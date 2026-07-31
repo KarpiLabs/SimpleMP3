@@ -5,6 +5,7 @@ object Routes {
     const val SEARCH = "search"
     const val LIBRARY = "library"
     const val PLAYLISTS = "playlists"
+    const val SETTINGS = "settings"
     const val JELLYFIN = "jellyfin"
     const val YOUTUBE = "youtube"
     const val PLAYLIST_DETAIL = "playlist/{playlistId}"

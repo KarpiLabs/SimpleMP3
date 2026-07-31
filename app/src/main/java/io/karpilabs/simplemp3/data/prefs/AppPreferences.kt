@@ -41,6 +41,11 @@ class AppPreferences @Inject constructor(
         val LARGE_FILE_OPTIMIZE = booleanPreferencesKey("large_file_optimize")
         /** Gzip-pack large idle files; thaw transparently on play. */
         val LARGE_FILE_COLD_PACK = booleanPreferencesKey("large_file_cold_pack")
+        /**
+         * Optional Jellyfin integration. Default off — not everyone runs a server.
+         * When false, Jellyfin UI entry points are hidden.
+         */
+        val JELLYFIN_ENABLED = booleanPreferencesKey("jellyfin_enabled")
         val RESUME_IDS = stringPreferencesKey("resume_track_ids")
         val RESUME_INDEX = intPreferencesKey("resume_index")
         val RESUME_POSITION = longPreferencesKey("resume_position_ms")
@@ -113,6 +118,17 @@ class AppPreferences @Inject constructor(
     }
 
     suspend fun isLargeFileColdPack(): Boolean = largeFileColdPackFlow.first()
+
+    /** Default off: hide Jellyfin sync UI until the user opts in. */
+    val jellyfinEnabledFlow: Flow<Boolean> = context.appDataStore.data.map {
+        it[Keys.JELLYFIN_ENABLED] ?: false
+    }
+
+    suspend fun setJellyfinEnabled(enabled: Boolean) {
+        context.appDataStore.edit { it[Keys.JELLYFIN_ENABLED] = enabled }
+    }
+
+    suspend fun isJellyfinEnabled(): Boolean = jellyfinEnabledFlow.first()
 
     val resumeFlow: Flow<ResumeSnapshot?> = context.appDataStore.data.map { prefs ->
         val idsRaw = prefs[Keys.RESUME_IDS].orEmpty()

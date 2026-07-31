@@ -21,14 +21,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CloudDownload
-import androidx.compose.material.icons.rounded.Compress
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
-import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -71,12 +70,10 @@ fun HomeScreen(
     continueListening: List<TrackEntity> = emptyList(),
     trackCount: Int,
     jellyfinCount: Int = 0,
+    jellyfinEnabled: Boolean = false,
     isScanning: Boolean,
     playerState: PlayerUiState,
     driveMode: Boolean = false,
-    autoDriveModeOnCar: Boolean = true,
-    largeFileOptimize: Boolean = true,
-    largeFileColdPack: Boolean = true,
     resume: ResumeSnapshot? = null,
     onScan: () -> Unit,
     onPlayTrack: (TrackEntity, List<TrackEntity>) -> Unit,
@@ -86,16 +83,16 @@ fun HomeScreen(
     onAddToPlaylist: (TrackEntity) -> Unit = {},
     onOpenJellyfin: () -> Unit = {},
     onOpenYoutube: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     onToggleDriveMode: () -> Unit = {},
-    onToggleAutoDriveModeOnCar: () -> Unit = {},
-    onToggleLargeFileOptimize: () -> Unit = {},
-    onToggleLargeFileColdPack: () -> Unit = {},
     onResume: () -> Unit = {},
     onPlayPause: () -> Unit = {},
     onSkipNext: () -> Unit = {},
     onSkipPrevious: () -> Unit = {}
 ) {
     val greeting = rememberGreeting()
+    val showJellyfin = jellyfinEnabled
+    val jfCount = if (showJellyfin) jellyfinCount else 0
 
     if (driveMode) {
         DriveModeHome(
@@ -103,7 +100,8 @@ fun HomeScreen(
             resume = resume,
             playlists = playlists,
             continueListening = continueListening,
-            jellyfinCount = jellyfinCount,
+            jellyfinCount = jfCount,
+            jellyfinEnabled = showJellyfin,
             onExitDriveMode = onToggleDriveMode,
             onResume = onResume,
             onPlayPause = onPlayPause,
@@ -170,19 +168,32 @@ fun HomeScreen(
                                 )
                             }
                         }
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(
+                                Icons.Rounded.Settings,
+                                contentDescription = "Settings",
+                                tint = AccentTeal
+                            )
+                        }
                     }
                 }
                 Text(
                     text = buildString {
                         if (trackCount > 0) {
                             append(formatTrackCount(trackCount))
-                            if (jellyfinCount > 0) {
+                            if (jfCount > 0) {
                                 append(" · ")
-                                append(jellyfinCount)
+                                append(jfCount)
                                 append(" from Jellyfin")
                             }
                         } else {
-                            append("Scan your library or sync Jellyfin")
+                            append(
+                                if (showJellyfin) {
+                                    "Scan your library or sync Jellyfin"
+                                } else {
+                                    "Scan your library to get started"
+                                }
+                            )
                         }
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -197,24 +208,26 @@ fun HomeScreen(
             }
         }
 
-        item {
-            FeatureCard(
-                icon = Icons.Rounded.CloudDownload,
-                title = "Jellyfin Sync",
-                subtitle = if (jellyfinCount > 0) {
-                    "$jellyfinCount tracks offline — tap to manage"
-                } else {
-                    "Download server music for offline & Android Auto"
-                },
-                brush = Brush.horizontalGradient(
-                    listOf(
-                        AccentViolet.copy(alpha = 0.35f),
-                        NightElevated,
-                        AccentTeal.copy(alpha = 0.15f)
-                    )
-                ),
-                onClick = onOpenJellyfin
-            )
+        if (showJellyfin) {
+            item {
+                FeatureCard(
+                    icon = Icons.Rounded.CloudDownload,
+                    title = "Jellyfin Sync",
+                    subtitle = if (jfCount > 0) {
+                        "$jfCount tracks offline — tap to manage"
+                    } else {
+                        "Download server music for offline & Android Auto"
+                    },
+                    brush = Brush.horizontalGradient(
+                        listOf(
+                            AccentViolet.copy(alpha = 0.35f),
+                            NightElevated,
+                            AccentTeal.copy(alpha = 0.15f)
+                        )
+                    ),
+                    onClick = onOpenJellyfin
+                )
+            }
         }
 
         item {
@@ -249,66 +262,6 @@ fun HomeScreen(
             )
         }
 
-        item {
-            FeatureCard(
-                icon = Icons.Rounded.DirectionsCar,
-                title = "Auto → Drive mode",
-                subtitle = if (autoDriveModeOnCar) {
-                    "On · turns Drive mode on when Android Auto connects"
-                } else {
-                    "Off · car connect won’t change Drive mode"
-                },
-                brush = Brush.horizontalGradient(
-                    listOf(
-                        if (autoDriveModeOnCar) AccentTeal.copy(alpha = 0.18f) else NightCard,
-                        NightElevated,
-                        NightCard
-                    )
-                ),
-                onClick = onToggleAutoDriveModeOnCar
-            )
-        }
-
-        item {
-            FeatureCard(
-                icon = Icons.Rounded.Compress,
-                title = "Large file optimize",
-                subtitle = if (largeFileOptimize) {
-                    "On · movie-length offline tracks re-encode leaner (96–128 kbps)"
-                } else {
-                    "Off · keep original bitrate for Jellyfin / YouTube offline"
-                },
-                brush = Brush.horizontalGradient(
-                    listOf(
-                        if (largeFileOptimize) AccentViolet.copy(alpha = 0.22f) else NightCard,
-                        NightElevated,
-                        NightCard
-                    )
-                ),
-                onClick = onToggleLargeFileOptimize
-            )
-        }
-
-        item {
-            FeatureCard(
-                icon = Icons.Rounded.Storage,
-                title = "Cold storage (large only)",
-                subtitle = if (largeFileColdPack) {
-                    "On · gzip idle 25+ MB files; thaw automatically on play"
-                } else {
-                    "Off · keep large offline files fully expanded"
-                },
-                brush = Brush.horizontalGradient(
-                    listOf(
-                        if (largeFileColdPack) AccentTeal.copy(alpha = 0.16f) else NightCard,
-                        NightElevated,
-                        NightCard
-                    )
-                ),
-                onClick = onToggleLargeFileColdPack
-            )
-        }
-
         if (trackCount == 0 && !isScanning) {
             item {
                 Column(
@@ -324,7 +277,11 @@ fun HomeScreen(
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Scan local MP3s or connect Jellyfin to download tracks for the road.",
+                        text = if (showJellyfin) {
+                            "Scan local MP3s or connect Jellyfin to download tracks for the road."
+                        } else {
+                            "Scan local MP3s on this device, or paste a YouTube link for offline audio."
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
                     )
@@ -339,14 +296,26 @@ fun HomeScreen(
                         ) {
                             Text("Scan library")
                         }
-                        Button(
-                            onClick = onOpenJellyfin,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AccentViolet,
-                                contentColor = NightBlack
-                            )
-                        ) {
-                            Text("Jellyfin")
+                        if (showJellyfin) {
+                            Button(
+                                onClick = onOpenJellyfin,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = AccentViolet,
+                                    contentColor = NightBlack
+                                )
+                            ) {
+                                Text("Jellyfin")
+                            }
+                        } else {
+                            Button(
+                                onClick = onOpenYoutube,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = AccentCoral,
+                                    contentColor = NightBlack
+                                )
+                            ) {
+                                Text("YouTube")
+                            }
                         }
                     }
                 }
@@ -409,7 +378,7 @@ fun HomeScreen(
             }
         }
 
-        if (jellyfinCount > 0) {
+        if (showJellyfin && jfCount > 0) {
             item {
                 SectionHeader(
                     title = "Jellyfin Offline",
@@ -428,6 +397,7 @@ private fun DriveModeHome(
     playlists: List<PlaylistWithMeta>,
     continueListening: List<TrackEntity>,
     jellyfinCount: Int,
+    jellyfinEnabled: Boolean,
     onExitDriveMode: () -> Unit,
     onResume: () -> Unit,
     onPlayPause: () -> Unit,
@@ -566,7 +536,7 @@ private fun DriveModeHome(
             Spacer(Modifier.height(10.dp))
         }
 
-        if (jellyfinCount > 0) {
+        if (jellyfinEnabled && jellyfinCount > 0) {
             Button(
                 onClick = onOpenJellyfin,
                 modifier = Modifier

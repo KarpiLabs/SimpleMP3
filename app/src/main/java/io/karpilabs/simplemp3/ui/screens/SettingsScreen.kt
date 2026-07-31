@@ -1,0 +1,308 @@
+package io.karpilabs.simplemp3.ui.screens
+
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.Compress
+import androidx.compose.material.icons.rounded.DirectionsCar
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.Wifi
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import io.karpilabs.simplemp3.ui.theme.AccentTeal
+import io.karpilabs.simplemp3.ui.theme.AccentViolet
+import io.karpilabs.simplemp3.ui.theme.NightCard
+import io.karpilabs.simplemp3.ui.theme.TextMuted
+import io.karpilabs.simplemp3.ui.theme.TextSecondary
+
+@Composable
+fun SettingsScreen(
+    jellyfinEnabled: Boolean,
+    autoDriveModeOnCar: Boolean,
+    wifiOnlyDownloads: Boolean,
+    largeFileOptimize: Boolean,
+    largeFileColdPack: Boolean,
+    onBack: () -> Unit,
+    onJellyfinEnabledChange: (Boolean) -> Unit,
+    onAutoDriveModeOnCarChange: (Boolean) -> Unit,
+    onWifiOnlyDownloadsChange: (Boolean) -> Unit,
+    onLargeFileOptimizeChange: (Boolean) -> Unit,
+    onLargeFileColdPackChange: (Boolean) -> Unit
+) {
+    val context = LocalContext.current
+    val versionLabel = remember {
+        runCatching {
+            val pm = context.packageManager
+            val pkg = context.packageName
+            val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(pkg, 0)
+            }
+            val name = info.versionName ?: "?"
+            val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                info.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                info.versionCode.toLong()
+            }
+            "$name ($code)"
+        }.getOrDefault("—")
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+            }
+            Text(
+                text = "Settings",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        LazyColumn(
+            contentPadding = PaddingValues(bottom = 120.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            item {
+                SettingsSectionHeader("Integrations")
+            }
+            item {
+                SettingsSwitchRow(
+                    icon = Icons.Rounded.CloudDownload,
+                    iconTint = AccentViolet,
+                    title = "Jellyfin",
+                    subtitle = if (jellyfinEnabled) {
+                        "On · sync & offline from your server"
+                    } else {
+                        "Off · hidden until you enable it"
+                    },
+                    checked = jellyfinEnabled,
+                    onCheckedChange = onJellyfinEnabledChange
+                )
+            }
+            if (jellyfinEnabled) {
+                item {
+                    SettingsSwitchRow(
+                        icon = Icons.Rounded.Wifi,
+                        title = "Wi‑Fi only downloads",
+                        subtitle = if (wifiOnlyDownloads) {
+                            "Jellyfin downloads wait for Wi‑Fi"
+                        } else {
+                            "Downloads may use mobile data"
+                        },
+                        checked = wifiOnlyDownloads,
+                        onCheckedChange = onWifiOnlyDownloadsChange
+                    )
+                }
+            }
+
+            item {
+                SettingsSectionHeader("Driving")
+            }
+            item {
+                SettingsSwitchRow(
+                    icon = Icons.Rounded.DirectionsCar,
+                    title = "Auto → Drive mode",
+                    subtitle = if (autoDriveModeOnCar) {
+                        "Turn Drive mode on when Android Auto connects"
+                    } else {
+                        "Car connect won’t change Drive mode"
+                    },
+                    checked = autoDriveModeOnCar,
+                    onCheckedChange = onAutoDriveModeOnCarChange
+                )
+            }
+
+            item {
+                SettingsSectionHeader("Storage")
+            }
+            item {
+                SettingsSwitchRow(
+                    icon = Icons.Rounded.Compress,
+                    title = "Large file optimize",
+                    subtitle = if (largeFileOptimize) {
+                        "Re-encode huge offline tracks leaner (96–128 kbps)"
+                    } else {
+                        "Keep original bitrate for offline downloads"
+                    },
+                    checked = largeFileOptimize,
+                    onCheckedChange = onLargeFileOptimizeChange
+                )
+            }
+            item {
+                SettingsSwitchRow(
+                    icon = Icons.Rounded.Storage,
+                    title = "Cold storage (large only)",
+                    subtitle = if (largeFileColdPack) {
+                        "Gzip idle 25+ MB files; thaw automatically on play"
+                    } else {
+                        "Keep large offline files fully expanded"
+                    },
+                    checked = largeFileColdPack,
+                    onCheckedChange = onLargeFileColdPackChange
+                )
+            }
+
+            item {
+                SettingsSectionHeader("About")
+            }
+            item {
+                AboutCard(versionLabel = versionLabel)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsSectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = AccentTeal,
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+    )
+}
+
+@Composable
+private fun SettingsSwitchRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    iconTint: androidx.compose.ui.graphics.Color = AccentTeal
+) {
+    Row(
+        modifier = Modifier
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(NightCard)
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(28.dp)
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = NightCard,
+                checkedTrackColor = AccentTeal,
+                uncheckedThumbColor = TextMuted,
+                uncheckedTrackColor = TextMuted.copy(alpha = 0.3f)
+            )
+        )
+    }
+}
+
+@Composable
+private fun AboutCard(versionLabel: String) {
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(NightCard)
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Rounded.Info,
+                contentDescription = null,
+                tint = AccentTeal,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(Modifier.width(14.dp))
+            Column {
+                Text(
+                    text = "Simple MP3",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Version $versionLabel",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        HorizontalDivider(color = TextMuted.copy(alpha = 0.25f))
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = "Local music player with playlists, optional Jellyfin offline sync, YouTube → MP3, and Android Auto.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextSecondary
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "Your music stays on your device. Jellyfin only talks to the server you configure.",
+            style = MaterialTheme.typography.bodySmall,
+            color = TextMuted
+        )
+    }
+}

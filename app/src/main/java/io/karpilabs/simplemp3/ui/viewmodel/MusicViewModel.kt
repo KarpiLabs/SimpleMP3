@@ -69,6 +69,12 @@ class MusicViewModel @Inject constructor(
     val largeFileColdPack: StateFlow<Boolean> = appPreferences.largeFileColdPackFlow
         .stateIn(viewModelScope, share, true)
 
+    val jellyfinEnabled: StateFlow<Boolean> = appPreferences.jellyfinEnabledFlow
+        .stateIn(viewModelScope, share, false)
+
+    val wifiOnlyDownloads: StateFlow<Boolean> = appPreferences.wifiOnlyDownloadsFlow
+        .stateIn(viewModelScope, share, true)
+
     val resumeSnapshot: StateFlow<ResumeSnapshot?> = appPreferences.resumeFlow
         .stateIn(viewModelScope, share, null)
 
@@ -144,6 +150,28 @@ class MusicViewModel @Inject constructor(
         }
     }
 
+    fun setJellyfinEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            appPreferences.setJellyfinEnabled(enabled)
+            _snackbar.value = if (enabled) {
+                "Jellyfin enabled — open it from Home"
+            } else {
+                "Jellyfin hidden"
+            }
+        }
+    }
+
+    fun setWifiOnlyDownloads(enabled: Boolean) {
+        viewModelScope.launch {
+            appPreferences.setWifiOnlyDownloads(enabled)
+            _snackbar.value = if (enabled) {
+                "Downloads wait for Wi‑Fi"
+            } else {
+                "Downloads may use mobile data"
+            }
+        }
+    }
+
     fun ensureLibraryReady() {
         viewModelScope.launch {
             repository.scanLibrary(force = false)
@@ -153,9 +181,13 @@ class MusicViewModel @Inject constructor(
     fun scanLibrary(force: Boolean = true) {
         viewModelScope.launch {
             val count = repository.scanLibrary(force = force)
-            val jf = jellyfinCount.value
+            val jf = if (jellyfinEnabled.value) jellyfinCount.value else 0
             _snackbar.value = when {
-                count == 0 -> "No music found — try Jellyfin sync"
+                count == 0 -> if (jellyfinEnabled.value) {
+                    "No music found — try Jellyfin sync"
+                } else {
+                    "No music found — scan local files or add downloads"
+                }
                 jf > 0 -> "Library ready · $count tracks ($jf offline from Jellyfin)"
                 else -> "Library ready · $count tracks"
             }

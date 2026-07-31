@@ -40,6 +40,7 @@ import androidx.navigation.navArgument
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.ui.components.AddToPlaylistSheet
 import io.karpilabs.simplemp3.ui.components.MiniPlayer
@@ -54,6 +55,7 @@ import io.karpilabs.simplemp3.ui.screens.LibraryScreen
 import io.karpilabs.simplemp3.ui.screens.PlaylistDetailScreen
 import io.karpilabs.simplemp3.ui.screens.PlaylistsScreen
 import io.karpilabs.simplemp3.ui.screens.SearchScreen
+import io.karpilabs.simplemp3.ui.screens.SettingsScreen
 import io.karpilabs.simplemp3.ui.screens.YoutubeScreen
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.NightBlack
@@ -79,13 +81,20 @@ fun SimpleMP3AppRoot(
     val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     val trackCount by viewModel.trackCount.collectAsStateWithLifecycle()
     val jellyfinCount by viewModel.jellyfinCount.collectAsStateWithLifecycle()
+    val jellyfinEnabled by viewModel.jellyfinEnabled.collectAsStateWithLifecycle()
     val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
     val driveMode by viewModel.driveMode.collectAsStateWithLifecycle()
     val autoDriveModeOnCar by viewModel.autoDriveModeOnCar.collectAsStateWithLifecycle()
     val largeFileOptimize by viewModel.largeFileOptimize.collectAsStateWithLifecycle()
     val largeFileColdPack by viewModel.largeFileColdPack.collectAsStateWithLifecycle()
+    val wifiOnlyDownloads by viewModel.wifiOnlyDownloads.collectAsStateWithLifecycle()
     val resume by viewModel.resumeSnapshot.collectAsStateWithLifecycle()
     val snackbar by viewModel.snackbar.collectAsStateWithLifecycle()
+
+    val visiblePlaylists = remember(playlists, jellyfinEnabled) {
+        if (jellyfinEnabled) playlists
+        else playlists.filter { it.systemType != PlaylistEntity.SYSTEM_JELLYFIN }
+    }
 
     var showNowPlaying by remember { mutableStateOf(false) }
     var showQueue by remember { mutableStateOf(false) }
@@ -129,6 +138,13 @@ fun SimpleMP3AppRoot(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val showBottomBar = !driveMode && currentRoute in tabs.map { it.route }
+
+    // Leave Jellyfin if the user turns the integration off while on that screen.
+    LaunchedEffect(jellyfinEnabled, currentRoute) {
+        if (!jellyfinEnabled && currentRoute == Routes.JELLYFIN) {
+            navController.popBackStack()
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -177,17 +193,15 @@ fun SimpleMP3AppRoot(
             ) {
                 composable(Routes.HOME) {
                     HomeScreen(
-                        playlists = playlists,
+                        playlists = visiblePlaylists,
                         recentlyAdded = recentlyAdded,
                         continueListening = continueListening,
                         trackCount = trackCount,
                         jellyfinCount = jellyfinCount,
+                        jellyfinEnabled = jellyfinEnabled,
                         isScanning = isScanning,
                         playerState = playerState,
                         driveMode = driveMode,
-                        autoDriveModeOnCar = autoDriveModeOnCar,
-                        largeFileOptimize = largeFileOptimize,
-                        largeFileColdPack = largeFileColdPack,
                         resume = resume,
                         onScan = {
                             if (permissionState.status.isGranted) viewModel.scanLibrary(force = true)
@@ -198,25 +212,39 @@ fun SimpleMP3AppRoot(
                         onOpenPlaylist = { navController.navigate(Routes.playlistDetail(it)) },
                         onToggleFavorite = viewModel::toggleFavorite,
                         onAddToPlaylist = { addToPlaylistTrack = it },
-                        onOpenJellyfin = { navController.navigate(Routes.JELLYFIN) },
+                        onOpenJellyfin = {
+                            if (jellyfinEnabled) navController.navigate(Routes.JELLYFIN)
+                        },
                         onOpenYoutube = { navController.navigate(Routes.YOUTUBE) },
+                        onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                         onToggleDriveMode = { viewModel.setDriveMode(!driveMode) },
-                        onToggleAutoDriveModeOnCar = {
-                            viewModel.setAutoDriveModeOnCar(!autoDriveModeOnCar)
-                        },
-                        onToggleLargeFileOptimize = {
-                            viewModel.setLargeFileOptimize(!largeFileOptimize)
-                        },
-                        onToggleLargeFileColdPack = {
-                            viewModel.setLargeFileColdPack(!largeFileColdPack)
-                        },
                         onResume = { viewModel.resumeLastSession(autoPlay = true) },
                         onPlayPause = viewModel::togglePlayPause,
                         onSkipNext = viewModel::skipNext,
                         onSkipPrevious = viewModel::skipPrevious
                     )
                 }
+                composable(Routes.SETTINGS) {
+                    SettingsScreen(
+                        jellyfinEnabled = jellyfinEnabled,
+                        autoDriveModeOnCar = autoDriveModeOnCar,
+                        wifiOnlyDownloads = wifiOnlyDownloads,
+                        largeFileOptimize = largeFileOptimize,
+                        largeFileColdPack = largeFileColdPack,
+                        onBack = { navController.popBackStack() },
+                        onJellyfinEnabledChange = viewModel::setJellyfinEnabled,
+                        onAutoDriveModeOnCarChange = viewModel::setAutoDriveModeOnCar,
+                        onWifiOnlyDownloadsChange = viewModel::setWifiOnlyDownloads,
+                        onLargeFileOptimizeChange = viewModel::setLargeFileOptimize,
+                        onLargeFileColdPackChange = viewModel::setLargeFileColdPack
+                    )
+                }
                 composable(Routes.JELLYFIN) {
+                    if (!jellyfinEnabled) {
+                        LaunchedEffect(Unit) { navController.popBackStack() }
+                        return@composable
+                    }
+
                     val jfVm: JellyfinViewModel = hiltViewModel()
                     val session by jfVm.session.collectAsStateWithLifecycle()
                     val jfUi by jfVm.ui.collectAsStateWithLifecycle()
@@ -324,7 +352,7 @@ fun SimpleMP3AppRoot(
                 }
                 composable(Routes.PLAYLISTS) {
                     PlaylistsScreen(
-                        playlists = playlists,
+                        playlists = visiblePlaylists,
                         onOpenPlaylist = { navController.navigate(Routes.playlistDetail(it)) },
                         onCreatePlaylist = { viewModel.createPlaylist(it) }
                     )
@@ -446,7 +474,7 @@ fun SimpleMP3AppRoot(
 
     addToPlaylistTrack?.let { track ->
         AddToPlaylistSheet(
-            playlists = playlists,
+            playlists = visiblePlaylists,
             trackTitle = track.title,
             onDismiss = { addToPlaylistTrack = null },
             onSelect = { playlistId ->

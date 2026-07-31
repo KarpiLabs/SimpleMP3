@@ -14,6 +14,7 @@ import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
+import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import io.karpilabs.simplemp3.data.repository.MusicRepository
 import io.karpilabs.simplemp3.data.storage.LargeFileStorageManager
@@ -505,7 +506,7 @@ class LibrarySessionCallback(
             parentId == MediaIds.ROOT -> buildRootChildren()
 
             parentId == MediaIds.PLAYLISTS ->
-                repository.getPlaylistsOnce().map { MediaItemFactory.fromPlaylist(it) }
+                visiblePlaylists().map { MediaItemFactory.fromPlaylist(it) }
 
             parentId == MediaIds.ALBUMS ->
                 repository.getAlbumsOnce().map { MediaItemFactory.fromAlbum(it) }
@@ -648,7 +649,11 @@ class LibrarySessionCallback(
                 MediaItemFactory.category(
                     MediaIds.OFFLINE,
                     "Offline",
-                    "Jellyfin & YouTube downloads"
+                    if (appPreferences.isJellyfinEnabled()) {
+                        "Jellyfin & YouTube downloads"
+                    } else {
+                        "YouTube & offline downloads"
+                    }
                 )
             )
             add(MediaItemFactory.category(MediaIds.ALBUMS, "Albums", "Browse by album"))
@@ -670,6 +675,13 @@ class LibrarySessionCallback(
         return listOf(MediaItemFactory.shufflePlayAction(targetId)) + tracks
     }
 
+    /** Hide Jellyfin system playlist in Auto when integration is disabled. */
+    private suspend fun visiblePlaylists() =
+        repository.getPlaylistsOnce().filter { pl ->
+            appPreferences.isJellyfinEnabled() ||
+                pl.systemType != PlaylistEntity.SYSTEM_JELLYFIN
+        }
+
     private suspend fun buildSearchResults(query: String): List<MediaItem> {
         val q = query.trim()
         if (q.isBlank()) return emptyList()
@@ -690,7 +702,7 @@ class LibrarySessionCallback(
             .take(10)
             .map { MediaItemFactory.fromArtist(it) }
 
-        val playlistItems = repository.getPlaylistsOnce()
+        val playlistItems = visiblePlaylists()
             .filter { it.name.contains(q, ignoreCase = true) }
             .take(10)
             .map { MediaItemFactory.fromPlaylist(it) }
