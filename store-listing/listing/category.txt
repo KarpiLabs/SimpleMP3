@@ -1,0 +1,3 @@
+Application type: App
+Category: Music & Audio
+Tags: music player, mp3, offline, android auto, jellyfin, playlist, car audio, local music

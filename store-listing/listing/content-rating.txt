@@ -1,0 +1,7 @@
+Target audience: Everyone
+Content: No violence, no sexual content, no user-generated public content, no ads by default.
+IARC / Play questionnaire tips:
+- Does not contain user-to-user communication in public
+- Does not share location
+- Local media + optional self-hosted Jellyfin only
+- Suitable for all ages

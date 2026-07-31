@@ -1,0 +1,4 @@
+• Resume last session and Drive Mode for the car
+• Play next, queue, and drag-reorder playlists
+• Jellyfin playlist import with Wi‑Fi-only background downloads
+• Faster library load and LAN server discovery

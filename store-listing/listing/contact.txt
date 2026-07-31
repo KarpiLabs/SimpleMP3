@@ -1,0 +1,4 @@
+Developer name: Karpi Labs (update to your legal name/org)
+Contact email: support@example.com  ← REPLACE before publish
+Website: https://example.com        ← optional
+Privacy policy URL: (host privacy-policy.html — required by Play)

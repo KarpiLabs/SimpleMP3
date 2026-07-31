@@ -1,0 +1,1 @@
+Local MP3 player with playlists, Jellyfin offline sync & Android Auto.

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy Policy — Simple MP3</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; line-height: 1.55; color: #1a1a1a; }
+    h1 { font-size: 1.75rem; }
+    h2 { margin-top: 1.75rem; font-size: 1.2rem; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; }
+    th { background: #f5f5f5; }
+    .muted { color: #666; font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <h1>Privacy Policy for Simple MP3</h1>
+  <p class="muted"><strong>Last updated:</strong> 2026-07-30<br/>
+  <strong>App:</strong> Simple MP3 (<code>io.karpilabs.simplemp3</code>)<br/>
+  <strong>Developer:</strong> Karpi Labs <em>(replace with your legal name)</em></p>
+
+  <h2>Overview</h2>
+  <p>Simple MP3 is a local music player. Your music and playlists stay on your device. This policy explains what the app accesses and why.</p>
+
+  <h2>Data we collect</h2>
+  <p><strong>We do not operate a Simple MP3 account system and we do not sell personal data.</strong></p>
+  <h3>Data stored only on your device</h3>
+  <ul>
+    <li>Music library metadata indexed from files on your phone</li>
+    <li>Playlists, liked songs, recently played, and resume position</li>
+    <li>Optional Jellyfin server URL, username, and access token (on-device)</li>
+    <li>Downloaded offline audio and artwork (app private storage)</li>
+  </ul>
+  <h3>Data sent over the network</h3>
+  <p>Only when you use <strong>Jellyfin Sync</strong>: your device talks to the Jellyfin server URL you provide. Credentials are used solely to authenticate and download media from that server. We do not receive your password or media on developer-owned servers.</p>
+  <p>No advertising or tracking SDKs are used for ads in the core app.</p>
+
+  <h2>Permissions</h2>
+  <table>
+    <tr><th>Permission</th><th>Why</th></tr>
+    <tr><td>Music / audio storage</td><td>Scan and play local files</td></tr>
+    <tr><td>Notifications</td><td>Playback controls and download progress</td></tr>
+    <tr><td>Internet / network</td><td>Optional Jellyfin sync</td></tr>
+    <tr><td>Wi‑Fi multicast</td><td>Discover Jellyfin on LAN</td></tr>
+    <tr><td>Foreground services</td><td>Background playback and downloads</td></tr>
+  </table>
+
+  <h2>Android Auto</h2>
+  <p>Media metadata is provided to the car through Android media session APIs for safe control while driving. This is handled by the Android/vehicle system, not uploaded to Simple MP3 servers.</p>
+
+  <h2>Deletion</h2>
+  <p>Uninstalling the app removes app-private data, including Jellyfin offline downloads stored in the app sandbox. Your system media files elsewhere on the device are not deleted.</p>
+
+  <h2>Contact</h2>
+  <p>Privacy questions: <strong>support@example.com</strong> <em>(replace before publishing)</em></p>
+  <p class="muted">This document is a template. Review for your jurisdiction before publishing.</p>
+</body>
+</html>

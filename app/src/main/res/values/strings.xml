@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Simple MP3</string>
+    <string name="app_description">Local music player with playlists and Android Auto</string>
+    <string name="notification_channel_name">Playback</string>
+    <string name="notification_channel_description">Music playback controls</string>
+</resources>
