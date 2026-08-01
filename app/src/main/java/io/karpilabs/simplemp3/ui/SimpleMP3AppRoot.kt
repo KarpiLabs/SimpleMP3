@@ -48,8 +48,10 @@ import io.karpilabs.simplemp3.ui.components.QueueSheet
 import io.karpilabs.simplemp3.ui.navigation.Routes
 import io.karpilabs.simplemp3.ui.screens.CollectionDetailScreen
 import io.karpilabs.simplemp3.ui.screens.CreatePlaylistDialog
+import io.karpilabs.simplemp3.ui.screens.FolderDetailScreen
 import io.karpilabs.simplemp3.ui.screens.HomeScreen
 import io.karpilabs.simplemp3.ui.screens.JellyfinScreen
+import io.karpilabs.simplemp3.ui.screens.LibraryFoldersScreen
 import io.karpilabs.simplemp3.ui.screens.LibraryScreen
 import io.karpilabs.simplemp3.ui.screens.PlaylistDetailScreen
 import io.karpilabs.simplemp3.ui.screens.PlaylistsScreen
@@ -242,7 +244,32 @@ fun SimpleMP3AppRoot(
                         onWifiOnlyDownloadsChange = viewModel::setWifiOnlyDownloads,
                         onLargeFileOptimizeChange = viewModel::setLargeFileOptimize,
                         onLargeFileColdPackChange = viewModel::setLargeFileColdPack,
-                        onOpenQuickConnect = { navController.navigate(Routes.QUICK_CONNECT) }
+                        onOpenQuickConnect = { navController.navigate(Routes.QUICK_CONNECT) },
+                        onOpenLibraryFolders = { navController.navigate(Routes.LIBRARY_FOLDERS) }
+                    )
+                }
+                composable(Routes.LIBRARY_FOLDERS) {
+                    val selectedRoots by viewModel.libraryFolderRoots.collectAsStateWithLifecycle()
+                    val deviceFolders by viewModel.deviceFolders.collectAsStateWithLifecycle()
+                    val deviceFoldersLoading by viewModel.deviceFoldersLoading.collectAsStateWithLifecycle()
+                    LaunchedEffect(Unit) { viewModel.refreshDeviceFolders() }
+                    // Picker “select all” uses the same top/second-level paths shown in the UI.
+                    val pickerPaths = remember(deviceFolders) {
+                        buildLibraryFolderPickerPaths(deviceFolders)
+                    }
+                    LibraryFoldersScreen(
+                        selectedRoots = selectedRoots,
+                        deviceFolders = deviceFolders,
+                        isLoading = deviceFoldersLoading,
+                        isScanning = isScanning,
+                        onBack = { navController.popBackStack() },
+                        onRefreshFolders = viewModel::refreshDeviceFolders,
+                        onLimitEnabledChange = viewModel::setLibraryFolderLimitEnabled,
+                        onToggleRoot = viewModel::toggleLibraryFolderRoot,
+                        onSelectAllVisible = {
+                            viewModel.selectAllVisibleLibraryFolderRoots(pickerPaths)
+                        },
+                        onClearSelection = viewModel::clearLibraryFolderRoots
                     )
                 }
                 composable(Routes.JELLYFIN) {
@@ -335,17 +362,20 @@ fun SimpleMP3AppRoot(
                     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
                     val albums by viewModel.albums.collectAsStateWithLifecycle()
                     val artists by viewModel.artists.collectAsStateWithLifecycle()
+                    val rootFolders by viewModel.rootFolders.collectAsStateWithLifecycle()
                     val libraryFilter by viewModel.libraryFilter.collectAsStateWithLifecycle()
                     LibraryScreen(
                         tracks = tracks,
                         albums = albums,
                         artists = artists,
+                        rootFolders = rootFolders,
                         filter = libraryFilter,
                         playerState = playerState,
                         onFilterChange = viewModel::setLibraryFilter,
                         onPlayTrack = { track, queue -> viewModel.playTrack(track, queue) },
                         onOpenAlbum = { navController.navigate(Routes.albumDetail(it)) },
                         onOpenArtist = { navController.navigate(Routes.artistDetail(it)) },
+                        onOpenFolder = { navController.navigate(Routes.folderDetail(it)) },
                         onToggleFavorite = viewModel::toggleFavorite,
                         onAddToPlaylist = { addToPlaylistTrack = it }
                     )
@@ -429,6 +459,31 @@ fun SimpleMP3AppRoot(
                         onToggleFavorite = viewModel::toggleFavorite
                     )
                 }
+                composable(
+                    route = Routes.FOLDER_DETAIL,
+                    arguments = listOf(navArgument("folderPath") { type = NavType.StringType })
+                ) { entry ->
+                    val folderPath = android.net.Uri.decode(
+                        entry.arguments?.getString("folderPath").orEmpty()
+                    )
+                    val subfolders by remember(folderPath) { viewModel.childFolders(folderPath) }
+                        .collectAsStateWithLifecycle()
+                    val folderTracks by remember(folderPath) { viewModel.folderTracks(folderPath) }
+                        .collectAsStateWithLifecycle()
+                    FolderDetailScreen(
+                        folderPath = folderPath,
+                        subfolders = subfolders,
+                        tracks = folderTracks,
+                        playerState = playerState,
+                        onBack = { navController.popBackStack() },
+                        onOpenFolder = { navController.navigate(Routes.folderDetail(it)) },
+                        onPlayAll = { viewModel.playAll(folderTracks) },
+                        onShuffle = { viewModel.playAll(folderTracks.shuffled()) },
+                        onPlayTrack = { viewModel.playTrack(it, folderTracks) },
+                        onToggleFavorite = viewModel::toggleFavorite,
+                        onAddToPlaylist = { addToPlaylistTrack = it }
+                    )
+                }
             }
 
             MiniPlayer(
@@ -500,4 +555,22 @@ fun SimpleMP3AppRoot(
             }
         )
     }
+}
+
+/** Mirrors LibraryFoldersScreen picker entries so “Select all” matches the UI. */
+private fun buildLibraryFolderPickerPaths(allFolders: List<String>): List<String> {
+    val normalized = allFolders
+        .map { it.trim().trim('/').replace('\\', '/') }
+        .filter { it.isNotEmpty() }
+    val entries = linkedSetOf<String>()
+    for (path in normalized) {
+        entries += path.substringBefore('/')
+    }
+    for (path in normalized) {
+        val parts = path.split('/')
+        if (parts.size >= 2) {
+            entries += parts.take(2).joinToString("/")
+        }
+    }
+    return entries.toList()
 }

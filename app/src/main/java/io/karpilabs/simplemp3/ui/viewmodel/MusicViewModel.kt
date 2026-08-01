@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.karpilabs.simplemp3.data.local.AlbumRow
+import io.karpilabs.simplemp3.data.local.FolderBrowser
 import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.PlaylistWithMeta
 import io.karpilabs.simplemp3.data.local.TrackEntity
@@ -56,6 +57,20 @@ class MusicViewModel @Inject constructor(
         .stateIn(viewModelScope, share, emptyList())
     val artists: StateFlow<List<AlbumRow>> = repository.artists
         .stateIn(viewModelScope, share, emptyList())
+
+    /** Top-level folders for the Library → Folders tab. */
+    val rootFolders: StateFlow<List<FolderBrowser.FolderEntry>> =
+        repository.childFolders("")
+            .stateIn(viewModelScope, share, emptyList())
+
+    val libraryFolderRoots: StateFlow<Set<String>> = repository.libraryFolderRoots
+        .stateIn(viewModelScope, share, emptySet())
+
+    private val _deviceFolders = MutableStateFlow<List<String>>(emptyList())
+    val deviceFolders: StateFlow<List<String>> = _deviceFolders.asStateFlow()
+
+    private val _deviceFoldersLoading = MutableStateFlow(false)
+    val deviceFoldersLoading: StateFlow<Boolean> = _deviceFoldersLoading.asStateFlow()
 
     val driveMode: StateFlow<Boolean> = appPreferences.driveModeFlow
         .stateIn(viewModelScope, share, false)
@@ -293,4 +308,71 @@ class MusicViewModel @Inject constructor(
     fun artistTracks(artist: String): StateFlow<List<TrackEntity>> =
         repository.getTracksByArtist(artist)
             .stateIn(viewModelScope, share, emptyList())
+
+    fun folderTracks(folderPath: String): StateFlow<List<TrackEntity>> =
+        repository.getTracksByFolder(folderPath)
+            .stateIn(viewModelScope, share, emptyList())
+
+    fun childFolders(folderPath: String): StateFlow<List<FolderBrowser.FolderEntry>> =
+        repository.childFolders(folderPath)
+            .stateIn(viewModelScope, share, emptyList())
+
+    fun refreshDeviceFolders() {
+        viewModelScope.launch {
+            _deviceFoldersLoading.value = true
+            try {
+                _deviceFolders.value = repository.listDeviceFolderPaths()
+            } finally {
+                _deviceFoldersLoading.value = false
+            }
+        }
+    }
+
+    fun setLibraryFolderLimitEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            if (!enabled) {
+                repository.setLibraryFolderRoots(emptySet())
+                return@launch
+            }
+            // Turning the filter on: default to every top-level music root found on device.
+            val folders = _deviceFolders.value.ifEmpty {
+                repository.listDeviceFolderPaths().also { _deviceFolders.value = it }
+            }
+            val tops = folders
+                .map { FolderBrowser.normalize(it).substringBefore('/') }
+                .filter { it.isNotBlank() }
+                .toSet()
+            repository.setLibraryFolderRoots(tops)
+        }
+    }
+
+    fun toggleLibraryFolderRoot(path: String) {
+        viewModelScope.launch {
+            val normalized = FolderBrowser.normalize(path)
+            if (normalized.isEmpty()) return@launch
+            val current = repository.getLibraryFolderRoots().toMutableSet()
+            if (current.any { FolderBrowser.normalize(it) == normalized }) {
+                current.removeAll { FolderBrowser.normalize(it) == normalized }
+            } else {
+                current += normalized
+            }
+            repository.setLibraryFolderRoots(current)
+        }
+    }
+
+    fun selectAllVisibleLibraryFolderRoots(paths: Collection<String>) {
+        viewModelScope.launch {
+            val cleaned = paths
+                .map { FolderBrowser.normalize(it) }
+                .filter { it.isNotBlank() }
+                .toSet()
+            repository.setLibraryFolderRoots(cleaned)
+        }
+    }
+
+    fun clearLibraryFolderRoots() {
+        viewModelScope.launch {
+            repository.setLibraryFolderRoots(emptySet())
+        }
+    }
 }

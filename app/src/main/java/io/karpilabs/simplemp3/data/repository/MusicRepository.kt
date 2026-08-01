@@ -1,6 +1,7 @@
 package io.karpilabs.simplemp3.data.repository
 
 import io.karpilabs.simplemp3.data.local.AlbumRow
+import io.karpilabs.simplemp3.data.local.FolderBrowser
 import io.karpilabs.simplemp3.data.local.PlaylistDao
 import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.PlaylistWithMeta
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -50,6 +52,25 @@ class MusicRepository @Inject constructor(
 
     val youtubeTracks: Flow<List<TrackEntity>> =
         trackDao.getTracksBySource(TrackEntity.SOURCE_YOUTUBE)
+
+    val folderPaths: Flow<List<String>> = trackDao.getDistinctFolderPaths()
+
+    val libraryFolderRoots: Flow<Set<String>> = appPreferences.libraryFolderRootsFlow
+
+    /** Direct track counts keyed by folderPath (for browser badges). */
+    val folderTrackCounts: Flow<Map<String, Int>> = tracks.map { list ->
+        list.groupingBy { it.folderPath }
+            .eachCount()
+            .filterKeys { it.isNotBlank() }
+    }
+
+    fun childFolders(parentPath: String): Flow<List<FolderBrowser.FolderEntry>> =
+        combine(folderPaths, folderTrackCounts) { paths, counts ->
+            FolderBrowser.childFolders(paths, parentPath, counts)
+        }
+
+    fun getTracksByFolder(folderPath: String): Flow<List<TrackEntity>> =
+        trackDao.getTracksByFolder(FolderBrowser.normalize(folderPath))
 
     /** Home "Continue listening" — tracks from Recently Played playlist. */
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -132,7 +153,9 @@ class MusicRepository @Inject constructor(
 
         _isScanning.value = true
         try {
-            val scanned = scanner.scan().map { it.copy(source = TrackEntity.SOURCE_LOCAL) }
+            val roots = appPreferences.getLibraryFolderRoots()
+            val scanned = scanner.scan(allowedRoots = roots)
+                .map { it.copy(source = TrackEntity.SOURCE_LOCAL) }
             // Only touch local MediaStore tracks — never wipe Jellyfin offline downloads.
             if (scanned.isNotEmpty()) {
                 // Chunk inserts for large libraries so Room/SQLite stays responsive
@@ -152,6 +175,16 @@ class MusicRepository @Inject constructor(
             _isScanning.value = false
         }
     }
+
+    suspend fun listDeviceFolderPaths(): List<String> = scanner.listAllFolderPaths()
+
+    suspend fun setLibraryFolderRoots(roots: Set<String>) {
+        appPreferences.setLibraryFolderRoots(roots)
+        // Force rescan so the library matches the new roots.
+        scanLibrary(force = true)
+    }
+
+    suspend fun getLibraryFolderRoots(): Set<String> = appPreferences.getLibraryFolderRoots()
 
     fun search(query: String): Flow<List<TrackEntity>> = trackDao.searchTracks(query)
 
@@ -182,6 +215,9 @@ class MusicRepository @Inject constructor(
 
     fun getTracksByArtist(artist: String): Flow<List<TrackEntity>> =
         trackDao.getTracksByArtist(artist)
+
+    suspend fun getTracksByFolderOnce(folderPath: String): List<TrackEntity> =
+        trackDao.getTracksByFolderOnce(FolderBrowser.normalize(folderPath))
 
     // ── Playlists ──────────────────────────────────────────────
 

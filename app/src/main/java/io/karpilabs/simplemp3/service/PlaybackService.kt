@@ -16,6 +16,7 @@ import io.karpilabs.simplemp3.MainActivity
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import io.karpilabs.simplemp3.data.repository.MusicRepository
 import io.karpilabs.simplemp3.data.storage.LargeFileStorageManager
+import io.karpilabs.simplemp3.widget.PlayerWidgetUpdater
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -42,6 +43,7 @@ class PlaybackService : MediaLibraryService() {
                 callback?.recordPlayForCurrent()
             }
             updateCustomLayout()
+            PlayerWidgetUpdater.publishFromPlayer(this@PlaybackService, player)
         }
 
         override fun onMediaItemTransition(
@@ -51,6 +53,11 @@ class PlaybackService : MediaLibraryService() {
             if (player.isPlaying) {
                 callback?.recordPlayForCurrent()
             }
+            PlayerWidgetUpdater.publishFromPlayer(this@PlaybackService, player)
+        }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            PlayerWidgetUpdater.publishFromPlayer(this@PlaybackService, player)
         }
 
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
@@ -101,6 +108,7 @@ class PlaybackService : MediaLibraryService() {
             .build()
 
         updateCustomLayout()
+        PlayerWidgetUpdater.publishFromPlayer(this, player)
     }
 
     /**

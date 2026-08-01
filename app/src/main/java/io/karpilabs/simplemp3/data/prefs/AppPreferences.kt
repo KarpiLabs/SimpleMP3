@@ -59,6 +59,11 @@ class AppPreferences @Inject constructor(
         val RESUME_TITLE = stringPreferencesKey("resume_title")
         val RESUME_ARTIST = stringPreferencesKey("resume_artist")
         val RESUME_ARTWORK = stringPreferencesKey("resume_artwork")
+        /**
+         * Comma-separated library folder roots (relative paths). Empty = scan all music folders.
+         * Example: "Music,Download/Audio"
+         */
+        val LIBRARY_FOLDER_ROOTS = stringPreferencesKey("library_folder_roots")
     }
 
     suspend fun getLastLibraryScanMs(): Long =
@@ -207,5 +212,43 @@ class AppPreferences @Inject constructor(
             prefs.remove(Keys.RESUME_ARTIST)
             prefs.remove(Keys.RESUME_ARTWORK)
         }
+    }
+
+    // ── Library folder roots (empty = all folders) ─────────────────
+
+    val libraryFolderRootsFlow: Flow<Set<String>> = context.appDataStore.data.map { prefs ->
+        parseFolderRoots(prefs[Keys.LIBRARY_FOLDER_ROOTS])
+    }
+
+    suspend fun getLibraryFolderRoots(): Set<String> = libraryFolderRootsFlow.first()
+
+    suspend fun setLibraryFolderRoots(roots: Set<String>) {
+        val cleaned = roots
+            .map { it.trim().trim('/').replace('\\', '/') }
+            .filter { it.isNotBlank() }
+            .toSortedSet()
+        context.appDataStore.edit { prefs ->
+            if (cleaned.isEmpty()) {
+                prefs.remove(Keys.LIBRARY_FOLDER_ROOTS)
+            } else {
+                prefs[Keys.LIBRARY_FOLDER_ROOTS] = cleaned.joinToString("\u001e")
+            }
+        }
+    }
+
+    suspend fun clearLibraryFolderRoots() = setLibraryFolderRoots(emptySet())
+
+    private fun parseFolderRoots(raw: String?): Set<String> {
+        if (raw.isNullOrBlank()) return emptySet()
+        // Prefer unit-separator (paths can contain commas); fall back to comma for older prefs.
+        val parts = if (raw.contains('\u001e')) {
+            raw.split('\u001e')
+        } else {
+            raw.split(',')
+        }
+        return parts
+            .map { it.trim().trim('/').replace('\\', '/') }
+            .filter { it.isNotBlank() }
+            .toSet()
     }
 }

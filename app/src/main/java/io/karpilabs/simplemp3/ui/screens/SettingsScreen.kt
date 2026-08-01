@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Compress
 import androidx.compose.material.icons.rounded.DirectionsCar
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Storage
@@ -65,7 +66,8 @@ fun SettingsScreen(
     onWifiOnlyDownloadsChange: (Boolean) -> Unit,
     onLargeFileOptimizeChange: (Boolean) -> Unit,
     onLargeFileColdPackChange: (Boolean) -> Unit,
-    onOpenQuickConnect: () -> Unit = {}
+    onOpenQuickConnect: () -> Unit = {},
+    onOpenLibraryFolders: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val versionLabel = remember {
@@ -149,6 +151,14 @@ fun SettingsScreen(
 
             item {
                 SettingsSectionHeader("Library")
+            }
+            item {
+                SettingsNavRow(
+                    icon = Icons.Rounded.Folder,
+                    title = "Library folders",
+                    subtitle = "Browse by path · optionally limit which folders are scanned",
+                    onClick = onOpenLibraryFolders
+                )
             }
             item {
                 SettingsNavRow(

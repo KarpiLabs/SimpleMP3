@@ -4,4 +4,12 @@
     <string name="app_description">Local music player with playlists and Android Auto</string>
     <string name="notification_channel_name">Playback</string>
     <string name="notification_channel_description">Music playback controls</string>
+
+    <string name="widget_description">Play, pause, and skip without opening Simple MP3</string>
+    <string name="widget_nothing_playing">Nothing playing</string>
+    <string name="widget_tap_to_open">Tap to open Simple MP3</string>
+    <string name="widget_album_art">Album art</string>
+    <string name="widget_play_pause">Play or pause</string>
+    <string name="widget_next">Next track</string>
+    <string name="widget_previous">Previous track</string>
 </resources>

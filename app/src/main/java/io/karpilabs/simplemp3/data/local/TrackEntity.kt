@@ -13,7 +13,8 @@ import androidx.room.PrimaryKey
         Index(value = ["source"]),
         Index(value = ["jellyfinId"], unique = true),
         Index(value = ["storageState"]),
-        Index(value = ["size"])
+        Index(value = ["size"]),
+        Index(value = ["folderPath"])
     ]
 )
 data class TrackEntity(
@@ -30,6 +31,11 @@ data class TrackEntity(
     val year: Int = 0,
     val trackNumber: Int = 0,
     val genre: String? = null,
+    /**
+     * Parent folder for browsing (MediaStore RELATIVE_PATH, no trailing slash).
+     * Example: "Music/Rock" or "Download/Audio". Empty when unknown.
+     */
+    val folderPath: String = "",
     val size: Long = 0L,
     /** local | jellyfin | youtube | lan */
     val source: String = SOURCE_LOCAL,

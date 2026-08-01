@@ -13,8 +13,11 @@ object Routes {
     const val PLAYLIST_DETAIL = "playlist/{playlistId}"
     const val ALBUM_DETAIL = "album/{albumName}"
     const val ARTIST_DETAIL = "artist/{artistName}"
+    const val FOLDER_DETAIL = "folder/{folderPath}"
+    const val LIBRARY_FOLDERS = "library_folders"
 
     fun playlistDetail(id: Long) = "playlist/$id"
     fun albumDetail(name: String) = "album/${android.net.Uri.encode(name)}"
     fun artistDetail(name: String) = "artist/${android.net.Uri.encode(name)}"
+    fun folderDetail(path: String) = "folder/${android.net.Uri.encode(path)}"
 }

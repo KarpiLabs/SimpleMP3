@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.karpilabs.simplemp3.data.local.AlbumRow
+import io.karpilabs.simplemp3.data.local.FolderBrowser
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.player.PlayerUiState
 import io.karpilabs.simplemp3.ui.components.AlbumArt
@@ -58,17 +59,19 @@ fun LibraryScreen(
     tracks: List<TrackEntity>,
     albums: List<AlbumRow>,
     artists: List<AlbumRow>,
+    rootFolders: List<FolderBrowser.FolderEntry>,
     filter: String,
     playerState: PlayerUiState,
     onFilterChange: (String) -> Unit,
     onPlayTrack: (TrackEntity, List<TrackEntity>) -> Unit,
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
+    onOpenFolder: (String) -> Unit,
     onToggleFavorite: (Long) -> Unit,
     onAddToPlaylist: (TrackEntity) -> Unit = {}
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    val tabs = listOf("Songs", "Albums", "Artists")
+    val tabs = listOf("Songs", "Albums", "Artists", "Folders")
     val q = filter.trim()
 
     // In-memory filter is instant (no Room round-trip) once the list is warm.
@@ -89,6 +92,12 @@ fun LibraryScreen(
     val filteredArtists = remember(artists, q) {
         if (q.isEmpty()) artists
         else artists.filter { it.name.contains(q, true) }
+    }
+    val filteredFolders = remember(rootFolders, q) {
+        if (q.isEmpty()) rootFolders
+        else rootFolders.filter {
+            it.name.contains(q, true) || it.path.contains(q, true)
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -188,8 +197,39 @@ fun LibraryScreen(
                     )
                 }
             }
+            3 -> LazyColumn(contentPadding = PaddingValues(bottom = 120.dp)) {
+                if (filteredFolders.isEmpty()) {
+                    item {
+                        Text(
+                            text = if (q.isNotEmpty()) {
+                                "No folders match “$q”"
+                            } else {
+                                "No folders yet — rescan the library from Home"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextMuted,
+                            modifier = Modifier.padding(24.dp)
+                        )
+                    }
+                } else {
+                    items(filteredFolders, key = { it.path }, contentType = { "folder" }) { folder ->
+                        FolderRow(
+                            name = folder.name,
+                            subtitle = buildRootFolderSubtitle(folder),
+                            onClick = { onOpenFolder(folder.path) }
+                        )
+                    }
+                }
+            }
         }
     }
+}
+
+private fun buildRootFolderSubtitle(folder: FolderBrowser.FolderEntry): String {
+    val parts = mutableListOf<String>()
+    if (folder.totalTrackCount > 0) parts += formatTrackCount(folder.totalTrackCount)
+    if (folder.hasSubfolders) parts += "subfolders"
+    return parts.joinToString(" · ").ifBlank { folder.path }
 }
 
 @Composable

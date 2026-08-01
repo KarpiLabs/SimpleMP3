@@ -58,6 +58,21 @@
             </intent-filter>
         </service>
 
+        <receiver
+            android:name=".widget.PlayerWidgetProvider"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="io.karpilabs.simplemp3.widget.PLAY_PAUSE" />
+                <action android:name="io.karpilabs.simplemp3.widget.SKIP_NEXT" />
+                <action android:name="io.karpilabs.simplemp3.widget.SKIP_PREVIOUS" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/player_widget_info" />
+        </receiver>
+
         <!--
           Application implements Configuration.Provider (HiltWorkerFactory),
           so remove the default WorkManager auto-initializer from AndroidX Startup.

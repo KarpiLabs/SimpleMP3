@@ -164,6 +164,49 @@ interface TrackDao {
 
     @Query(
         """
+        SELECT DISTINCT folderPath FROM tracks
+        WHERE folderPath IS NOT NULL AND folderPath != ''
+        ORDER BY folderPath COLLATE NOCASE ASC
+        """
+    )
+    fun getDistinctFolderPaths(): Flow<List<String>>
+
+    @Query(
+        """
+        SELECT DISTINCT folderPath FROM tracks
+        WHERE folderPath IS NOT NULL AND folderPath != ''
+        ORDER BY folderPath COLLATE NOCASE ASC
+        """
+    )
+    suspend fun getDistinctFolderPathsOnce(): List<String>
+
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE folderPath = :folderPath
+        ORDER BY title COLLATE NOCASE ASC
+        """
+    )
+    fun getTracksByFolder(folderPath: String): Flow<List<TrackEntity>>
+
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE folderPath = :folderPath
+        ORDER BY title COLLATE NOCASE ASC
+        """
+    )
+    suspend fun getTracksByFolderOnce(folderPath: String): List<TrackEntity>
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM tracks WHERE folderPath = :folderPath
+        """
+    )
+    suspend fun countTracksInFolder(folderPath: String): Int
+
+    @Query(
+        """
         SELECT * FROM tracks
         WHERE source IN ('jellyfin', 'youtube', 'lan')
           AND size >= :minSize
