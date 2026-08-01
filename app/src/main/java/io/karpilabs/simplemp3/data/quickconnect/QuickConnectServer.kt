@@ -134,7 +134,7 @@ class QuickConnectServer @Inject constructor(
 
     private fun generateAccessCode(): String {
         val n = SecureRandom().nextInt(1_000_000)
-        return "%06d".format(n)
+        return n.toString().padStart(6, '0')
     }
 
     companion object {
@@ -532,11 +532,11 @@ class QuickConnectServer @Inject constructor(
         }
 
         /**
-         * NanoHTTPD stores non-multipart bodies as a temp file path under `postData`.
+         * NanoHTTPD stores raw (non-multipart, non-form-urlencoded) POST bodies as the
+         * literal content string under `postData` — not a temp file path.
          */
         private fun readJsonBody(files: Map<String, String>): JSONObject? {
-            val path = files["postData"] ?: return null
-            val text = runCatching { File(path).readText() }.getOrNull() ?: return null
+            val text = files["postData"] ?: return null
             return runCatching { JSONObject(text) }.getOrNull()
         }
 

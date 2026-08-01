@@ -229,22 +229,6 @@ fun HomeScreen(
             }
         }
 
-        item {
-            FeatureCard(
-                icon = Icons.Rounded.DirectionsCar,
-                title = if (driveMode) "Drive mode · on" else "Drive mode",
-                subtitle = "Big controls · auto-resumes last session when enabled",
-                brush = Brush.horizontalGradient(
-                    listOf(
-                        AccentTeal.copy(alpha = 0.22f),
-                        NightElevated,
-                        NightCard
-                    )
-                ),
-                onClick = onToggleDriveMode
-            )
-        }
-
         if (trackCount == 0 && !isScanning) {
             item {
                 Column(
