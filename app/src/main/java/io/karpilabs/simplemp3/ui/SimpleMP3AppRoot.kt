@@ -91,6 +91,7 @@ fun SimpleMP3AppRoot(
     val largeFileColdPack by viewModel.largeFileColdPack.collectAsStateWithLifecycle()
     val wifiOnlyDownloads by viewModel.wifiOnlyDownloads.collectAsStateWithLifecycle()
     val resume by viewModel.resumeSnapshot.collectAsStateWithLifecycle()
+    val resumeEnabled by viewModel.resumeEnabled.collectAsStateWithLifecycle()
 
     val visiblePlaylists = remember(playlists, jellyfinEnabled) {
         if (jellyfinEnabled) playlists
@@ -196,7 +197,7 @@ fun SimpleMP3AppRoot(
                         isScanning = isScanning,
                         playerState = playerState,
                         driveMode = driveMode,
-                        resume = resume,
+                        resume = if (resumeEnabled) resume else null,
                         onScan = {
                             if (permissionState.status.isGranted) viewModel.scanLibrary(force = true)
                             else permissionState.launchPermissionRequest()
@@ -229,6 +230,7 @@ fun SimpleMP3AppRoot(
                         jellyfinEnabled = jellyfinEnabled,
                         autoDriveModeOnCar = autoDriveModeOnCar,
                         autoResumeOnDrive = autoResumeOnDrive,
+                        resumeEnabled = resumeEnabled,
                         wifiOnlyDownloads = wifiOnlyDownloads,
                         largeFileOptimize = largeFileOptimize,
                         largeFileColdPack = largeFileColdPack,
@@ -236,6 +238,7 @@ fun SimpleMP3AppRoot(
                         onJellyfinEnabledChange = viewModel::setJellyfinEnabled,
                         onAutoDriveModeOnCarChange = viewModel::setAutoDriveModeOnCar,
                         onAutoResumeOnDriveChange = viewModel::setAutoResumeOnDrive,
+                        onResumeEnabledChange = viewModel::setResumeEnabled,
                         onWifiOnlyDownloadsChange = viewModel::setWifiOnlyDownloads,
                         onLargeFileOptimizeChange = viewModel::setLargeFileOptimize,
                         onLargeFileColdPackChange = viewModel::setLargeFileColdPack,

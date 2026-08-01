@@ -81,6 +81,9 @@ class MusicViewModel @Inject constructor(
     val resumeSnapshot: StateFlow<ResumeSnapshot?> = appPreferences.resumeFlow
         .stateIn(viewModelScope, share, null)
 
+    val resumeEnabled: StateFlow<Boolean> = appPreferences.resumeEnabledFlow
+        .stateIn(viewModelScope, share, true)
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
@@ -131,6 +134,12 @@ class MusicViewModel @Inject constructor(
     fun setAutoResumeOnDrive(enabled: Boolean) {
         viewModelScope.launch {
             appPreferences.setAutoResumeOnDrive(enabled)
+        }
+    }
+
+    fun setResumeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            appPreferences.setResumeEnabled(enabled)
         }
     }
 

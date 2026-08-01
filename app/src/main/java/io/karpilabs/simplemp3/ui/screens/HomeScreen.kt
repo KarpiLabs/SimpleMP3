@@ -24,20 +24,20 @@ import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +62,7 @@ import io.karpilabs.simplemp3.ui.theme.TextSecondary
 import io.karpilabs.simplemp3.ui.util.formatTrackCount
 import java.util.Calendar
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     playlists: List<PlaylistWithMeta>,
@@ -113,6 +114,11 @@ fun HomeScreen(
         return
     }
 
+    PullToRefreshBox(
+        isRefreshing = isScanning,
+        onRefresh = onScan,
+        modifier = Modifier.fillMaxSize()
+    ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 120.dp)
@@ -152,21 +158,6 @@ fun HomeScreen(
                                 iconColor = AccentTeal
                             )
                         )
-                        IconButton(onClick = onScan, enabled = !isScanning) {
-                            if (isScanning) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(22.dp),
-                                    strokeWidth = 2.dp,
-                                    color = AccentTeal
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Rounded.Refresh,
-                                    contentDescription = "Scan library",
-                                    tint = AccentTeal
-                                )
-                            }
-                        }
                         IconButton(onClick = onOpenSettings) {
                             Icon(
                                 Icons.Rounded.Settings,
@@ -354,6 +345,7 @@ fun HomeScreen(
                 )
             }
         }
+    }
     }
 }
 

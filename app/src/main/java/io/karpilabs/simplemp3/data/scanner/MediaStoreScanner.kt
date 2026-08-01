@@ -77,12 +77,12 @@ class MediaStoreScanner @Inject constructor(
                     id
                 ).toString()
 
-                val artworkUri = if (albumId > 0) {
-                    ContentUris.withAppendedId(
-                        android.net.Uri.parse("content://media/external/audio/albumart"),
-                        albumId
-                    ).toString()
-                } else null
+                // The per-track content URI resolves reliably via ContentResolver.loadThumbnail
+                // (API 29+); the legacy content://media/external/audio/albumart/{id} table is
+                // deprecated under scoped storage and often fails for a regular app's resolver
+                // even though privileged system loaders (e.g. the media notification) still
+                // read it — that mismatch is why art showed in the notification but not in-app.
+                val artworkUri = contentUri
 
                 tracks += TrackEntity(
                     id = id,

@@ -9,6 +9,7 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
 import dagger.hilt.android.HiltAndroidApp
+import io.karpilabs.simplemp3.data.scanner.AudioThumbnailFetcher
 import io.karpilabs.simplemp3.data.storage.StorageMaintenanceWorker
 import javax.inject.Inject
 
@@ -32,6 +33,9 @@ class SimpleMP3App : Application(), ImageLoaderFactory, Configuration.Provider {
         return ImageLoader.Builder(this)
             .crossfade(true)
             .crossfade(120)
+            .components {
+                add(AudioThumbnailFetcher.Factory(this@SimpleMP3App))
+            }
             .memoryCache {
                 MemoryCache.Builder(this)
                     .maxSizePercent(0.22)

@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -46,6 +47,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -78,6 +80,7 @@ import io.karpilabs.simplemp3.ui.util.formatTrackCount
 import io.karpilabs.simplemp3.ui.viewmodel.BrowseMode
 import io.karpilabs.simplemp3.ui.viewmodel.JellyfinUiState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JellyfinScreen(
     session: JellyfinSession?,
@@ -137,11 +140,6 @@ fun JellyfinScreen(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            if (session != null) {
-                IconButton(onClick = onRefresh, enabled = !ui.isLoading && !progress.isActive) {
-                    Icon(Icons.Rounded.Refresh, contentDescription = "Refresh", tint = AccentTeal)
-                }
-            }
         }
 
         AnimatedVisibility(visible = progress.isActive || progress.phase == "Done" || progress.error != null) {
@@ -159,27 +157,33 @@ fun JellyfinScreen(
                 onDiscover = onDiscover
             )
         } else {
-            ConnectedContent(
-                ui = ui,
-                progress = progress,
-                offlineTracks = offlineTracks,
-                offlineCount = offlineCount,
-                onLogout = onLogout,
-                onBrowseMode = onBrowseMode,
-                onOpenAlbum = onOpenAlbum,
-                onCloseAlbum = onCloseAlbum,
-                onToggleSelect = onToggleSelect,
-                onSelectAll = onSelectAll,
-                onSyncSelected = onSyncSelected,
-                onSyncAlbum = onSyncAlbum,
-                onSyncAll = onSyncAll,
-                onImportPlaylist = onImportPlaylist,
-                onImportPlaylistNow = onImportPlaylistNow,
-                onWifiOnlyChange = onWifiOnlyChange,
-                onRemoveOffline = onRemoveOffline,
-                onClearOffline = onClearOffline,
-                onPlayOfflineTrack = onPlayOfflineTrack
-            )
+            PullToRefreshBox(
+                isRefreshing = ui.isLoading,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                ConnectedContent(
+                    ui = ui,
+                    progress = progress,
+                    offlineTracks = offlineTracks,
+                    offlineCount = offlineCount,
+                    onLogout = onLogout,
+                    onBrowseMode = onBrowseMode,
+                    onOpenAlbum = onOpenAlbum,
+                    onCloseAlbum = onCloseAlbum,
+                    onToggleSelect = onToggleSelect,
+                    onSelectAll = onSelectAll,
+                    onSyncSelected = onSyncSelected,
+                    onSyncAlbum = onSyncAlbum,
+                    onSyncAll = onSyncAll,
+                    onImportPlaylist = onImportPlaylist,
+                    onImportPlaylistNow = onImportPlaylistNow,
+                    onWifiOnlyChange = onWifiOnlyChange,
+                    onRemoveOffline = onRemoveOffline,
+                    onClearOffline = onClearOffline,
+                    onPlayOfflineTrack = onPlayOfflineTrack
+                )
+            }
         }
     }
 }

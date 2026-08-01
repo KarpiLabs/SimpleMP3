@@ -51,6 +51,8 @@ class AppPreferences @Inject constructor(
          * When false, Jellyfin UI entry points are hidden.
          */
         val JELLYFIN_ENABLED = booleanPreferencesKey("jellyfin_enabled")
+        /** "Pick up where you left off" — show/use the resume snapshot outside Drive mode. */
+        val RESUME_ENABLED = booleanPreferencesKey("resume_enabled")
         val RESUME_IDS = stringPreferencesKey("resume_track_ids")
         val RESUME_INDEX = intPreferencesKey("resume_index")
         val RESUME_POSITION = longPreferencesKey("resume_position_ms")
@@ -145,6 +147,17 @@ class AppPreferences @Inject constructor(
     }
 
     suspend fun isJellyfinEnabled(): Boolean = jellyfinEnabledFlow.first()
+
+    /** Default on: offer "Pick up where you left off" on Home. */
+    val resumeEnabledFlow: Flow<Boolean> = context.appDataStore.data.map {
+        it[Keys.RESUME_ENABLED] ?: true
+    }
+
+    suspend fun setResumeEnabled(enabled: Boolean) {
+        context.appDataStore.edit { it[Keys.RESUME_ENABLED] = enabled }
+    }
+
+    suspend fun isResumeEnabled(): Boolean = resumeEnabledFlow.first()
 
     val resumeFlow: Flow<ResumeSnapshot?> = context.appDataStore.data.map { prefs ->
         val idsRaw = prefs[Keys.RESUME_IDS].orEmpty()

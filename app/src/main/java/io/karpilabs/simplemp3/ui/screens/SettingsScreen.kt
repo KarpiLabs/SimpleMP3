@@ -53,6 +53,7 @@ fun SettingsScreen(
     jellyfinEnabled: Boolean,
     autoDriveModeOnCar: Boolean,
     autoResumeOnDrive: Boolean,
+    resumeEnabled: Boolean,
     wifiOnlyDownloads: Boolean,
     largeFileOptimize: Boolean,
     largeFileColdPack: Boolean,
@@ -60,6 +61,7 @@ fun SettingsScreen(
     onJellyfinEnabledChange: (Boolean) -> Unit,
     onAutoDriveModeOnCarChange: (Boolean) -> Unit,
     onAutoResumeOnDriveChange: (Boolean) -> Unit,
+    onResumeEnabledChange: (Boolean) -> Unit,
     onWifiOnlyDownloadsChange: (Boolean) -> Unit,
     onLargeFileOptimizeChange: (Boolean) -> Unit,
     onLargeFileColdPackChange: (Boolean) -> Unit,
@@ -154,6 +156,23 @@ fun SettingsScreen(
                     title = "Quick Connect",
                     subtitle = "Host a temporary LAN portal to upload & manage playlists",
                     onClick = onOpenQuickConnect
+                )
+            }
+
+            item {
+                SettingsSectionHeader("Playback")
+            }
+            item {
+                SettingsSwitchRow(
+                    icon = Icons.Rounded.PlayCircle,
+                    title = "Pick up where you left off",
+                    subtitle = if (resumeEnabled) {
+                        "Show a resume prompt for your last session on Home"
+                    } else {
+                        "Home always starts fresh"
+                    },
+                    checked = resumeEnabled,
+                    onCheckedChange = onResumeEnabledChange
                 )
             }
 

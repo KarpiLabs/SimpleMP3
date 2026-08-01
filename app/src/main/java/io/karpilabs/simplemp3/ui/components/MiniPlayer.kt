@@ -26,7 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.karpilabs.simplemp3.player.PlayerUiState
@@ -54,15 +53,7 @@ fun MiniPlayer(
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.horizontalGradient(
-                    listOf(
-                        NightElevated,
-                        AccentTeal.copy(alpha = 0.12f),
-                        NightCard
-                    )
-                )
-            )
+            .background(NightElevated)
             .clickable(onClick = onExpand)
     ) {
         LinearProgressIndicator(
