@@ -17,8 +17,6 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -76,7 +74,6 @@ fun SimpleMP3AppRoot(
     viewModel: MusicViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     // Only collect what Home + chrome need — keeps first frame light.
     val playerState by viewModel.playerState.collectAsStateWithLifecycle()
@@ -94,7 +91,6 @@ fun SimpleMP3AppRoot(
     val largeFileColdPack by viewModel.largeFileColdPack.collectAsStateWithLifecycle()
     val wifiOnlyDownloads by viewModel.wifiOnlyDownloads.collectAsStateWithLifecycle()
     val resume by viewModel.resumeSnapshot.collectAsStateWithLifecycle()
-    val snackbar by viewModel.snackbar.collectAsStateWithLifecycle()
 
     val visiblePlaylists = remember(playlists, jellyfinEnabled) {
         if (jellyfinEnabled) playlists
@@ -126,13 +122,6 @@ fun SimpleMP3AppRoot(
         }
     }
 
-    LaunchedEffect(snackbar) {
-        snackbar?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.consumeSnackbar()
-        }
-    }
-
     val tabs = listOf(
         TabItem(Routes.HOME, "Home", Icons.Rounded.Home),
         TabItem(Routes.SEARCH, "Search", Icons.Rounded.Search),
@@ -154,7 +143,6 @@ fun SimpleMP3AppRoot(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
@@ -267,12 +255,6 @@ fun SimpleMP3AppRoot(
                     val offlineTracks by jfVm.offlineTracks.collectAsStateWithLifecycle()
                     val offlineCount by jfVm.offlineCount.collectAsStateWithLifecycle()
 
-                    LaunchedEffect(jfUi.message) {
-                        jfUi.message?.let {
-                            snackbarHostState.showSnackbar(it)
-                            jfVm.consumeMessage()
-                        }
-                    }
                     LaunchedEffect(session?.userId) {
                         if (session != null) jfVm.refreshRemote()
                     }
@@ -311,13 +293,6 @@ fun SimpleMP3AppRoot(
                     val ytUi by ytVm.ui.collectAsStateWithLifecycle()
                     val ytProgress by ytVm.progress.collectAsStateWithLifecycle()
                     val ytDownloads by ytVm.downloads.collectAsStateWithLifecycle()
-
-                    LaunchedEffect(ytUi.message) {
-                        ytUi.message?.let {
-                            snackbarHostState.showSnackbar(it)
-                            ytVm.consumeMessage()
-                        }
-                    }
 
                     YoutubeScreen(
                         ui = ytUi,

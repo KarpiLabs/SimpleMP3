@@ -57,6 +57,15 @@ android {
     }
 }
 
+tasks.withType<JavaCompile>().configureEach {
+    // hiltJavaCompile aggregates every KSP/kapt processor jar on the project (including
+    // moshi-kotlin-codegen's legacy kapt-era processor, kept only for back-compat) onto its
+    // own javac classpath, which trips that processor's static deprecation notice even though
+    // this project is fully on KSP already (no kapt plugin/deps anywhere). Upstream issue:
+    // https://github.com/google/dagger/issues/4116 — no real fix, so just silence the noise.
+    options.compilerArgs.add("-nowarn")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

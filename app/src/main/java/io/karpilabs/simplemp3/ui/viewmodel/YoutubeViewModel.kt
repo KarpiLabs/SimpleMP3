@@ -17,8 +17,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class YoutubeUiState(
-    val urlInput: String = "",
-    val message: String? = null
+    val urlInput: String = ""
 )
 
 @HiltViewModel
@@ -51,31 +50,17 @@ class YoutubeViewModel @Inject constructor(
 
     fun download() {
         val url = _ui.value.urlInput.trim()
-        if (url.isBlank()) {
-            _ui.value = _ui.value.copy(message = "Paste a YouTube link first")
-            return
-        }
+        if (url.isBlank()) return
         viewModelScope.launch {
-            downloadManager.download(url).fold(
-                onSuccess = { track ->
-                    _ui.value = _ui.value.copy(
-                        urlInput = "",
-                        message = "Saved · ${track.title}"
-                    )
-                },
-                onFailure = { e ->
-                    _ui.value = _ui.value.copy(
-                        message = e.message ?: "Download failed"
-                    )
-                }
-            )
+            downloadManager.download(url).onSuccess {
+                _ui.value = _ui.value.copy(urlInput = "")
+            }
         }
     }
 
     fun remove(trackId: Long) {
         viewModelScope.launch {
             downloadManager.removeDownload(trackId)
-            _ui.value = _ui.value.copy(message = "Removed from library")
         }
     }
 
@@ -84,25 +69,13 @@ class YoutubeViewModel @Inject constructor(
             val current = downloads.value.firstOrNull { it.id == trackId }
                 ?: repository.getTrack(trackId)
                 ?: return@launch
-            val updated = storageManager.setNeverCompress(trackId, !current.neverCompress)
-            _ui.value = _ui.value.copy(
-                message = when {
-                    updated == null -> "Couldn’t update"
-                    updated.neverCompress -> "Starred · never compress"
-                    else -> "Unstarred · compression allowed"
-                }
-            )
+            storageManager.setNeverCompress(trackId, !current.neverCompress)
         }
     }
 
     fun clearAll() {
         viewModelScope.launch {
-            val n = downloadManager.clearAll()
-            _ui.value = _ui.value.copy(message = "Cleared $n YouTube downloads")
+            downloadManager.clearAll()
         }
-    }
-
-    fun consumeMessage() {
-        _ui.value = _ui.value.copy(message = null)
     }
 }

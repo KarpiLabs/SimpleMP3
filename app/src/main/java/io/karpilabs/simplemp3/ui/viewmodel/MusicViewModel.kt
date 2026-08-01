@@ -92,9 +92,6 @@ class MusicViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, share, emptyList())
 
-    private val _snackbar = MutableStateFlow<String?>(null)
-    val snackbar: StateFlow<String?> = _snackbar.asStateFlow()
-
     private val _libraryFilter = MutableStateFlow("")
     val libraryFilter: StateFlow<String> = _libraryFilter.asStateFlow()
 
@@ -122,81 +119,42 @@ class MusicViewModel @Inject constructor(
                     playerConnection.resumeLastSession(autoPlay = true)
                 }
             }
-            _snackbar.value = if (enabled) {
-                if (appPreferences.isAutoResumeOnDrive()) {
-                    "Drive mode on · resuming last session"
-                } else {
-                    "Drive mode on"
-                }
-            } else {
-                "Drive mode off"
-            }
         }
     }
 
     fun setAutoDriveModeOnCar(enabled: Boolean) {
         viewModelScope.launch {
             appPreferences.setAutoDriveModeOnCar(enabled)
-            _snackbar.value = if (enabled) {
-                "Drive mode will turn on when the car connects"
-            } else {
-                "Car connect won’t change Drive mode"
-            }
         }
     }
 
     fun setAutoResumeOnDrive(enabled: Boolean) {
         viewModelScope.launch {
             appPreferences.setAutoResumeOnDrive(enabled)
-            _snackbar.value = if (enabled) {
-                "Last session resumes when you start driving"
-            } else {
-                "Won’t auto-play when Drive mode starts"
-            }
         }
     }
 
     fun setLargeFileOptimize(enabled: Boolean) {
         viewModelScope.launch {
             appPreferences.setLargeFileOptimize(enabled)
-            _snackbar.value = if (enabled) {
-                "Large files will re-encode leaner when idle"
-            } else {
-                "Large-file re-encode off"
-            }
         }
     }
 
     fun setLargeFileColdPack(enabled: Boolean) {
         viewModelScope.launch {
             appPreferences.setLargeFileColdPack(enabled)
-            _snackbar.value = if (enabled) {
-                "Large idle files will gzip until next play"
-            } else {
-                "Cold storage packing off"
-            }
         }
     }
 
     fun setJellyfinEnabled(enabled: Boolean) {
         viewModelScope.launch {
             appPreferences.setJellyfinEnabled(enabled)
-            _snackbar.value = if (enabled) {
-                "Jellyfin enabled — open it from Home"
-            } else {
-                "Jellyfin hidden"
-            }
         }
     }
 
     fun setWifiOnlyDownloads(enabled: Boolean) {
         viewModelScope.launch {
             appPreferences.setWifiOnlyDownloads(enabled)
-            _snackbar.value = if (enabled) {
-                "Downloads wait for Wi‑Fi"
-            } else {
-                "Downloads may use mobile data"
-            }
         }
     }
 
@@ -208,22 +166,8 @@ class MusicViewModel @Inject constructor(
 
     fun scanLibrary(force: Boolean = true) {
         viewModelScope.launch {
-            val count = repository.scanLibrary(force = force)
-            val jf = if (jellyfinEnabled.value) jellyfinCount.value else 0
-            _snackbar.value = when {
-                count == 0 -> if (jellyfinEnabled.value) {
-                    "No music found — try Jellyfin sync"
-                } else {
-                    "No music found — scan local files or add downloads"
-                }
-                jf > 0 -> "Library ready · $count tracks ($jf offline from Jellyfin)"
-                else -> "Library ready · $count tracks"
-            }
+            repository.scanLibrary(force = force)
         }
-    }
-
-    fun consumeSnackbar() {
-        _snackbar.value = null
     }
 
     fun playTrack(track: TrackEntity, queue: List<TrackEntity> = tracks.value) {
@@ -237,17 +181,14 @@ class MusicViewModel @Inject constructor(
 
     fun playNext(track: TrackEntity) {
         playerConnection.playNext(track)
-        _snackbar.value = "Playing next · ${track.title}"
     }
 
     fun addToQueue(track: TrackEntity) {
         playerConnection.addToQueue(track)
-        _snackbar.value = "Queued · ${track.title}"
     }
 
     fun resumeLastSession(autoPlay: Boolean = true) {
         playerConnection.resumeLastSession(autoPlay)
-        _snackbar.value = if (autoPlay) "Resuming where you left off" else "Session restored"
     }
 
     fun playPlaylist(playlistId: Long) {
@@ -267,13 +208,11 @@ class MusicViewModel @Inject constructor(
     fun seekToQueueIndex(index: Int) = playerConnection.seekToQueueIndex(index)
     fun setSleepTimer(minutes: Int) {
         playerConnection.setSleepTimer(minutes)
-        _snackbar.value = if (minutes > 0) "Sleep timer · $minutes min" else "Sleep timer off"
     }
 
     fun createPlaylist(name: String, onCreated: (Long) -> Unit = {}) {
         viewModelScope.launch {
             val id = repository.createPlaylist(name)
-            _snackbar.value = "Playlist created"
             onCreated(id)
         }
     }
@@ -285,21 +224,18 @@ class MusicViewModel @Inject constructor(
     fun deletePlaylist(id: Long) {
         viewModelScope.launch {
             repository.deletePlaylist(id)
-            _snackbar.value = "Playlist deleted"
         }
     }
 
     fun addToPlaylist(playlistId: Long, trackId: Long) {
         viewModelScope.launch {
             repository.addToPlaylist(playlistId, trackId)
-            _snackbar.value = "Added to playlist"
         }
     }
 
     fun removeFromPlaylist(playlistId: Long, trackId: Long) {
         viewModelScope.launch {
             repository.removeFromPlaylist(playlistId, trackId)
-            _snackbar.value = "Removed from playlist"
         }
     }
 
@@ -320,8 +256,7 @@ class MusicViewModel @Inject constructor(
 
     fun toggleFavorite(trackId: Long) {
         viewModelScope.launch {
-            val liked = repository.toggleFavorite(trackId)
-            _snackbar.value = if (liked) "Added to Liked Songs" else "Removed from Liked Songs"
+            repository.toggleFavorite(trackId)
         }
     }
 
@@ -329,16 +264,8 @@ class MusicViewModel @Inject constructor(
     fun toggleNeverCompress(trackId: Long) {
         viewModelScope.launch {
             val current = repository.getTrack(trackId) ?: return@launch
-            if (!current.isAppOwned) {
-                _snackbar.value = "Never compress only applies to offline downloads"
-                return@launch
-            }
-            val updated = storageManager.setNeverCompress(trackId, !current.neverCompress)
-            _snackbar.value = when {
-                updated == null -> "Couldn’t update"
-                updated.neverCompress -> "Starred · never compress “${updated.title}”"
-                else -> "Unstarred · compression allowed again"
-            }
+            if (!current.isAppOwned) return@launch
+            storageManager.setNeverCompress(trackId, !current.neverCompress)
         }
     }
 

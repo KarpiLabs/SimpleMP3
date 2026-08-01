@@ -30,7 +30,6 @@ data class JellyfinUiState(
     val browseMode: BrowseMode = BrowseMode.ALBUMS,
     val albumTracks: List<JellyfinItem> = emptyList(),
     val openAlbum: JellyfinItem? = null,
-    val message: String? = null,
     val isDiscovering: Boolean = false,
     val discoveredServers: List<DiscoveredJellyfinServer> = emptyList(),
     val discoveryAttempted: Boolean = false,
@@ -81,10 +80,7 @@ class JellyfinViewModel @Inject constructor(
     fun setWifiOnly(enabled: Boolean) {
         viewModelScope.launch {
             appPreferences.setWifiOnlyDownloads(enabled)
-            _ui.value = _ui.value.copy(
-                wifiOnly = enabled,
-                message = if (enabled) "Downloads require Wi‑Fi" else "Downloads allowed on cellular"
-            )
+            _ui.value = _ui.value.copy(wifiOnly = enabled)
         }
     }
 
@@ -112,7 +108,7 @@ class JellyfinViewModel @Inject constructor(
             val result = syncManager.login(serverUrl, username, password)
             result.fold(
                 onSuccess = {
-                    _ui.value = _ui.value.copy(isLoading = false, message = "Connected as ${it.userName}")
+                    _ui.value = _ui.value.copy(isLoading = false)
                     refreshRemote()
                 },
                 onFailure = {
@@ -129,7 +125,6 @@ class JellyfinViewModel @Inject constructor(
         viewModelScope.launch {
             syncManager.logout()
             _ui.value = JellyfinUiState(
-                message = "Disconnected",
                 wifiOnly = appPreferences.isWifiOnlyDownloads()
             )
         }
@@ -210,41 +205,23 @@ class JellyfinViewModel @Inject constructor(
                 }
                 else -> emptyList()
             }
-            if (items.isEmpty()) {
-                _ui.value = ui.copy(message = "Nothing to download — open an album or switch to Tracks")
-                return@launch
-            }
+            if (items.isEmpty()) return@launch
             // Background + Wi‑Fi constraint when enabled
             downloadScheduler.enqueueItemIds(items.map { it.id })
-            _ui.value = _ui.value.copy(
-                message = if (ui.wifiOnly) {
-                    "Queued ${items.size} tracks — downloads on Wi‑Fi"
-                } else {
-                    "Queued ${items.size} tracks for background download"
-                },
-                selectedIds = emptySet()
-            )
+            _ui.value = _ui.value.copy(selectedIds = emptySet())
         }
     }
 
     fun syncAlbum(albumId: String) {
         viewModelScope.launch {
             // Prefer immediate for single album when user taps download icon
-            val result = syncManager.syncAlbum(albumId)
-            _ui.value = _ui.value.copy(
-                message = result.getOrNull()?.let { "Synced $it album tracks offline" }
-                    ?: result.exceptionOrNull()?.message
-            )
+            syncManager.syncAlbum(albumId)
         }
     }
 
     fun syncAll(max: Int = 200) {
         viewModelScope.launch {
-            val result = syncManager.syncAllMusic(max)
-            _ui.value = _ui.value.copy(
-                message = result.getOrNull()?.let { "Synced $it tracks offline" }
-                    ?: result.exceptionOrNull()?.message
-            )
+            syncManager.syncAllMusic(max)
         }
     }
 
@@ -254,43 +231,26 @@ class JellyfinViewModel @Inject constructor(
                 playlistId = playlist.id,
                 playlistName = playlist.name.orEmpty().ifBlank { "Playlist" }
             )
-            _ui.value = _ui.value.copy(
-                message = if (_ui.value.wifiOnly) {
-                    "Import queued for Wi‑Fi · ${playlist.name}"
-                } else {
-                    "Importing ${playlist.name} in the background"
-                }
-            )
         }
     }
 
     fun importPlaylistNow(playlist: JellyfinItem) {
         viewModelScope.launch {
             _ui.value = _ui.value.copy(isLoading = true)
-            val result = syncManager.importPlaylist(playlist)
-            _ui.value = _ui.value.copy(
-                isLoading = false,
-                message = result.getOrNull()?.let { "Imported playlist · offline & ready for Auto" }
-                    ?: result.exceptionOrNull()?.message
-            )
+            syncManager.importPlaylist(playlist)
+            _ui.value = _ui.value.copy(isLoading = false)
         }
     }
 
     fun removeOffline(trackId: Long) {
         viewModelScope.launch {
             syncManager.removeOfflineTrack(trackId)
-            _ui.value = _ui.value.copy(message = "Removed offline track")
         }
     }
 
     fun clearOffline() {
         viewModelScope.launch {
-            val n = syncManager.clearAllOffline()
-            _ui.value = _ui.value.copy(message = "Cleared $n offline Jellyfin tracks")
+            syncManager.clearAllOffline()
         }
-    }
-
-    fun consumeMessage() {
-        _ui.value = _ui.value.copy(message = null, error = null)
     }
 }
