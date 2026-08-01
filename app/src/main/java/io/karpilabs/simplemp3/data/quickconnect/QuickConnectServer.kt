@@ -11,10 +11,13 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
+import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -140,6 +143,7 @@ class QuickConnectServer @Inject constructor(
     companion object {
         const val DEFAULT_PORT = 8765
         const val COOKIE_NAME = "sm3_qc"
+        const val MAX_AUTH_ATTEMPTS = 5
     }
 
     private class HttpEngine(
@@ -152,6 +156,11 @@ class QuickConnectServer @Inject constructor(
     ) : NanoHTTPD(port) {
 
         private val started = AtomicBoolean(false)
+
+        // Brute-force protection on /api/auth: the access code is only 6 digits
+        // (1,000,000 combinations), so failed attempts must be throttled.
+        private val failedAttempts = AtomicInteger(0)
+        private val lockedUntilMs = AtomicLong(0)
 
         override fun start(timeout: Int, daemon: Boolean) {
             super.start(timeout, daemon)
@@ -269,14 +278,31 @@ class QuickConnectServer @Inject constructor(
         }
 
         private fun handleAuth(session: IHTTPSession, files: Map<String, String>): Response {
+            val now = System.currentTimeMillis()
+            val lockedUntil = lockedUntilMs.get()
+            if (now < lockedUntil) {
+                val waitSec = ((lockedUntil - now) / 1000).coerceAtLeast(1)
+                return jsonError(
+                    Response.Status.TOO_MANY_REQUESTS,
+                    "Too many attempts — try again in ${waitSec}s"
+                )
+            }
+
             val body = session.parms["code"]
                 ?.takeIf { it.isNotBlank() }
                 ?: readJsonBody(files)?.optString("code")
                 ?: ""
-            if (body.trim() != accessCode) {
+            if (!constantTimeEquals(body.trim(), accessCode)) {
+                val attempts = failedAttempts.incrementAndGet()
                 onEvent("Failed access code attempt")
+                if (attempts >= MAX_AUTH_ATTEMPTS) {
+                    val lockMs = lockoutDurationMs(attempts)
+                    lockedUntilMs.set(System.currentTimeMillis() + lockMs)
+                }
                 return jsonError(Response.Status.UNAUTHORIZED, "Invalid access code")
             }
+            failedAttempts.set(0)
+            lockedUntilMs.set(0)
             onEvent("Desktop unlocked the portal")
             val res = jsonOk(JSONObject().put("ok", true))
             res.addHeader(
@@ -284,6 +310,13 @@ class QuickConnectServer @Inject constructor(
                 "${COOKIE_NAME}=$sessionToken; Path=/; HttpOnly; SameSite=Strict"
             )
             return res
+        }
+
+        /** Exponential backoff beyond the free-attempt threshold, capped at 5 minutes. */
+        private fun lockoutDurationMs(attempts: Int): Long {
+            val overage = (attempts - MAX_AUTH_ATTEMPTS).coerceAtLeast(0)
+            val seconds = (30L shl overage.coerceAtMost(4)) // 30s, 60s, 120s, 240s, then capped
+            return seconds.coerceAtMost(300L) * 1000L
         }
 
         private fun handleStatus(): Response = runBlocking {
@@ -523,13 +556,19 @@ class QuickConnectServer @Inject constructor(
                 .map { it.trim() }
                 .firstOrNull { it.startsWith("$COOKIE_NAME=") }
                 ?.substringAfter('=')
-            if (fromCookie == sessionToken) return true
+            if (fromCookie != null && constantTimeEquals(fromCookie, sessionToken)) return true
             val header = session.headers["x-access-code"]
-            if (header == accessCode) return true
+            if (header != null && constantTimeEquals(header, accessCode)) return true
             val auth = session.headers["authorization"]
-            if (auth != null && auth.removePrefix("Bearer ").trim() == sessionToken) return true
+            if (auth != null && constantTimeEquals(auth.removePrefix("Bearer ").trim(), sessionToken)) {
+                return true
+            }
             return false
         }
+
+        /** Avoids leaking match-length via early-exit string comparison timing. */
+        private fun constantTimeEquals(a: String, b: String): Boolean =
+            MessageDigest.isEqual(a.toByteArray(Charsets.UTF_8), b.toByteArray(Charsets.UTF_8))
 
         /**
          * NanoHTTPD stores raw (non-multipart, non-form-urlencoded) POST bodies as the
