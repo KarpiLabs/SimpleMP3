@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Compress
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiTethering
@@ -51,12 +52,14 @@ import io.karpilabs.simplemp3.ui.theme.TextSecondary
 fun SettingsScreen(
     jellyfinEnabled: Boolean,
     autoDriveModeOnCar: Boolean,
+    autoResumeOnDrive: Boolean,
     wifiOnlyDownloads: Boolean,
     largeFileOptimize: Boolean,
     largeFileColdPack: Boolean,
     onBack: () -> Unit,
     onJellyfinEnabledChange: (Boolean) -> Unit,
     onAutoDriveModeOnCarChange: (Boolean) -> Unit,
+    onAutoResumeOnDriveChange: (Boolean) -> Unit,
     onWifiOnlyDownloadsChange: (Boolean) -> Unit,
     onLargeFileOptimizeChange: (Boolean) -> Unit,
     onLargeFileColdPackChange: (Boolean) -> Unit,
@@ -168,6 +171,19 @@ fun SettingsScreen(
                     },
                     checked = autoDriveModeOnCar,
                     onCheckedChange = onAutoDriveModeOnCarChange
+                )
+            }
+            item {
+                SettingsSwitchRow(
+                    icon = Icons.Rounded.PlayCircle,
+                    title = "Auto-resume when driving",
+                    subtitle = if (autoResumeOnDrive) {
+                        "Restore last queue & play when the car connects or Drive mode turns on"
+                    } else {
+                        "You’ll start playback manually"
+                    },
+                    checked = autoResumeOnDrive,
+                    onCheckedChange = onAutoResumeOnDriveChange
                 )
             }
 

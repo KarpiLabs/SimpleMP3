@@ -36,6 +36,11 @@ class AppPreferences @Inject constructor(
         val DRIVE_MODE = booleanPreferencesKey("drive_mode")
         /** When Android Auto / Automotive connects, turn Drive Mode on. */
         val AUTO_DRIVE_MODE_ON_CAR = booleanPreferencesKey("auto_drive_mode_on_car")
+        /**
+         * When the car connects or Drive mode is turned on, restore the last
+         * queue + position and start playback (if nothing is already playing).
+         */
+        val AUTO_RESUME_ON_DRIVE = booleanPreferencesKey("auto_resume_on_drive")
         val WIFI_ONLY_DOWNLOADS = booleanPreferencesKey("wifi_only_downloads")
         /** Re-encode very large/high-bitrate app-owned audio to save space. */
         val LARGE_FILE_OPTIMIZE = booleanPreferencesKey("large_file_optimize")
@@ -86,6 +91,17 @@ class AppPreferences @Inject constructor(
     }
 
     suspend fun isAutoDriveModeOnCar(): Boolean = autoDriveModeOnCarFlow.first()
+
+    /** Default on: pick up the last session when driving starts. */
+    val autoResumeOnDriveFlow: Flow<Boolean> = context.appDataStore.data.map {
+        it[Keys.AUTO_RESUME_ON_DRIVE] ?: true
+    }
+
+    suspend fun setAutoResumeOnDrive(enabled: Boolean) {
+        context.appDataStore.edit { it[Keys.AUTO_RESUME_ON_DRIVE] = enabled }
+    }
+
+    suspend fun isAutoResumeOnDrive(): Boolean = autoResumeOnDriveFlow.first()
 
     val wifiOnlyDownloadsFlow: Flow<Boolean> = context.appDataStore.data.map {
         it[Keys.WIFI_ONLY_DOWNLOADS] ?: true

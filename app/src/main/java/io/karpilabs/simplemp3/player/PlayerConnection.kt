@@ -283,9 +283,19 @@ class PlayerConnection @Inject constructor(
 
     fun cancelSleepTimer() = setSleepTimer(0)
 
-    /** Restore last session (queue + position) and optionally auto-play. */
+    /**
+     * Restore last session (queue + position) and optionally auto-play.
+     * If a queue is already loaded and nothing is playing, [autoPlay] continues it
+     * without reloading (handy for Drive mode / car connect).
+     */
     fun resumeLastSession(autoPlay: Boolean = true) {
         scope.launch {
+            val c = controller ?: return@launch
+            // Already have a queue (paused mid-trip) — just continue.
+            if (c.mediaItemCount > 0) {
+                if (autoPlay && !c.isPlaying) c.play()
+                return@launch
+            }
             val snap = appPreferences.getResume() ?: return@launch
             if (!snap.hasSession) return@launch
             val tracks = musicRepository.getTracksByIdsOrdered(snap.trackIds)
@@ -296,7 +306,6 @@ class PlayerConnection @Inject constructor(
             if (ready.isEmpty()) return@launch
             val idx = snap.index.coerceIn(0, ready.lastIndex)
             lastQueueIds = ready.map { it.id }
-            val c = controller ?: return@launch
             val items = withContext(Dispatchers.Default) {
                 MediaItemFactory.fromTracks(ready)
             }

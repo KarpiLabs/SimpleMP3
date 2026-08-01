@@ -233,7 +233,7 @@ fun HomeScreen(
             FeatureCard(
                 icon = Icons.Rounded.DirectionsCar,
                 title = if (driveMode) "Drive mode · on" else "Drive mode",
-                subtitle = "Big controls, resume, and playlists for the road",
+                subtitle = "Big controls · auto-resumes last session when enabled",
                 brush = Brush.horizontalGradient(
                     listOf(
                         AccentTeal.copy(alpha = 0.22f),

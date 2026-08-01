@@ -63,6 +63,9 @@ class MusicViewModel @Inject constructor(
     val autoDriveModeOnCar: StateFlow<Boolean> = appPreferences.autoDriveModeOnCarFlow
         .stateIn(viewModelScope, share, true)
 
+    val autoResumeOnDrive: StateFlow<Boolean> = appPreferences.autoResumeOnDriveFlow
+        .stateIn(viewModelScope, share, true)
+
     val largeFileOptimize: StateFlow<Boolean> = appPreferences.largeFileOptimizeFlow
         .stateIn(viewModelScope, share, true)
 
@@ -113,7 +116,21 @@ class MusicViewModel @Inject constructor(
     fun setDriveMode(enabled: Boolean) {
         viewModelScope.launch {
             appPreferences.setDriveMode(enabled)
-            _snackbar.value = if (enabled) "Drive mode on" else "Drive mode off"
+            if (enabled && appPreferences.isAutoResumeOnDrive()) {
+                // Manual Drive mode: pick up last session if nothing is playing.
+                if (!playerConnection.state.value.isPlaying) {
+                    playerConnection.resumeLastSession(autoPlay = true)
+                }
+            }
+            _snackbar.value = if (enabled) {
+                if (appPreferences.isAutoResumeOnDrive()) {
+                    "Drive mode on · resuming last session"
+                } else {
+                    "Drive mode on"
+                }
+            } else {
+                "Drive mode off"
+            }
         }
     }
 
@@ -124,6 +141,17 @@ class MusicViewModel @Inject constructor(
                 "Drive mode will turn on when the car connects"
             } else {
                 "Car connect won’t change Drive mode"
+            }
+        }
+    }
+
+    fun setAutoResumeOnDrive(enabled: Boolean) {
+        viewModelScope.launch {
+            appPreferences.setAutoResumeOnDrive(enabled)
+            _snackbar.value = if (enabled) {
+                "Last session resumes when you start driving"
+            } else {
+                "Won’t auto-play when Drive mode starts"
             }
         }
     }

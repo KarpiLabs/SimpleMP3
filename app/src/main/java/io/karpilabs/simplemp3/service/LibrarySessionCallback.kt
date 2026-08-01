@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap
  * - Single-track plays expand into a full queue
  * - Search is fully wired (notify + results)
  * - Shuffle play actions on folders
- * - Optional Drive Mode when Auto connects
+ * - Optional Drive Mode + auto-resume when Auto connects
  */
 @OptIn(UnstableApi::class)
 class LibrarySessionCallback(
@@ -46,6 +46,10 @@ class LibrarySessionCallback(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Avoid restarting playback when Auto reconnects several controllers at once. */
+    @Volatile
+    private var lastAutoResumeAtMs: Long = 0L
 
     /** Last browsable folder the Auto client opened — used to expand single-track plays. */
     @Volatile
@@ -60,6 +64,9 @@ class LibrarySessionCallback(
 
         val CUSTOM_SHUFFLE = SessionCommand(ACTION_TOGGLE_SHUFFLE, android.os.Bundle.EMPTY)
         val CUSTOM_REPEAT = SessionCommand(ACTION_CYCLE_REPEAT, android.os.Bundle.EMPTY)
+
+        /** Ignore repeated Auto controller connects within this window. */
+        private const val AUTO_RESUME_COOLDOWN_MS = 45_000L
 
         /** Packages that mean “the car is connected”. */
         private val CAR_PACKAGES = setOf(
@@ -100,11 +107,60 @@ class LibrarySessionCallback(
             pkg.contains("android.car", ignoreCase = true) ||
             pkg.contains("projection", ignoreCase = true)
         if (!looksLikeCar) return
-        scope.launch(Dispatchers.IO) {
-            if (appPreferences.isAutoDriveModeOnCar()) {
-                appPreferences.setDriveMode(true)
+        scope.launch {
+            val enableDrive = withContext(Dispatchers.IO) {
+                appPreferences.isAutoDriveModeOnCar()
+            }
+            if (enableDrive) {
+                withContext(Dispatchers.IO) { appPreferences.setDriveMode(true) }
+            }
+            val shouldResume = withContext(Dispatchers.IO) {
+                appPreferences.isAutoResumeOnDrive()
+            }
+            if (shouldResume) {
+                autoResumeForDriving(fromCarConnect = true)
             }
         }
+    }
+
+    /**
+     * Restore last session and play when driving starts.
+     * Skips if already playing, or if a car auto-resume ran recently (controller spam).
+     */
+    private suspend fun autoResumeForDriving(fromCarConnect: Boolean) {
+        val now = System.currentTimeMillis()
+        if (fromCarConnect && now - lastAutoResumeAtMs < AUTO_RESUME_COOLDOWN_MS) {
+            return
+        }
+        // Never yank control if music is already going.
+        if (player.isPlaying) return
+
+        // Queue already loaded (e.g. paused mid-trip) — just continue.
+        if (player.mediaItemCount > 0) {
+            lastAutoResumeAtMs = now
+            player.play()
+            return
+        }
+
+        val snap = withContext(Dispatchers.IO) { appPreferences.getResume() } ?: return
+        if (!snap.hasSession) return
+        val tracks = withContext(Dispatchers.IO) {
+            repository.getTracksByIdsOrdered(snap.trackIds)
+        }
+        if (tracks.isEmpty()) return
+        val ready = withContext(Dispatchers.IO) {
+            storageManager.ensurePlayable(tracks)
+        }
+        if (ready.isEmpty()) return
+
+        lastAutoResumeAtMs = now
+        val idx = snap.index.coerceIn(0, ready.lastIndex)
+        val items = withContext(Dispatchers.Default) {
+            MediaItemFactory.fromTracks(ready)
+        }
+        player.setMediaItems(items, idx, snap.positionMs.coerceAtLeast(0L))
+        player.prepare()
+        player.play()
     }
 
     override fun onCustomCommand(
