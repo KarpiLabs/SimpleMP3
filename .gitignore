@@ -32,3 +32,6 @@ keystore.properties
 secrets.properties
 .env
 .env.*
+
+# Local tooling (e.g. make format downloads ktlint here)
+.tools/

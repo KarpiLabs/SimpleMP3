@@ -33,6 +33,22 @@ More assets live under [`store-listing/`](store-listing/).
 
 ## Build
 
+Using the Makefile (recommended):
+
+```bash
+make help          # list all targets
+make build         # debug APK
+make test          # unit tests
+make lint          # Android Lint
+make check         # lint + unit tests
+make format        # format Kotlin with ktlint (auto-downloaded once)
+make install-run   # install debug APK and launch on a device
+make release       # release APK
+make aab           # release App Bundle
+```
+
+Or Gradle directly:
+
 ```bash
 ./gradlew assembleDebug
 ```
