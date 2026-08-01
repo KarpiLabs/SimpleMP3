@@ -50,6 +50,7 @@ import io.karpilabs.simplemp3.ui.components.QueueSheet
 import io.karpilabs.simplemp3.ui.navigation.Routes
 import io.karpilabs.simplemp3.ui.screens.CollectionDetailScreen
 import io.karpilabs.simplemp3.ui.screens.CreatePlaylistDialog
+import io.karpilabs.simplemp3.ui.screens.DriveScreen
 import io.karpilabs.simplemp3.ui.screens.HomeScreen
 import io.karpilabs.simplemp3.ui.screens.JellyfinScreen
 import io.karpilabs.simplemp3.ui.screens.LibraryScreen
@@ -63,6 +64,7 @@ import io.karpilabs.simplemp3.ui.screens.YoutubeScreen
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.NightBlack
 import io.karpilabs.simplemp3.ui.theme.TextMuted
+import io.karpilabs.simplemp3.ui.viewmodel.DriveViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.JellyfinViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.MusicViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.QuickConnectViewModel
@@ -233,8 +235,48 @@ fun SimpleMP3AppRoot(
                 composable(Routes.TOOLS) {
                     ToolsScreen(
                         onOpenYoutube = { navController.navigate(Routes.YOUTUBE) },
-                        onOpenQuickConnect = { navController.navigate(Routes.QUICK_CONNECT) }
+                        onOpenQuickConnect = { navController.navigate(Routes.QUICK_CONNECT) },
+                        onOpenDrive = { navController.navigate(Routes.DRIVE) }
                     )
+                }
+                composable(Routes.DRIVE) {
+                    val driveVm: DriveViewModel = hiltViewModel()
+                    val driveUi by driveVm.ui.collectAsStateWithLifecycle()
+                    val driveProgress by driveVm.progress.collectAsStateWithLifecycle()
+                    val includeMedia by driveVm.includeMedia.collectAsStateWithLifecycle()
+                    val driveWifiOnly by driveVm.wifiOnly.collectAsStateWithLifecycle()
+                    val lastBackupMs by driveVm.lastBackupMs.collectAsStateWithLifecycle()
+
+                    DriveScreen(
+                        ui = driveUi,
+                        progress = driveProgress,
+                        includeMedia = includeMedia,
+                        wifiOnly = driveWifiOnly,
+                        lastBackupMs = lastBackupMs,
+                        signInIntent = driveVm::signInIntent,
+                        onBack = { navController.popBackStack() },
+                        onSignInResult = driveVm::onSignInResult,
+                        onSignOut = driveVm::signOut,
+                        onIncludeMediaChange = driveVm::setIncludeMedia,
+                        onWifiOnlyChange = driveVm::setWifiOnly,
+                        onBackup = driveVm::backupNow,
+                        onRestore = driveVm::restore,
+                        onDelete = driveVm::deleteBackup,
+                        onRefresh = driveVm::refreshBackupList
+                    )
+
+                    LaunchedEffect(driveUi.message) {
+                        driveUi.message?.let {
+                            snackbarHostState.showSnackbar(it)
+                            driveVm.consumeMessage()
+                        }
+                    }
+                    LaunchedEffect(driveUi.error) {
+                        driveUi.error?.let {
+                            snackbarHostState.showSnackbar(it)
+                            driveVm.consumeError()
+                        }
+                    }
                 }
                 composable(Routes.SETTINGS) {
                     SettingsScreen(

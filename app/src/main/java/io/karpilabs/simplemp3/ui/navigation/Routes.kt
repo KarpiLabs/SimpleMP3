@@ -10,6 +10,7 @@ object Routes {
     const val JELLYFIN = "jellyfin"
     const val YOUTUBE = "youtube"
     const val QUICK_CONNECT = "quick_connect"
+    const val DRIVE = "drive"
     const val PLAYLIST_DETAIL = "playlist/{playlistId}"
     const val ALBUM_DETAIL = "album/{albumName}"
     const val ARTIST_DETAIL = "artist/{artistName}"

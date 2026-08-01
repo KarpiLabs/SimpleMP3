@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material.icons.rounded.WifiTethering
 import androidx.compose.material3.Icon
@@ -38,7 +39,8 @@ import io.karpilabs.simplemp3.ui.theme.TextSecondary
 @Composable
 fun ToolsScreen(
     onOpenYoutube: () -> Unit,
-    onOpenQuickConnect: () -> Unit
+    onOpenQuickConnect: () -> Unit,
+    onOpenDrive: () -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -52,7 +54,7 @@ fun ToolsScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Import and transfer music",
+                    text = "Import, transfer, and back up music",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary
                 )
@@ -88,6 +90,22 @@ fun ToolsScreen(
                     )
                 ),
                 onClick = onOpenQuickConnect
+            )
+        }
+
+        item {
+            ToolsFeatureCard(
+                icon = Icons.Rounded.Cloud,
+                title = "Google Drive",
+                subtitle = "Backup playlists · optional offline media",
+                brush = Brush.horizontalGradient(
+                    listOf(
+                        AccentViolet.copy(alpha = 0.35f),
+                        NightElevated,
+                        AccentTeal.copy(alpha = 0.15f)
+                    )
+                ),
+                onClick = onOpenDrive
             )
         }
     }

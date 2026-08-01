@@ -57,6 +57,12 @@ class AppPreferences @Inject constructor(
         val RESUME_TITLE = stringPreferencesKey("resume_title")
         val RESUME_ARTIST = stringPreferencesKey("resume_artist")
         val RESUME_ARTWORK = stringPreferencesKey("resume_artwork")
+        /** Google Drive: include app-owned audio files in backups (large). */
+        val DRIVE_INCLUDE_MEDIA = booleanPreferencesKey("drive_include_media")
+        /** Google Drive: require Wi‑Fi for backup/restore (esp. with media). */
+        val DRIVE_WIFI_ONLY = booleanPreferencesKey("drive_wifi_only")
+        val DRIVE_LAST_ACCOUNT = stringPreferencesKey("drive_last_account")
+        val DRIVE_LAST_BACKUP_MS = longPreferencesKey("drive_last_backup_ms")
     }
 
     suspend fun getLastLibraryScanMs(): Long =
@@ -194,5 +200,48 @@ class AppPreferences @Inject constructor(
             prefs.remove(Keys.RESUME_ARTIST)
             prefs.remove(Keys.RESUME_ARTWORK)
         }
+    }
+
+    // ── Google Drive backup ───────────────────────────────────
+
+    /** Default off: metadata-only backups stay small. */
+    val driveIncludeMediaFlow: Flow<Boolean> = context.appDataStore.data.map {
+        it[Keys.DRIVE_INCLUDE_MEDIA] ?: false
+    }
+
+    suspend fun setDriveIncludeMedia(enabled: Boolean) {
+        context.appDataStore.edit { it[Keys.DRIVE_INCLUDE_MEDIA] = enabled }
+    }
+
+    suspend fun isDriveIncludeMedia(): Boolean = driveIncludeMediaFlow.first()
+
+    /** Default on: avoid surprise cellular uploads. */
+    val driveWifiOnlyFlow: Flow<Boolean> = context.appDataStore.data.map {
+        it[Keys.DRIVE_WIFI_ONLY] ?: true
+    }
+
+    suspend fun setDriveWifiOnly(enabled: Boolean) {
+        context.appDataStore.edit { it[Keys.DRIVE_WIFI_ONLY] = enabled }
+    }
+
+    suspend fun isDriveWifiOnly(): Boolean = driveWifiOnlyFlow.first()
+
+    val driveLastAccountFlow: Flow<String?> = context.appDataStore.data.map {
+        it[Keys.DRIVE_LAST_ACCOUNT]
+    }
+
+    suspend fun setDriveLastAccount(email: String?) {
+        context.appDataStore.edit { prefs ->
+            if (email.isNullOrBlank()) prefs.remove(Keys.DRIVE_LAST_ACCOUNT)
+            else prefs[Keys.DRIVE_LAST_ACCOUNT] = email
+        }
+    }
+
+    val driveLastBackupMsFlow: Flow<Long> = context.appDataStore.data.map {
+        it[Keys.DRIVE_LAST_BACKUP_MS] ?: 0L
+    }
+
+    suspend fun setDriveLastBackupMs(ms: Long = System.currentTimeMillis()) {
+        context.appDataStore.edit { it[Keys.DRIVE_LAST_BACKUP_MS] = ms }
     }
 }
