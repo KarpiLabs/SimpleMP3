@@ -28,10 +28,12 @@ import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.QrCode2
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -71,6 +73,24 @@ fun QuickConnectScreen(
     DisposableEffect(Unit) {
         viewModel.startPortal()
         onDispose { viewModel.stopPortal() }
+    }
+
+    if (session.lockedOut) {
+        AlertDialog(
+            onDismissRequest = onBack,
+            title = { Text("Quick Connect locked") },
+            text = {
+                Text(
+                    "Too many incorrect access codes were entered, so the portal has been " +
+                        "disabled. Go back and reopen Quick Connect to start a fresh session."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = onBack) {
+                    Text("Go back")
+                }
+            }
+        )
     }
 
     Column(

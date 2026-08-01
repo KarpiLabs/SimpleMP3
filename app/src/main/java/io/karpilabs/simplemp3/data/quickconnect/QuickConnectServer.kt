@@ -39,7 +39,9 @@ data class QuickConnectSession(
      */
     val qrUrl: String? = null,
     val error: String? = null,
-    val events: List<QuickConnectEvent> = emptyList()
+    val events: List<QuickConnectEvent> = emptyList(),
+    /** True once repeated failed access codes have permanently disabled this portal instance. */
+    val lockedOut: Boolean = false
 )
 
 /**
@@ -77,7 +79,8 @@ class QuickConnectServer @Inject constructor(
                         sessionToken = token,
                         musicRepository = musicRepository,
                         lanImportManager = lanImportManager,
-                        onEvent = ::pushEvent
+                        onEvent = ::pushEvent,
+                        onLockedOut = ::handleLockout
                     )
                     engine.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false)
                     http = engine
@@ -124,6 +127,24 @@ class QuickConnectServer @Inject constructor(
         http = null
     }
 
+    /**
+     * Called from a request-handling thread once too many wrong access codes have been
+     * entered. Doesn't tear down the listening socket (would race with writing this
+     * request's response) — instead the running HttpEngine keeps rejecting every request
+     * (see `permanentlyLocked` in HttpEngine.serve), and the session flips to a visibly
+     * disabled state. The user must leave and reopen Quick Connect to get a fresh instance.
+     */
+    private fun handleLockout() {
+        pushEvent("Portal locked after repeated failed access codes")
+        synchronized(lock) {
+            _session.value = _session.value.copy(
+                running = false,
+                lockedOut = true,
+                error = "Portal locked — too many incorrect access codes. Reopen Quick Connect to try again."
+            )
+        }
+    }
+
     private fun pushEvent(message: String) {
         events.add(0, QuickConnectEvent(message = message))
         while (events.size > 40) {
@@ -144,6 +165,8 @@ class QuickConnectServer @Inject constructor(
         const val DEFAULT_PORT = 8765
         const val COOKIE_NAME = "sm3_qc"
         const val MAX_AUTH_ATTEMPTS = 5
+        /** Above this many total failed codes, the portal disables itself until reopened. */
+        const val MAX_PERMANENT_LOCKOUT_ATTEMPTS = 10
     }
 
     private class HttpEngine(
@@ -152,7 +175,8 @@ class QuickConnectServer @Inject constructor(
         private val sessionToken: String,
         private val musicRepository: MusicRepository,
         private val lanImportManager: LanImportManager,
-        private val onEvent: (String) -> Unit
+        private val onEvent: (String) -> Unit,
+        private val onLockedOut: () -> Unit
     ) : NanoHTTPD(port) {
 
         private val started = AtomicBoolean(false)
@@ -161,15 +185,22 @@ class QuickConnectServer @Inject constructor(
         // (1,000,000 combinations), so failed attempts must be throttled.
         private val failedAttempts = AtomicInteger(0)
         private val lockedUntilMs = AtomicLong(0)
+        private val permanentlyLocked = AtomicBoolean(false)
 
         override fun start(timeout: Int, daemon: Boolean) {
             super.start(timeout, daemon)
             started.set(true)
         }
 
-        val isRunning: Boolean get() = started.get() && wasStarted()
+        val isRunning: Boolean get() = started.get() && wasStarted() && !permanentlyLocked.get()
 
         override fun serve(session: IHTTPSession): Response {
+            if (permanentlyLocked.get()) {
+                return jsonError(
+                    Response.Status.FORBIDDEN,
+                    "Portal locked — too many incorrect access codes. Reopen Quick Connect to try again."
+                )
+            }
             val method = session.method
             val uri = session.uri.substringBefore('?')
             val files = HashMap<String, String>()
@@ -295,6 +326,14 @@ class QuickConnectServer @Inject constructor(
             if (!constantTimeEquals(body.trim(), accessCode)) {
                 val attempts = failedAttempts.incrementAndGet()
                 onEvent("Failed access code attempt")
+                if (attempts >= MAX_PERMANENT_LOCKOUT_ATTEMPTS) {
+                    permanentlyLocked.set(true)
+                    onLockedOut()
+                    return jsonError(
+                        Response.Status.FORBIDDEN,
+                        "Portal locked — too many incorrect access codes. Reopen Quick Connect to try again."
+                    )
+                }
                 if (attempts >= MAX_AUTH_ATTEMPTS) {
                     val lockMs = lockoutDurationMs(attempts)
                     lockedUntilMs.set(System.currentTimeMillis() + lockMs)
