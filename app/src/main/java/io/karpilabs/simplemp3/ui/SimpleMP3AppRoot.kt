@@ -362,8 +362,9 @@ fun SimpleMP3AppRoot(
                     arguments = listOf(navArgument("playlistId") { type = NavType.LongType })
                 ) { entry ->
                     val playlistId = entry.arguments?.getLong("playlistId") ?: return@composable
-                    val playlist by viewModel.playlist(playlistId).collectAsStateWithLifecycle()
-                    val playlistTracks by viewModel.playlistTracks(playlistId)
+                    val playlist by remember(playlistId) { viewModel.playlist(playlistId) }
+                        .collectAsStateWithLifecycle()
+                    val playlistTracks by remember(playlistId) { viewModel.playlistTracks(playlistId) }
                         .collectAsStateWithLifecycle()
                     PlaylistDetailScreen(
                         playlist = playlist,
@@ -393,7 +394,7 @@ fun SimpleMP3AppRoot(
                     val albumName = android.net.Uri.decode(
                         entry.arguments?.getString("albumName").orEmpty()
                     )
-                    val albumTracks by viewModel.albumTracks(albumName)
+                    val albumTracks by remember(albumName) { viewModel.albumTracks(albumName) }
                         .collectAsStateWithLifecycle()
                     CollectionDetailScreen(
                         title = albumName,
@@ -414,7 +415,7 @@ fun SimpleMP3AppRoot(
                     val artistName = android.net.Uri.decode(
                         entry.arguments?.getString("artistName").orEmpty()
                     )
-                    val artistTracks by viewModel.artistTracks(artistName)
+                    val artistTracks by remember(artistName) { viewModel.artistTracks(artistName) }
                         .collectAsStateWithLifecycle()
                     CollectionDetailScreen(
                         title = artistName,
