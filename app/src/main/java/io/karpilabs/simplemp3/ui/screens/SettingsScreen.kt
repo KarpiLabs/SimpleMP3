@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Wifi
+import androidx.compose.material.icons.rounded.WifiTethering
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,7 +59,8 @@ fun SettingsScreen(
     onAutoDriveModeOnCarChange: (Boolean) -> Unit,
     onWifiOnlyDownloadsChange: (Boolean) -> Unit,
     onLargeFileOptimizeChange: (Boolean) -> Unit,
-    onLargeFileColdPackChange: (Boolean) -> Unit
+    onLargeFileColdPackChange: (Boolean) -> Unit,
+    onOpenQuickConnect: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val versionLabel = remember {
@@ -141,6 +143,18 @@ fun SettingsScreen(
             }
 
             item {
+                SettingsSectionHeader("Library")
+            }
+            item {
+                SettingsNavRow(
+                    icon = Icons.Rounded.WifiTethering,
+                    title = "Quick Connect",
+                    subtitle = "Host a temporary LAN portal to upload & manage playlists",
+                    onClick = onOpenQuickConnect
+                )
+            }
+
+            item {
                 SettingsSectionHeader("Driving")
             }
             item {
@@ -205,6 +219,46 @@ private fun SettingsSectionHeader(title: String) {
         color = AccentTeal,
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
     )
+}
+
+@Composable
+private fun SettingsNavRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    iconTint: androidx.compose.ui.graphics.Color = AccentTeal
+) {
+    Row(
+        modifier = Modifier
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(NightCard)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(28.dp)
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+    }
 }
 
 @Composable
@@ -294,13 +348,13 @@ private fun AboutCard(versionLabel: String) {
         HorizontalDivider(color = TextMuted.copy(alpha = 0.25f))
         Spacer(Modifier.height(12.dp))
         Text(
-            text = "Local music player with playlists, optional Jellyfin offline sync, YouTube → MP3, and Android Auto.",
+            text = "Local music player with playlists, optional Jellyfin offline sync, YouTube → MP3, Quick Connect LAN portal, and Android Auto.",
             style = MaterialTheme.typography.bodyMedium,
             color = TextSecondary
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Your music stays on your device. Jellyfin only talks to the server you configure.",
+            text = "Your music stays on your device. Jellyfin only talks to the server you configure. Quick Connect is local Wi‑Fi only and stops when you leave that screen.",
             style = MaterialTheme.typography.bodySmall,
             color = TextMuted
         )

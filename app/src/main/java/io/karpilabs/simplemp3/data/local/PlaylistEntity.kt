@@ -24,5 +24,6 @@ data class PlaylistEntity(
         const val SYSTEM_RECENTLY_PLAYED = "recently_played"
         const val SYSTEM_JELLYFIN = "jellyfin_offline"
         const val SYSTEM_YOUTUBE = "youtube_downloads"
+        const val SYSTEM_LAN = "lan_imports"
     }
 }

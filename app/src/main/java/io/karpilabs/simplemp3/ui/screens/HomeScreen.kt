@@ -28,7 +28,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
-import androidx.compose.material.icons.rounded.VideoLibrary
+
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -53,7 +53,6 @@ import io.karpilabs.simplemp3.ui.components.AlbumArt
 import io.karpilabs.simplemp3.ui.components.PlaylistCard
 import io.karpilabs.simplemp3.ui.components.SectionHeader
 import io.karpilabs.simplemp3.ui.components.TrackRow
-import io.karpilabs.simplemp3.ui.theme.AccentCoral
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.AccentViolet
 import io.karpilabs.simplemp3.ui.theme.NightBlack
@@ -82,7 +81,7 @@ fun HomeScreen(
     onToggleFavorite: (Long) -> Unit,
     onAddToPlaylist: (TrackEntity) -> Unit = {},
     onOpenJellyfin: () -> Unit = {},
-    onOpenYoutube: () -> Unit = {},
+    onOpenTools: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     onToggleDriveMode: () -> Unit = {},
     onResume: () -> Unit = {},
@@ -232,22 +231,6 @@ fun HomeScreen(
 
         item {
             FeatureCard(
-                icon = Icons.Rounded.VideoLibrary,
-                title = "YouTube → MP3",
-                subtitle = "Paste a link · title, art, and offline audio",
-                brush = Brush.horizontalGradient(
-                    listOf(
-                        AccentCoral.copy(alpha = 0.32f),
-                        NightElevated,
-                        AccentViolet.copy(alpha = 0.18f)
-                    )
-                ),
-                onClick = onOpenYoutube
-            )
-        }
-
-        item {
-            FeatureCard(
                 icon = Icons.Rounded.DirectionsCar,
                 title = if (driveMode) "Drive mode · on" else "Drive mode",
                 subtitle = "Big controls, resume, and playlists for the road",
@@ -280,7 +263,7 @@ fun HomeScreen(
                         text = if (showJellyfin) {
                             "Scan local MP3s or connect Jellyfin to download tracks for the road."
                         } else {
-                            "Scan local MP3s on this device, or paste a YouTube link for offline audio."
+                            "Scan local MP3s on this device, or open Tools for YouTube and LAN import."
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
@@ -308,13 +291,13 @@ fun HomeScreen(
                             }
                         } else {
                             Button(
-                                onClick = onOpenYoutube,
+                                onClick = onOpenTools,
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = AccentCoral,
-                                    contentColor = NightBlack
+                                    containerColor = NightCard,
+                                    contentColor = AccentTeal
                                 )
                             ) {
-                                Text("YouTube")
+                                Text("Tools")
                             }
                         }
                     }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.QueueMusic
@@ -54,14 +55,17 @@ import io.karpilabs.simplemp3.ui.screens.JellyfinScreen
 import io.karpilabs.simplemp3.ui.screens.LibraryScreen
 import io.karpilabs.simplemp3.ui.screens.PlaylistDetailScreen
 import io.karpilabs.simplemp3.ui.screens.PlaylistsScreen
+import io.karpilabs.simplemp3.ui.screens.QuickConnectScreen
 import io.karpilabs.simplemp3.ui.screens.SearchScreen
 import io.karpilabs.simplemp3.ui.screens.SettingsScreen
+import io.karpilabs.simplemp3.ui.screens.ToolsScreen
 import io.karpilabs.simplemp3.ui.screens.YoutubeScreen
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.NightBlack
 import io.karpilabs.simplemp3.ui.theme.TextMuted
 import io.karpilabs.simplemp3.ui.viewmodel.JellyfinViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.MusicViewModel
+import io.karpilabs.simplemp3.ui.viewmodel.QuickConnectViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.YoutubeViewModel
 
 private data class TabItem(val route: String, val label: String, val icon: ImageVector)
@@ -132,7 +136,8 @@ fun SimpleMP3AppRoot(
         TabItem(Routes.HOME, "Home", Icons.Rounded.Home),
         TabItem(Routes.SEARCH, "Search", Icons.Rounded.Search),
         TabItem(Routes.LIBRARY, "Library", Icons.Rounded.LibraryMusic),
-        TabItem(Routes.PLAYLISTS, "Playlists", Icons.Rounded.QueueMusic)
+        TabItem(Routes.PLAYLISTS, "Playlists", Icons.Rounded.QueueMusic),
+        TabItem(Routes.TOOLS, "Tools", Icons.Rounded.Build)
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -215,13 +220,19 @@ fun SimpleMP3AppRoot(
                         onOpenJellyfin = {
                             if (jellyfinEnabled) navController.navigate(Routes.JELLYFIN)
                         },
-                        onOpenYoutube = { navController.navigate(Routes.YOUTUBE) },
+                        onOpenTools = { navController.navigate(Routes.TOOLS) },
                         onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                         onToggleDriveMode = { viewModel.setDriveMode(!driveMode) },
                         onResume = { viewModel.resumeLastSession(autoPlay = true) },
                         onPlayPause = viewModel::togglePlayPause,
                         onSkipNext = viewModel::skipNext,
                         onSkipPrevious = viewModel::skipPrevious
+                    )
+                }
+                composable(Routes.TOOLS) {
+                    ToolsScreen(
+                        onOpenYoutube = { navController.navigate(Routes.YOUTUBE) },
+                        onOpenQuickConnect = { navController.navigate(Routes.QUICK_CONNECT) }
                     )
                 }
                 composable(Routes.SETTINGS) {
@@ -236,7 +247,8 @@ fun SimpleMP3AppRoot(
                         onAutoDriveModeOnCarChange = viewModel::setAutoDriveModeOnCar,
                         onWifiOnlyDownloadsChange = viewModel::setWifiOnlyDownloads,
                         onLargeFileOptimizeChange = viewModel::setLargeFileOptimize,
-                        onLargeFileColdPackChange = viewModel::setLargeFileColdPack
+                        onLargeFileColdPackChange = viewModel::setLargeFileColdPack,
+                        onOpenQuickConnect = { navController.navigate(Routes.QUICK_CONNECT) }
                     )
                 }
                 composable(Routes.JELLYFIN) {
@@ -316,6 +328,13 @@ fun SimpleMP3AppRoot(
                         onRemove = ytVm::remove,
                         onToggleNeverCompress = ytVm::toggleNeverCompress,
                         onClearAll = ytVm::clearAll
+                    )
+                }
+                composable(Routes.QUICK_CONNECT) {
+                    val qcVm: QuickConnectViewModel = hiltViewModel()
+                    QuickConnectScreen(
+                        viewModel = qcVm,
+                        onBack = { navController.popBackStack() }
                     )
                 }
                 composable(Routes.SEARCH) {

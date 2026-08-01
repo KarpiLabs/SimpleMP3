@@ -165,7 +165,7 @@ interface TrackDao {
     @Query(
         """
         SELECT * FROM tracks
-        WHERE source IN ('jellyfin', 'youtube')
+        WHERE source IN ('jellyfin', 'youtube', 'lan')
           AND size >= :minSize
         ORDER BY size DESC
         """
@@ -175,7 +175,7 @@ interface TrackDao {
     @Query(
         """
         SELECT * FROM tracks
-        WHERE source IN ('jellyfin', 'youtube')
+        WHERE source IN ('jellyfin', 'youtube', 'lan')
           AND storageState = 'hot'
           AND neverCompress = 0
           AND size >= :minSize
@@ -193,7 +193,7 @@ interface TrackDao {
     @Query(
         """
         SELECT * FROM tracks
-        WHERE source IN ('jellyfin', 'youtube')
+        WHERE source IN ('jellyfin', 'youtube', 'lan')
           AND isSizeOptimized = 0
           AND neverCompress = 0
           AND size >= :minSize

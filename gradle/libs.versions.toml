@@ -49,6 +49,8 @@ newpipeExtractor = "v0.26.4"
 mozillaRhino = "1.7.15"
 # Community 16KB-page repackage of retired arthenica FFmpegKit (LGPL)
 ffmpegKit = "6.0.0"
+nanohttpd = "2.3.1"
+zxing = "3.5.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -108,6 +110,8 @@ desugar-jdk-libs-nio = { group = "com.android.tools", name = "desugar_jdk_libs_n
 newpipe-extractor = { group = "com.github.teamnewpipe", name = "NewPipeExtractor", version.ref = "newpipeExtractor" }
 mozilla-rhino = { group = "org.mozilla", name = "rhino", version.ref = "mozillaRhino" }
 ffmpeg-kit = { group = "com.moizhassan.ffmpeg", name = "ffmpeg-kit-16kb", version.ref = "ffmpegKit" }
+nanohttpd = { group = "org.nanohttpd", name = "nanohttpd", version.ref = "nanohttpd" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

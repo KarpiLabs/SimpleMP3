@@ -107,6 +107,10 @@ dependencies {
     implementation(libs.mozilla.rhino)
     implementation(libs.ffmpeg.kit)
 
+    // Temporary LAN web portal (Quick Connect) + QR for the portal URL
+    implementation(libs.nanohttpd)
+    implementation(libs.zxing.core)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.core)

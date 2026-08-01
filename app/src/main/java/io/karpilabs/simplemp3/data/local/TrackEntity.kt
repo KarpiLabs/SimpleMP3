@@ -31,7 +31,7 @@ data class TrackEntity(
     val trackNumber: Int = 0,
     val genre: String? = null,
     val size: Long = 0L,
-    /** local | jellyfin | youtube */
+    /** local | jellyfin | youtube | lan */
     val source: String = SOURCE_LOCAL,
     /** Jellyfin item GUID or YouTube video id (source-discriminated). */
     val jellyfinId: String? = null,
@@ -57,6 +57,8 @@ data class TrackEntity(
         const val SOURCE_LOCAL = "local"
         const val SOURCE_JELLYFIN = "jellyfin"
         const val SOURCE_YOUTUBE = "youtube"
+        /** Uploaded via Quick Connect LAN portal */
+        const val SOURCE_LAN = "lan"
 
         const val STORAGE_HOT = "hot"
         const val STORAGE_COLD = "cold"
@@ -64,8 +66,12 @@ data class TrackEntity(
 
     val isJellyfin: Boolean get() = source == SOURCE_JELLYFIN
     val isYoutube: Boolean get() = source == SOURCE_YOUTUBE
+    val isLan: Boolean get() = source == SOURCE_LAN
     val isCold: Boolean get() = storageState == STORAGE_COLD
-    val isAppOwned: Boolean get() = source == SOURCE_JELLYFIN || source == SOURCE_YOUTUBE
+    val isAppOwned: Boolean
+        get() = source == SOURCE_JELLYFIN ||
+            source == SOURCE_YOUTUBE ||
+            source == SOURCE_LAN
 }
 
 /** Stable negative Long id from an external string id (never collides with MediaStore). */

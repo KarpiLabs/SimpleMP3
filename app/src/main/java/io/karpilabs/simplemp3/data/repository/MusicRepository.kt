@@ -103,6 +103,16 @@ class MusicRepository @Inject constructor(
                 )
             )
         }
+        if (playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_LAN) == null) {
+            playlistDao.insertPlaylist(
+                PlaylistEntity(
+                    name = "LAN Imports",
+                    description = "Uploaded via Quick Connect",
+                    isSystem = true,
+                    systemType = PlaylistEntity.SYSTEM_LAN
+                )
+            )
+        }
     }
 
     /**
