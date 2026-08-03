@@ -61,6 +61,7 @@ import io.karpilabs.simplemp3.ui.screens.SettingsScreen
 import io.karpilabs.simplemp3.ui.screens.ToolsScreen
 import io.karpilabs.simplemp3.ui.screens.YoutubeScreen
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
+import io.karpilabs.simplemp3.ui.theme.DeepViolet
 import io.karpilabs.simplemp3.ui.theme.NightBlack
 import io.karpilabs.simplemp3.ui.theme.TextMuted
 import io.karpilabs.simplemp3.ui.viewmodel.JellyfinViewModel
@@ -171,7 +172,7 @@ fun SimpleMP3AppRoot(
                                 selectedTextColor = AccentTeal,
                                 unselectedIconColor = TextMuted,
                                 unselectedTextColor = TextMuted,
-                                indicatorColor = AccentTeal.copy(alpha = 0.15f)
+                                indicatorColor = DeepViolet.copy(alpha = 0.55f)
                             )
                         )
                     }

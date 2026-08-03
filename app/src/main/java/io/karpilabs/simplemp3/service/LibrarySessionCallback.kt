@@ -70,8 +70,8 @@ class LibrarySessionCallback(
         const val ACTION_TOGGLE_SHUFFLE = "io.karpilabs.simplemp3.TOGGLE_SHUFFLE"
         const val ACTION_CYCLE_REPEAT = "io.karpilabs.simplemp3.CYCLE_REPEAT"
 
-        val CUSTOM_SHUFFLE = SessionCommand(ACTION_TOGGLE_SHUFFLE, android.os.Bundle.EMPTY)
-        val CUSTOM_REPEAT = SessionCommand(ACTION_CYCLE_REPEAT, android.os.Bundle.EMPTY)
+        val CUSTOM_SHUFFLE = SessionCommand(ACTION_TOGGLE_SHUFFLE, android.os.Bundle())
+        val CUSTOM_REPEAT = SessionCommand(ACTION_CYCLE_REPEAT, android.os.Bundle())
 
         /** Ignore repeated Auto controller connects within this window. */
         private const val AUTO_RESUME_COOLDOWN_MS = 45_000L

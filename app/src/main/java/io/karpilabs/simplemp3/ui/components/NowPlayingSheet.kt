@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import io.karpilabs.simplemp3.player.PlayerUiState
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
+import io.karpilabs.simplemp3.ui.theme.DeepViolet
 import io.karpilabs.simplemp3.ui.theme.NightBlack
 import io.karpilabs.simplemp3.ui.theme.TextMuted
 import io.karpilabs.simplemp3.ui.theme.TextSecondary
@@ -100,7 +101,7 @@ fun NowPlayingSheet(
                             Color(0xFF0F2A26),
                             Color(0xFF0C1418),
                             NightBlack,
-                            Color(0xFF120A18)
+                            DeepViolet
                         )
                     )
                 )

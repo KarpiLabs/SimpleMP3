@@ -55,6 +55,7 @@ import io.karpilabs.simplemp3.ui.components.SectionHeader
 import io.karpilabs.simplemp3.ui.components.TrackRow
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.AccentViolet
+import io.karpilabs.simplemp3.ui.theme.DeepViolet
 import io.karpilabs.simplemp3.ui.theme.NightBlack
 import io.karpilabs.simplemp3.ui.theme.NightCard
 import io.karpilabs.simplemp3.ui.theme.NightElevated
@@ -371,7 +372,7 @@ private fun DriveModeHome(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(NightBlack, NightElevated, NightBlack)
+                    listOf(NightBlack, DeepViolet, NightBlack)
                 )
             )
             .padding(20.dp),

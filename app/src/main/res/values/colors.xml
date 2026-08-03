@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="night_black">#FF0A0A0C</color>
+    <color name="night_black">#FF0C0A12</color>
+    <color name="deep_violet">#FF2A1848</color>
     <color name="accent_teal">#FF00E5C0</color>
-    <color name="ic_launcher_background">#0A0A0C</color>
+    <color name="accent_violet">#FFA78BFA</color>
+    <color name="ic_launcher_background">#2A1848</color>
 </resources>
