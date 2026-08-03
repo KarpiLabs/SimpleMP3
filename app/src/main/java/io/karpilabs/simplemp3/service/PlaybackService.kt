@@ -3,8 +3,10 @@ package io.karpilabs.simplemp3.service
 import android.app.PendingIntent
 import android.content.Intent
 import androidx.annotation.OptIn
+import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -21,6 +23,10 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class PlaybackService : MediaLibraryService() {
+
+    companion object {
+        private const val TAG = "PlaybackService"
+    }
 
     @Inject
     lateinit var player: ExoPlayer
@@ -66,6 +72,22 @@ class PlaybackService : MediaLibraryService() {
 
         override fun onRepeatModeChanged(repeatMode: Int) {
             updateCustomLayout()
+        }
+
+        /**
+         * A dead file (purged offline download, missing SD card track, etc.) would
+         * otherwise stall the queue silently — bad on a drive where the user can't
+         * look at the screen. Skip past it instead of leaving playback stuck.
+         */
+        override fun onPlayerError(error: PlaybackException) {
+            Log.w(TAG, "Playback error on \"${player.currentMediaItem?.mediaId}\": ${error.errorCodeName}", error)
+            if (player.hasNextMediaItem()) {
+                player.seekToNextMediaItem()
+                player.prepare()
+                player.play()
+            } else {
+                player.pause()
+            }
         }
     }
 

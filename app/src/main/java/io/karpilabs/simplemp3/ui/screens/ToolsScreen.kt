@@ -32,14 +32,14 @@ import io.karpilabs.simplemp3.ui.theme.AccentCoral
 import io.karpilabs.simplemp3.ui.theme.AccentGold
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.AccentViolet
-import io.karpilabs.simplemp3.ui.theme.NightElevated
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 
 @Composable
 fun ToolsScreen(
     onOpenYoutube: () -> Unit,
     onOpenQuickConnect: () -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 120.dp)
@@ -54,7 +54,7 @@ fun ToolsScreen(
                 Text(
                     text = "Import and transfer music",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
+                    color = palette.textSecondary
                 )
             }
         }
@@ -67,7 +67,7 @@ fun ToolsScreen(
                 brush = Brush.horizontalGradient(
                     listOf(
                         AccentCoral.copy(alpha = 0.32f),
-                        NightElevated,
+                        palette.elevated,
                         AccentViolet.copy(alpha = 0.18f)
                     )
                 ),
@@ -83,7 +83,7 @@ fun ToolsScreen(
                 brush = Brush.horizontalGradient(
                     listOf(
                         AccentTeal.copy(alpha = 0.3f),
-                        NightElevated,
+                        palette.elevated,
                         AccentGold.copy(alpha = 0.18f)
                     )
                 ),
@@ -101,6 +101,7 @@ private fun ToolsFeatureCard(
     brush: Brush,
     onClick: () -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Box(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -123,7 +124,7 @@ private fun ToolsFeatureCard(
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = palette.textSecondary)
             }
         }
     }

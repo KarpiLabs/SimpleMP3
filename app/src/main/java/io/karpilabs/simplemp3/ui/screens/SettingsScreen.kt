@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Compress
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Info
@@ -44,11 +45,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import io.karpilabs.simplemp3.data.prefs.ThemeMode
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.AccentViolet
-import io.karpilabs.simplemp3.ui.theme.NightCard
-import io.karpilabs.simplemp3.ui.theme.TextMuted
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 
 @Composable
 fun SettingsScreen(
@@ -60,6 +60,7 @@ fun SettingsScreen(
     wifiOnlyDownloads: Boolean,
     largeFileOptimize: Boolean,
     largeFileColdPack: Boolean,
+    themeMode: ThemeMode,
     onBack: () -> Unit,
     onJellyfinEnabledChange: (Boolean) -> Unit,
     onAutoDriveModeOnCarChange: (Boolean) -> Unit,
@@ -69,6 +70,7 @@ fun SettingsScreen(
     onWifiOnlyDownloadsChange: (Boolean) -> Unit,
     onLargeFileOptimizeChange: (Boolean) -> Unit,
     onLargeFileColdPackChange: (Boolean) -> Unit,
+    onThemeModeChange: (ThemeMode) -> Unit,
     onOpenQuickConnect: () -> Unit = {},
     onOpenLibraryFolders: () -> Unit = {}
 ) {
@@ -169,6 +171,29 @@ fun SettingsScreen(
                     title = "Quick Connect",
                     subtitle = "Host a temporary LAN portal to upload & manage playlists",
                     onClick = onOpenQuickConnect
+                )
+            }
+
+            item {
+                SettingsSectionHeader("Display")
+            }
+            item {
+                SettingsNavRow(
+                    icon = Icons.Rounded.DarkMode,
+                    title = "Theme",
+                    subtitle = when (themeMode) {
+                        ThemeMode.SYSTEM -> "Follows system light/dark setting"
+                        ThemeMode.LIGHT -> "Light — always on"
+                        ThemeMode.DARK -> "Dark — always on"
+                    },
+                    onClick = {
+                        val next = when (themeMode) {
+                            ThemeMode.SYSTEM -> ThemeMode.LIGHT
+                            ThemeMode.LIGHT -> ThemeMode.DARK
+                            ThemeMode.DARK -> ThemeMode.SYSTEM
+                        }
+                        onThemeModeChange(next)
+                    }
                 )
             }
 
@@ -290,12 +315,13 @@ private fun SettingsNavRow(
     onClick: () -> Unit,
     iconTint: androidx.compose.ui.graphics.Color = AccentTeal
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Row(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(NightCard)
+            .background(palette.card)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -316,7 +342,7 @@ private fun SettingsNavRow(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
+                color = palette.textSecondary
             )
         }
     }
@@ -331,12 +357,13 @@ private fun SettingsSwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     iconTint: androidx.compose.ui.graphics.Color = AccentTeal
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Row(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(NightCard)
+            .background(palette.card)
             .clickable { onCheckedChange(!checked) }
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -357,7 +384,7 @@ private fun SettingsSwitchRow(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
+                color = palette.textSecondary
             )
         }
         Spacer(Modifier.width(8.dp))
@@ -365,10 +392,10 @@ private fun SettingsSwitchRow(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = NightCard,
+                checkedThumbColor = palette.card,
                 checkedTrackColor = AccentTeal,
-                uncheckedThumbColor = TextMuted,
-                uncheckedTrackColor = TextMuted.copy(alpha = 0.3f)
+                uncheckedThumbColor = palette.textMuted,
+                uncheckedTrackColor = palette.textMuted.copy(alpha = 0.3f)
             )
         )
     }
@@ -376,12 +403,13 @@ private fun SettingsSwitchRow(
 
 @Composable
 private fun AboutCard(versionLabel: String) {
+    val palette = LocalSimpleMP3Palette.current
     Column(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(NightCard)
+            .background(palette.card)
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -401,23 +429,23 @@ private fun AboutCard(versionLabel: String) {
                 Text(
                     text = "Version $versionLabel",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = palette.textSecondary
                 )
             }
         }
         Spacer(Modifier.height(12.dp))
-        HorizontalDivider(color = TextMuted.copy(alpha = 0.25f))
+        HorizontalDivider(color = palette.textMuted.copy(alpha = 0.25f))
         Spacer(Modifier.height(12.dp))
         Text(
             text = "Local music player with playlists, optional Jellyfin offline sync, YouTube → MP3, Quick Connect LAN portal, and Android Auto.",
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary
+            color = palette.textSecondary
         )
         Spacer(Modifier.height(8.dp))
         Text(
             text = "Your music stays on your device. Jellyfin only talks to the server you configure. Quick Connect is local Wi‑Fi only and stops when you leave that screen.",
             style = MaterialTheme.typography.bodySmall,
-            color = TextMuted
+            color = palette.textMuted
         )
     }
 }

@@ -10,6 +10,7 @@ import io.karpilabs.simplemp3.data.local.PlaylistWithMeta
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import io.karpilabs.simplemp3.data.prefs.ResumeSnapshot
+import io.karpilabs.simplemp3.data.prefs.ThemeMode
 import io.karpilabs.simplemp3.data.repository.MusicRepository
 import io.karpilabs.simplemp3.data.storage.LargeFileStorageManager
 import io.karpilabs.simplemp3.player.PlayerConnection
@@ -102,6 +103,9 @@ class MusicViewModel @Inject constructor(
     val resumeEnabled: StateFlow<Boolean> = appPreferences.resumeEnabledFlow
         .stateIn(viewModelScope, share, true)
 
+    val themeMode: StateFlow<ThemeMode> = appPreferences.themeModeFlow
+        .stateIn(viewModelScope, share, ThemeMode.SYSTEM)
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
@@ -140,6 +144,12 @@ class MusicViewModel @Inject constructor(
                     playerConnection.resumeLastSession(autoPlay = true)
                 }
             }
+        }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            appPreferences.setThemeMode(mode)
         }
     }
 

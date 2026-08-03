@@ -41,9 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.karpilabs.simplemp3.data.local.FolderBrowser
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
-import io.karpilabs.simplemp3.ui.theme.NightCard
-import io.karpilabs.simplemp3.ui.theme.TextMuted
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 
 /**
  * Settings screen: optionally limit the MediaStore scan to selected folder roots.
@@ -63,6 +61,7 @@ fun LibraryFoldersScreen(
     onSelectAllVisible: () -> Unit,
     onClearSelection: () -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     val limitEnabled = selectedRoots.isNotEmpty()
     // Prefer top-level roots for a clean picker; still include deeper unique roots if needed.
     val pickerEntries = remember(deviceFolders) {
@@ -99,7 +98,7 @@ fun LibraryFoldersScreen(
                 Text(
                     text = "Choose which folders appear in your local library. Jellyfin, YouTube, and LAN imports are never filtered out.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = palette.textSecondary,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
@@ -110,7 +109,7 @@ fun LibraryFoldersScreen(
                         .padding(horizontal = 16.dp, vertical = 4.dp)
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(NightCard)
+                        .background(palette.card)
                         .clickable { onLimitEnabledChange(!limitEnabled) }
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -135,17 +134,17 @@ fun LibraryFoldersScreen(
                                 "Off · all music on this device is scanned"
                             },
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
+                            color = palette.textSecondary
                         )
                     }
                     Switch(
                         checked = limitEnabled,
                         onCheckedChange = onLimitEnabledChange,
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = NightCard,
+                            checkedThumbColor = palette.card,
                             checkedTrackColor = AccentTeal,
-                            uncheckedThumbColor = TextMuted,
-                            uncheckedTrackColor = TextMuted.copy(alpha = 0.3f)
+                            uncheckedThumbColor = palette.textMuted,
+                            uncheckedTrackColor = palette.textMuted.copy(alpha = 0.3f)
                         )
                     )
                 }
@@ -174,7 +173,7 @@ fun LibraryFoldersScreen(
                         Text(
                             text = "Clear",
                             style = MaterialTheme.typography.labelLarge,
-                            color = TextMuted,
+                            color = palette.textMuted,
                             modifier = Modifier
                                 .clickable(onClick = onClearSelection)
                                 .padding(horizontal = 8.dp)
@@ -196,7 +195,7 @@ fun LibraryFoldersScreen(
                                 strokeWidth = 3.dp
                             )
                             Spacer(Modifier.width(16.dp))
-                            Text("Scanning folders…", color = TextSecondary)
+                            Text("Scanning folders…", color = palette.textSecondary)
                         }
                     }
                 }
@@ -218,7 +217,7 @@ fun LibraryFoldersScreen(
                         Text(
                             text = "No music folders found. Grant audio permission and pull to rescan the library first.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextMuted,
+                            color = palette.textMuted,
                             modifier = Modifier.padding(24.dp)
                         )
                     }
@@ -247,12 +246,13 @@ private fun FolderCheckRow(
     checked: Boolean,
     onToggle: () -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Row(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 3.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(NightCard)
+            .background(palette.card)
             .clickable(onClick = onToggle)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -262,7 +262,7 @@ private fun FolderCheckRow(
             onCheckedChange = { onToggle() },
             colors = CheckboxDefaults.colors(
                 checkedColor = AccentTeal,
-                uncheckedColor = TextMuted
+                uncheckedColor = palette.textMuted
             )
         )
         Column(modifier = Modifier.weight(1f)) {
@@ -277,7 +277,7 @@ private fun FolderCheckRow(
                 Text(
                     text = path,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted,
+                    color = palette.textMuted,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

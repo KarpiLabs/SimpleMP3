@@ -26,8 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.karpilabs.simplemp3.data.local.PlaylistWithMeta
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
-import io.karpilabs.simplemp3.ui.theme.NightCard
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatTrackCount
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,11 +38,12 @@ fun AddToPlaylistSheet(
     onSelect: (Long) -> Unit,
     onCreateNew: () -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = NightCard
+        containerColor = palette.card
     ) {
         Column(modifier = Modifier.padding(bottom = 32.dp)) {
             Text(
@@ -55,7 +55,7 @@ fun AddToPlaylistSheet(
             Text(
                 text = trackTitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
+                color = palette.textSecondary,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
             )
             Spacer(Modifier.height(8.dp))
@@ -97,7 +97,7 @@ fun AddToPlaylistSheet(
                             Text(
                                 text = formatTrackCount(playlist.trackCount),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
+                                color = palette.textSecondary
                             )
                         }
                     }

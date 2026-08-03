@@ -33,8 +33,7 @@ import io.karpilabs.simplemp3.data.local.PlaylistWithMeta
 import io.karpilabs.simplemp3.ui.theme.AccentCoral
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.AccentViolet
-import io.karpilabs.simplemp3.ui.theme.NightElevated
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatTrackCount
 
 @Composable
@@ -43,6 +42,7 @@ fun PlaylistCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Column(
         modifier = modifier
             .clickable(onClick = onClick)
@@ -53,7 +53,7 @@ fun PlaylistCard(
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(14.dp))
-                .background(playlistGradient(playlist.systemType)),
+                .background(playlistGradient(playlist.systemType, palette.elevated)),
             contentAlignment = Alignment.Center
         ) {
             val cover = playlist.displayCover
@@ -88,7 +88,7 @@ fun PlaylistCard(
         Text(
             text = formatTrackCount(playlist.trackCount),
             style = MaterialTheme.typography.bodySmall,
-            color = TextSecondary,
+            color = palette.textSecondary,
             maxLines = 1
         )
     }
@@ -100,6 +100,7 @@ fun PlaylistListRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val palette = LocalSimpleMP3Palette.current
     androidx.compose.foundation.layout.Row(
         modifier = modifier
             .fillMaxWidth()
@@ -111,7 +112,7 @@ fun PlaylistListRow(
             modifier = Modifier
                 .size(64.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(playlistGradient(playlist.systemType)),
+                .background(playlistGradient(playlist.systemType, palette.elevated)),
             contentAlignment = Alignment.Center
         ) {
             val cover = playlist.displayCover
@@ -153,7 +154,7 @@ fun PlaylistListRow(
                     }
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
+                color = palette.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -161,17 +162,17 @@ fun PlaylistListRow(
     }
 }
 
-private fun playlistGradient(systemType: String?) = when (systemType) {
+private fun playlistGradient(systemType: String?, elevated: androidx.compose.ui.graphics.Color) = when (systemType) {
     PlaylistEntity.SYSTEM_FAVORITES -> Brush.linearGradient(
-        listOf(AccentCoral.copy(alpha = 0.55f), NightElevated)
+        listOf(AccentCoral.copy(alpha = 0.55f), elevated)
     )
     PlaylistEntity.SYSTEM_RECENTLY_PLAYED -> Brush.linearGradient(
-        listOf(AccentViolet.copy(alpha = 0.5f), NightElevated)
+        listOf(AccentViolet.copy(alpha = 0.5f), elevated)
     )
     PlaylistEntity.SYSTEM_JELLYFIN -> Brush.linearGradient(
-        listOf(AccentViolet.copy(alpha = 0.55f), AccentTeal.copy(alpha = 0.25f), NightElevated)
+        listOf(AccentViolet.copy(alpha = 0.55f), AccentTeal.copy(alpha = 0.25f), elevated)
     )
     else -> Brush.linearGradient(
-        listOf(AccentTeal.copy(alpha = 0.35f), NightElevated)
+        listOf(AccentTeal.copy(alpha = 0.35f), elevated)
     )
 }

@@ -31,8 +31,7 @@ import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.player.PlayerUiState
 import io.karpilabs.simplemp3.ui.components.TrackRow
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
-import io.karpilabs.simplemp3.ui.theme.NightBlack
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatTrackCount
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,6 +47,7 @@ fun CollectionDetailScreen(
     onPlayTrack: (TrackEntity) -> Unit,
     onToggleFavorite: (Long) -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = {
@@ -56,7 +56,7 @@ fun CollectionDetailScreen(
                     Text(
                         text = subtitle.ifBlank { formatTrackCount(tracks.size) },
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = palette.textSecondary
                     )
                 }
             },
@@ -80,7 +80,7 @@ fun CollectionDetailScreen(
                 enabled = tracks.isNotEmpty(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AccentTeal,
-                    contentColor = NightBlack
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 modifier = Modifier.weight(1f)
             ) {

@@ -27,8 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
-import io.karpilabs.simplemp3.ui.theme.TextMuted
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatDuration
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -44,6 +43,7 @@ fun TrackRow(
     onFavoriteClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -98,7 +98,7 @@ fun TrackRow(
                         track.neverCompress -> AccentTeal
                         track.isJellyfin || track.isYoutube ->
                             io.karpilabs.simplemp3.ui.theme.AccentViolet
-                        else -> TextSecondary
+                        else -> palette.textSecondary
                     },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -111,7 +111,7 @@ fun TrackRow(
                 Icon(
                     imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                     contentDescription = if (isFavorite) "Unlike" else "Like",
-                    tint = if (isFavorite) AccentTeal else TextMuted
+                    tint = if (isFavorite) AccentTeal else palette.textMuted
                 )
             }
         }
@@ -121,7 +121,7 @@ fun TrackRow(
                 Icon(
                     imageVector = Icons.Rounded.MoreVert,
                     contentDescription = "More",
-                    tint = TextMuted
+                    tint = palette.textMuted
                 )
             }
         }

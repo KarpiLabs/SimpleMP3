@@ -24,9 +24,7 @@ import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.player.PlayerUiState
 import io.karpilabs.simplemp3.ui.components.TrackRow
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
-import io.karpilabs.simplemp3.ui.theme.NightCard
-import io.karpilabs.simplemp3.ui.theme.TextMuted
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 
 @Composable
 fun SearchScreen(
@@ -38,6 +36,7 @@ fun SearchScreen(
     onToggleFavorite: (Long) -> Unit,
     onAddToPlaylist: (TrackEntity) -> Unit = {}
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
             text = "Search",
@@ -54,7 +53,7 @@ fun SearchScreen(
                 .padding(horizontal = 16.dp),
             placeholder = { Text("Songs, artists, albums") },
             leadingIcon = {
-                Icon(Icons.Rounded.Search, contentDescription = null, tint = TextMuted)
+                Icon(Icons.Rounded.Search, contentDescription = null, tint = palette.textMuted)
             },
             trailingIcon = {
                 if (query.isNotEmpty()) {
@@ -67,9 +66,9 @@ fun SearchScreen(
             shape = RoundedCornerShape(14.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = AccentTeal,
-                unfocusedBorderColor = NightCard,
-                focusedContainerColor = NightCard,
-                unfocusedContainerColor = NightCard,
+                unfocusedBorderColor = palette.card,
+                focusedContainerColor = palette.card,
+                unfocusedContainerColor = palette.card,
                 cursorColor = AccentTeal
             )
         )
@@ -78,14 +77,14 @@ fun SearchScreen(
             Text(
                 text = "Find anything in your local library — same search works on Android Auto.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
+                color = palette.textSecondary,
                 modifier = Modifier.padding(24.dp)
             )
         } else if (results.isEmpty()) {
             Text(
                 text = "No matches for \"$query\"",
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
+                color = palette.textSecondary,
                 modifier = Modifier.padding(24.dp)
             )
         } else {

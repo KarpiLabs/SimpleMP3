@@ -69,10 +69,19 @@ object MediaIds {
 
 object MediaItemFactory {
 
+    /** Android Auto content-style hints: grid vs. list layout for a browsable node's children. */
+    const val EXTRA_CONTENT_STYLE_BROWSABLE = "android.media.browse.CONTENT_STYLE_BROWSABLE_HINT"
+    const val EXTRA_CONTENT_STYLE_PLAYABLE = "android.media.browse.CONTENT_STYLE_PLAYABLE_HINT"
+    const val CONTENT_STYLE_LIST = 1
+    const val CONTENT_STYLE_GRID = 2
+
     fun root(): MediaItem = browsable(
         mediaId = MediaIds.ROOT,
         title = "Simple MP3",
-        isPlayable = false
+        isPlayable = false,
+        // Root categories (Albums, Artists, Playlists…) read better as a grid with art.
+        browsableHint = CONTENT_STYLE_GRID,
+        playableHint = CONTENT_STYLE_LIST
     )
 
     fun category(
@@ -80,13 +89,17 @@ object MediaItemFactory {
         title: String,
         subtitle: String? = null,
         isPlayable: Boolean = false,
-        artworkUri: String? = null
+        artworkUri: String? = null,
+        browsableHint: Int = CONTENT_STYLE_GRID,
+        playableHint: Int = CONTENT_STYLE_LIST
     ): MediaItem = browsable(
         mediaId = mediaId,
         title = title,
         subtitle = subtitle,
         isPlayable = isPlayable,
-        artworkUri = artworkUri
+        artworkUri = artworkUri,
+        browsableHint = browsableHint,
+        playableHint = playableHint
     )
 
     /**
@@ -124,7 +137,10 @@ object MediaItemFactory {
         },
         artworkUri = playlist.displayCover,
         isPlayable = playlist.trackCount > 0,
-        folderType = MediaMetadata.FOLDER_TYPE_PLAYLISTS
+        folderType = MediaMetadata.FOLDER_TYPE_PLAYLISTS,
+        // Contains tracks — render as a list, not a grid.
+        browsableHint = CONTENT_STYLE_LIST,
+        playableHint = CONTENT_STYLE_LIST
     )
 
     fun fromAlbum(album: AlbumRow): MediaItem = browsable(
@@ -133,7 +149,9 @@ object MediaItemFactory {
         subtitle = "${album.subtitle} · ${album.trackCount} songs",
         artworkUri = album.artworkUri,
         isPlayable = true,
-        folderType = MediaMetadata.FOLDER_TYPE_ALBUMS
+        folderType = MediaMetadata.FOLDER_TYPE_ALBUMS,
+        browsableHint = CONTENT_STYLE_LIST,
+        playableHint = CONTENT_STYLE_LIST
     )
 
     fun fromArtist(artist: AlbumRow): MediaItem = browsable(
@@ -142,7 +160,9 @@ object MediaItemFactory {
         subtitle = "${artist.trackCount} songs",
         artworkUri = artist.artworkUri,
         isPlayable = true,
-        folderType = MediaMetadata.FOLDER_TYPE_ARTISTS
+        folderType = MediaMetadata.FOLDER_TYPE_ARTISTS,
+        browsableHint = CONTENT_STYLE_LIST,
+        playableHint = CONTENT_STYLE_LIST
     )
 
     @OptIn(UnstableApi::class)
@@ -179,8 +199,15 @@ object MediaItemFactory {
         subtitle: String? = null,
         artworkUri: String? = null,
         isPlayable: Boolean = false,
-        folderType: @MediaMetadata.FolderType Int = MediaMetadata.FOLDER_TYPE_MIXED
+        folderType: @MediaMetadata.FolderType Int = MediaMetadata.FOLDER_TYPE_MIXED,
+        browsableHint: Int = CONTENT_STYLE_GRID,
+        playableHint: Int = CONTENT_STYLE_LIST
     ): MediaItem {
+        // Tells Android Auto how to lay out THIS node's children once entered.
+        val extras = android.os.Bundle().apply {
+            putInt(EXTRA_CONTENT_STYLE_BROWSABLE, browsableHint)
+            putInt(EXTRA_CONTENT_STYLE_PLAYABLE, playableHint)
+        }
         val metadata = MediaMetadata.Builder()
             .setTitle(title)
             .setSubtitle(subtitle)
@@ -188,6 +215,7 @@ object MediaItemFactory {
             .setIsPlayable(isPlayable)
             .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
             .setFolderType(folderType)
+            .setExtras(extras)
             .apply {
                 artworkUri?.let { setArtworkUri(it.toUri()) }
             }

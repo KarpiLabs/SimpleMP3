@@ -27,9 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.karpilabs.simplemp3.player.PlayerUiState
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
-import io.karpilabs.simplemp3.ui.theme.NightCard
-import io.karpilabs.simplemp3.ui.theme.NightElevated
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,11 +36,12 @@ fun QueueSheet(
     onDismiss: () -> Unit,
     onPlayIndex: (Int) -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = NightCard
+        containerColor = palette.card
     ) {
         Column(modifier = Modifier.padding(bottom = 28.dp)) {
             Text(
@@ -54,14 +53,14 @@ fun QueueSheet(
             Text(
                 text = "${state.queueSize} in queue",
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
+                color = palette.textSecondary,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
             )
             Spacer(Modifier.height(8.dp))
             if (state.queue.isEmpty()) {
                 Text(
                     text = "Play something to build a queue.",
-                    color = TextSecondary,
+                    color = palette.textSecondary,
                     modifier = Modifier.padding(20.dp)
                 )
             } else {
@@ -78,7 +77,7 @@ fun QueueSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onPlayIndex(absoluteIndex) }
-                                .background(if (isCurrent) AccentTeal.copy(alpha = 0.12f) else NightCard)
+                                .background(if (isCurrent) AccentTeal.copy(alpha = 0.12f) else palette.card)
                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -100,7 +99,7 @@ fun QueueSheet(
                                 Text(
                                     text = item.artist.ifBlank { " " },
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary,
+                                    color = palette.textSecondary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )

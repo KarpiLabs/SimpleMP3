@@ -16,6 +16,8 @@ import javax.inject.Singleton
 
 private val Context.appDataStore by preferencesDataStore(name = "app_prefs")
 
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
 data class ResumeSnapshot(
     val trackIds: List<Long>,
     val index: Int,
@@ -69,6 +71,18 @@ class AppPreferences @Inject constructor(
          * Example: "Music,Download/Audio"
          */
         val LIBRARY_FOLDER_ROOTS = stringPreferencesKey("library_folder_roots")
+        /** SYSTEM / LIGHT / DARK — see [ThemeMode]. */
+        val THEME_MODE = stringPreferencesKey("theme_mode")
+    }
+
+    val themeModeFlow: Flow<ThemeMode> = context.appDataStore.data.map { prefs ->
+        ThemeMode.entries.firstOrNull { it.name == prefs[Keys.THEME_MODE] } ?: ThemeMode.SYSTEM
+    }
+
+    suspend fun getThemeMode(): ThemeMode = themeModeFlow.first()
+
+    suspend fun setThemeMode(mode: ThemeMode) {
+        context.appDataStore.edit { it[Keys.THEME_MODE] = mode.name }
     }
 
     suspend fun getLastLibraryScanMs(): Long =

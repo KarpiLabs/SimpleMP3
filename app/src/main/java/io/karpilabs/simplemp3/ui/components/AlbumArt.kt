@@ -23,7 +23,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.AccentViolet
-import io.karpilabs.simplemp3.ui.theme.NightElevated
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 
 @Composable
 fun AlbumArt(
@@ -33,6 +33,7 @@ fun AlbumArt(
     size: Dp = 56.dp,
     cornerRadius: Dp = 10.dp
 ) {
+    val palette = LocalSimpleMP3Palette.current
     val shape = RoundedCornerShape(cornerRadius)
     val context = LocalContext.current
     val px = with(androidx.compose.ui.platform.LocalDensity.current) { size.roundToPx() }
@@ -42,7 +43,7 @@ fun AlbumArt(
             .clip(shape)
             .background(
                 Brush.linearGradient(
-                    listOf(NightElevated, AccentTeal.copy(alpha = 0.25f), AccentViolet.copy(alpha = 0.2f))
+                    listOf(palette.elevated, AccentTeal.copy(alpha = 0.25f), AccentViolet.copy(alpha = 0.2f))
                 )
             ),
         contentAlignment = Alignment.Center

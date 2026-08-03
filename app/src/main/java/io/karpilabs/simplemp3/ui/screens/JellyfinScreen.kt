@@ -70,11 +70,7 @@ import io.karpilabs.simplemp3.ui.components.AlbumArt
 import io.karpilabs.simplemp3.ui.theme.AccentCoral
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.AccentViolet
-import io.karpilabs.simplemp3.ui.theme.NightBlack
-import io.karpilabs.simplemp3.ui.theme.NightCard
-import io.karpilabs.simplemp3.ui.theme.NightElevated
-import io.karpilabs.simplemp3.ui.theme.TextMuted
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatDuration
 import io.karpilabs.simplemp3.ui.util.formatTrackCount
 import io.karpilabs.simplemp3.ui.viewmodel.BrowseMode
@@ -108,6 +104,7 @@ fun JellyfinScreen(
     onClearOffline: () -> Unit,
     onPlayOfflineTrack: (TrackEntity) -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -135,7 +132,7 @@ fun JellyfinScreen(
                         "Pull music offline for the car"
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
+                    color = palette.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -190,6 +187,7 @@ fun JellyfinScreen(
 
 @Composable
 private fun SyncBanner(progress: SyncProgress) {
+    val palette = LocalSimpleMP3Palette.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -211,7 +209,7 @@ private fun SyncBanner(progress: SyncProgress) {
             Text(
                 text = progress.currentTitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
+                color = palette.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -225,12 +223,12 @@ private fun SyncBanner(progress: SyncProgress) {
                     .height(6.dp)
                     .clip(RoundedCornerShape(4.dp)),
                 color = AccentTeal,
-                trackColor = NightElevated
+                trackColor = palette.elevated
             )
             Text(
                 text = "${progress.current}/${progress.total}",
                 style = MaterialTheme.typography.labelSmall,
-                color = TextMuted,
+                color = palette.textMuted,
                 modifier = Modifier.padding(top = 4.dp)
             )
         }
@@ -238,7 +236,7 @@ private fun SyncBanner(progress: SyncProgress) {
             Text(text = it, color = AccentCoral, style = MaterialTheme.typography.bodySmall)
         }
         progress.lastResult?.takeIf { !progress.isActive }?.let {
-            Text(text = it, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+            Text(text = it, color = palette.textSecondary, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -253,6 +251,7 @@ private fun LoginCard(
     onLogin: (String, String, String) -> Unit,
     onDiscover: () -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     var server by remember { mutableStateOf("http://") }
     var user by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
@@ -270,7 +269,7 @@ private fun LoginCard(
                         Brush.linearGradient(
                             listOf(
                                 AccentViolet.copy(alpha = 0.35f),
-                                NightCard,
+                                palette.card,
                                 AccentTeal.copy(alpha = 0.2f)
                             )
                         )
@@ -294,7 +293,7 @@ private fun LoginCard(
                     Text(
                         text = "We’ll scan your Wi‑Fi for Jellyfin, or you can paste a server URL. Then download music for offline & Android Auto.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        color = palette.textSecondary
                     )
                 }
             }
@@ -343,7 +342,7 @@ private fun LoginCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(NightCard)
+                        .background(palette.card)
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -356,7 +355,7 @@ private fun LoginCard(
                     Text(
                         "Looking for Jellyfin on your Wi‑Fi…",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        color = palette.textSecondary
                     )
                 }
             }
@@ -367,7 +366,7 @@ private fun LoginCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
-                    .background(NightCard)
+                    .background(palette.card)
                     .border(
                         width = if (server.trimEnd('/') == found.address.trimEnd('/')) 1.5.dp else 0.dp,
                         color = AccentTeal,
@@ -390,7 +389,7 @@ private fun LoginCard(
                     Text(
                         text = found.address,
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = palette.textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -408,7 +407,7 @@ private fun LoginCard(
                 Text(
                     text = "Nothing found on LAN. Make sure your phone is on the same Wi‑Fi as the server (not guest/AP isolation), then try again — or enter the URL below.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted
+                    color = palette.textMuted
                 )
             }
         }
@@ -421,7 +420,7 @@ private fun LoginCard(
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("http://192.168.1.10:8096") },
                 singleLine = true,
-                leadingIcon = { Icon(Icons.Rounded.Link, null, tint = TextMuted) },
+                leadingIcon = { Icon(Icons.Rounded.Link, null, tint = palette.textMuted) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 colors = fieldColors(),
                 shape = RoundedCornerShape(14.dp)
@@ -464,7 +463,7 @@ private fun LoginCard(
                     .height(52.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AccentTeal,
-                    contentColor = NightBlack
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 shape = RoundedCornerShape(14.dp)
             ) {
@@ -472,7 +471,7 @@ private fun LoginCard(
                     CircularProgressIndicator(
                         modifier = Modifier.size(22.dp),
                         strokeWidth = 2.dp,
-                        color = NightBlack
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
                     Text("Connect", style = MaterialTheme.typography.titleSmall)
@@ -483,7 +482,7 @@ private fun LoginCard(
             Text(
                 text = "Tip: Use your LAN IP for car/offline downloads at home. HTTPS reverse proxies work too.",
                 style = MaterialTheme.typography.bodySmall,
-                color = TextMuted
+                color = palette.textMuted
             )
         }
     }
@@ -511,6 +510,7 @@ private fun ConnectedContent(
     onClearOffline: () -> Unit,
     onPlayOfflineTrack: (TrackEntity) -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
@@ -546,12 +546,12 @@ private fun ConnectedContent(
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = AccentTeal.copy(alpha = 0.2f),
                     selectedLabelColor = AccentTeal,
-                    containerColor = NightCard,
-                    labelColor = TextSecondary
+                    containerColor = palette.card,
+                    labelColor = palette.textSecondary
                 )
             )
             TextButton(onClick = onLogout) {
-                Text("Log out", color = TextMuted)
+                Text("Log out", color = palette.textMuted)
             }
         }
 
@@ -630,6 +630,7 @@ private fun RemotePlaylistList(
     onImportWifi: (JellyfinItem) -> Unit,
     onImportNow: (JellyfinItem) -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     if (loading && playlists.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = AccentTeal)
@@ -639,7 +640,7 @@ private fun RemotePlaylistList(
     if (playlists.isEmpty()) {
         Text(
             "No server playlists found.",
-            color = TextSecondary,
+            color = palette.textSecondary,
             modifier = Modifier.padding(24.dp)
         )
         return
@@ -653,7 +654,7 @@ private fun RemotePlaylistList(
                     "Import downloads in the background and creates a local playlist."
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = TextMuted,
+                color = palette.textMuted,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }
@@ -668,7 +669,7 @@ private fun RemotePlaylistList(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(NightElevated),
+                        .background(palette.elevated),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Rounded.Storage, null, tint = AccentViolet)
@@ -690,7 +691,7 @@ private fun RemotePlaylistList(
                             append("Import offline")
                         },
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = palette.textSecondary
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
@@ -698,7 +699,7 @@ private fun RemotePlaylistList(
                         Text(if (wifiOnly) "Wi‑Fi" else "Queue", color = AccentTeal)
                     }
                     TextButton(onClick = { onImportNow(pl) }) {
-                        Text("Now", color = TextSecondary)
+                        Text("Now", color = palette.textSecondary)
                     }
                 }
             }
@@ -708,6 +709,7 @@ private fun RemotePlaylistList(
 
 @Composable
 private fun ModeChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    val palette = LocalSimpleMP3Palette.current
     FilterChip(
         selected = selected,
         onClick = onClick,
@@ -715,8 +717,8 @@ private fun ModeChip(label: String, selected: Boolean, onClick: () -> Unit) {
         colors = FilterChipDefaults.filterChipColors(
             selectedContainerColor = AccentTeal.copy(alpha = 0.2f),
             selectedLabelColor = AccentTeal,
-            containerColor = NightCard,
-            labelColor = TextSecondary
+            containerColor = palette.card,
+            labelColor = palette.textSecondary
         )
     )
 }
@@ -729,6 +731,7 @@ private fun RemoteAlbumList(
     onOpen: (JellyfinItem) -> Unit,
     onSyncAlbum: (String) -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     if (loading && albums.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = AccentTeal)
@@ -748,7 +751,7 @@ private fun RemoteAlbumList(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(NightElevated),
+                        .background(palette.elevated),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Rounded.MusicNote, null, tint = AccentTeal)
@@ -768,7 +771,7 @@ private fun RemoteAlbumList(
                             album.childCount?.let { append(" · "); append(formatTrackCount(it)) }
                         },
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = palette.textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -886,6 +889,7 @@ private fun ActionRow(
     onSync: () -> Unit,
     syncLabel: String = "Download selected"
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -894,14 +898,14 @@ private fun ActionRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         TextButton(onClick = onSelectAll) {
-            Text("Select all", color = TextSecondary)
+            Text("Select all", color = palette.textSecondary)
         }
         Button(
             onClick = onSync,
             enabled = !syncing,
             colors = ButtonDefaults.buttonColors(
                 containerColor = AccentTeal,
-                contentColor = NightBlack
+                contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
             Icon(Icons.Rounded.Download, null, modifier = Modifier.size(18.dp))
@@ -919,6 +923,7 @@ private fun SelectableRemoteTrack(
     selected: Boolean,
     onToggle: () -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -932,10 +937,10 @@ private fun SelectableRemoteTrack(
                 .clip(CircleShape)
                 .border(
                     width = 2.dp,
-                    color = if (selected) AccentTeal else TextMuted,
+                    color = if (selected) AccentTeal else palette.textMuted,
                     shape = CircleShape
                 )
-                .background(if (selected) AccentTeal.copy(alpha = 0.25f) else NightCard),
+                .background(if (selected) AccentTeal.copy(alpha = 0.25f) else palette.card),
             contentAlignment = Alignment.Center
         ) {
             if (selected) {
@@ -959,7 +964,7 @@ private fun SelectableRemoteTrack(
             Text(
                 "${track.artistName} · ${formatDuration(track.durationMs)}",
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
+                color = palette.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -974,6 +979,7 @@ private fun OfflineList(
     onRemove: (Long) -> Unit,
     onClear: () -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     if (tracks.isEmpty()) {
         Column(
             modifier = Modifier
@@ -981,13 +987,13 @@ private fun OfflineList(
                 .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(Icons.Rounded.CloudOff, null, tint = TextMuted, modifier = Modifier.size(48.dp))
+            Icon(Icons.Rounded.CloudOff, null, tint = palette.textMuted, modifier = Modifier.size(48.dp))
             Spacer(Modifier.height(12.dp))
             Text("Nothing offline yet", style = MaterialTheme.typography.titleMedium)
             Text(
                 "Download albums or tracks from Jellyfin. They'll appear here and in Android Auto.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
+                color = palette.textSecondary
             )
         }
         return
@@ -1006,7 +1012,7 @@ private fun OfflineList(
                     Spacer(Modifier.width(8.dp))
                     Text(
                         formatTrackCount(tracks.size) + " ready offline",
-                        color = TextSecondary,
+                        color = palette.textSecondary,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -1040,7 +1046,7 @@ private fun OfflineList(
                     )
                 }
                 IconButton(onClick = { onRemove(track.id) }) {
-                    Icon(Icons.Rounded.Delete, contentDescription = "Remove", tint = TextMuted)
+                    Icon(Icons.Rounded.Delete, contentDescription = "Remove", tint = palette.textMuted)
                 }
             }
         }
@@ -1049,19 +1055,24 @@ private fun OfflineList(
 
 @Composable
 private fun FieldLabel(text: String) {
+    val palette = LocalSimpleMP3Palette.current
     Text(
         text = text,
         style = MaterialTheme.typography.labelLarge,
-        color = TextSecondary,
+        color = palette.textSecondary,
         modifier = Modifier.padding(bottom = 6.dp, top = 4.dp)
     )
 }
 
 @Composable
-private fun fieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = AccentTeal,
-    unfocusedBorderColor = NightElevated,
-    focusedContainerColor = NightCard,
-    unfocusedContainerColor = NightCard,
-    cursorColor = AccentTeal
-)
+private fun fieldColors(): androidx.compose.material3.TextFieldColors {
+    val palette = LocalSimpleMP3Palette.current
+    return OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = AccentTeal,
+        unfocusedBorderColor = palette.elevated,
+        focusedContainerColor = palette.card,
+        unfocusedContainerColor = palette.card,
+        cursorColor = AccentTeal
+    )
+}
+

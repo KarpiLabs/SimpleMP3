@@ -48,10 +48,7 @@ import io.karpilabs.simplemp3.player.PlayerUiState
 import io.karpilabs.simplemp3.ui.components.AlbumArt
 import io.karpilabs.simplemp3.ui.components.TrackRow
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
-import io.karpilabs.simplemp3.ui.theme.NightCard
-import io.karpilabs.simplemp3.ui.theme.NightElevated
-import io.karpilabs.simplemp3.ui.theme.TextMuted
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatTrackCount
 
 @Composable
@@ -70,6 +67,7 @@ fun LibraryScreen(
     onToggleFavorite: (Long) -> Unit,
     onAddToPlaylist: (TrackEntity) -> Unit = {}
 ) {
+    val palette = LocalSimpleMP3Palette.current
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val tabs = listOf("Songs", "Albums", "Artists", "Folders")
     val q = filter.trim()
@@ -116,7 +114,7 @@ fun LibraryScreen(
                 .padding(horizontal = 16.dp),
             placeholder = { Text("Filter this tab…") },
             singleLine = true,
-            leadingIcon = { Icon(Icons.Rounded.Search, null, tint = TextMuted) },
+            leadingIcon = { Icon(Icons.Rounded.Search, null, tint = palette.textMuted) },
             trailingIcon = {
                 if (filter.isNotEmpty()) {
                     IconButton(onClick = { onFilterChange("") }) {
@@ -127,9 +125,9 @@ fun LibraryScreen(
             shape = RoundedCornerShape(14.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = AccentTeal,
-                unfocusedBorderColor = NightCard,
-                focusedContainerColor = NightCard,
-                unfocusedContainerColor = NightCard,
+                unfocusedBorderColor = palette.card,
+                focusedContainerColor = palette.card,
+                unfocusedContainerColor = palette.card,
                 cursorColor = AccentTeal
             )
         )
@@ -154,7 +152,7 @@ fun LibraryScreen(
                     text = {
                         Text(
                             title,
-                            color = if (tab == index) AccentTeal else TextSecondary
+                            color = if (tab == index) AccentTeal else palette.textSecondary
                         )
                     }
                 )
@@ -207,7 +205,7 @@ fun LibraryScreen(
                                 "No folders yet — rescan the library from Home"
                             },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextMuted,
+                            color = palette.textMuted,
                             modifier = Modifier.padding(24.dp)
                         )
                     }
@@ -239,6 +237,7 @@ private fun MediaCollectionRow(
     artworkUri: String?,
     onClick: () -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -250,7 +249,7 @@ private fun MediaCollectionRow(
             modifier = Modifier
                 .size(56.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(NightElevated),
+                .background(palette.elevated),
             contentAlignment = Alignment.Center
         ) {
             if (!artworkUri.isNullOrBlank()) {
@@ -276,7 +275,7 @@ private fun MediaCollectionRow(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
+                color = palette.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

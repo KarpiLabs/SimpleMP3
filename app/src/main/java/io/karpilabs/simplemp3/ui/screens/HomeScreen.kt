@@ -56,10 +56,7 @@ import io.karpilabs.simplemp3.ui.components.TrackRow
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.AccentViolet
 import io.karpilabs.simplemp3.ui.theme.DeepViolet
-import io.karpilabs.simplemp3.ui.theme.NightBlack
-import io.karpilabs.simplemp3.ui.theme.NightCard
-import io.karpilabs.simplemp3.ui.theme.NightElevated
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatTrackCount
 import java.util.Calendar
 
@@ -91,6 +88,7 @@ fun HomeScreen(
     onSkipNext: () -> Unit = {},
     onSkipPrevious: () -> Unit = {}
 ) {
+    val palette = LocalSimpleMP3Palette.current
     val greeting = rememberGreeting()
     val showJellyfin = jellyfinEnabled
     val jfCount = if (showJellyfin) jellyfinCount else 0
@@ -154,7 +152,7 @@ fun HomeScreen(
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                containerColor = NightCard,
+                                containerColor = palette.card,
                                 labelColor = AccentTeal,
                                 iconColor = AccentTeal
                             )
@@ -188,7 +186,7 @@ fun HomeScreen(
                         }
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
+                    color = palette.textSecondary
                 )
             }
         }
@@ -212,7 +210,7 @@ fun HomeScreen(
                     brush = Brush.horizontalGradient(
                         listOf(
                             AccentViolet.copy(alpha = 0.35f),
-                            NightElevated,
+                            palette.elevated,
                             AccentTeal.copy(alpha = 0.15f)
                         )
                     ),
@@ -242,7 +240,7 @@ fun HomeScreen(
                             "Scan local MP3s on this device, or open Tools for YouTube and LAN import."
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        color = palette.textSecondary
                     )
                     Spacer(Modifier.height(20.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -250,7 +248,7 @@ fun HomeScreen(
                             onClick = onScan,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = AccentTeal,
-                                contentColor = NightBlack
+                                contentColor = MaterialTheme.colorScheme.background
                             )
                         ) {
                             Text("Scan library")
@@ -260,7 +258,7 @@ fun HomeScreen(
                                 onClick = onOpenJellyfin,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = AccentViolet,
-                                    contentColor = NightBlack
+                                    contentColor = MaterialTheme.colorScheme.background
                                 )
                             ) {
                                 Text("Jellyfin")
@@ -269,7 +267,7 @@ fun HomeScreen(
                             Button(
                                 onClick = onOpenTools,
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = NightCard,
+                                    containerColor = palette.card,
                                     contentColor = AccentTeal
                                 )
                             ) {
@@ -367,12 +365,14 @@ private fun DriveModeHome(
     onPlayContinue: () -> Unit,
     onOpenJellyfin: () -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
+    val background = MaterialTheme.colorScheme.background
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(NightBlack, DeepViolet, NightBlack)
+                    listOf(background, DeepViolet, background)
                 )
             )
             .padding(20.dp),
@@ -390,7 +390,7 @@ private fun DriveModeHome(
             )
             Text(
                 "Exit",
-                color = TextSecondary,
+                color = palette.textSecondary,
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
                     .clickable(onClick = onExitDriveMode)
@@ -419,7 +419,7 @@ private fun DriveModeHome(
         Text(
             text = playerState.artist.ifBlank { resume?.artist ?: "Tap Resume or a playlist" },
             style = MaterialTheme.typography.bodyLarge,
-            color = TextSecondary,
+            color = palette.textSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -449,7 +449,7 @@ private fun DriveModeHome(
                 Icon(
                     if (playerState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = "Play/Pause",
-                    tint = NightBlack,
+                    tint = background,
                     modifier = Modifier.size(48.dp)
                 )
             }
@@ -473,7 +473,7 @@ private fun DriveModeHome(
                     .height(56.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AccentTeal,
-                    contentColor = NightBlack
+                    contentColor = background
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -488,7 +488,7 @@ private fun DriveModeHome(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = NightCard),
+                colors = ButtonDefaults.buttonColors(containerColor = palette.card),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Text("Play recently played", color = AccentTeal)
@@ -502,7 +502,7 @@ private fun DriveModeHome(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = NightCard),
+                colors = ButtonDefaults.buttonColors(containerColor = palette.card),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Text("Jellyfin Offline ($jellyfinCount)", color = AccentViolet)
@@ -513,7 +513,7 @@ private fun DriveModeHome(
         Text(
             "Playlists",
             style = MaterialTheme.typography.titleMedium,
-            color = TextSecondary,
+            color = palette.textSecondary,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
@@ -524,7 +524,7 @@ private fun DriveModeHome(
                     modifier = Modifier
                         .width(120.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(NightCard)
+                        .background(palette.card)
                         .clickable { onOpenPlaylist(pl.id) }
                         .padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -550,6 +550,7 @@ private fun DriveModeHome(
 
 @Composable
 private fun ResumeCard(resume: ResumeSnapshot, onResume: () -> Unit) {
+    val palette = LocalSimpleMP3Palette.current
     Row(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -557,7 +558,7 @@ private fun ResumeCard(resume: ResumeSnapshot, onResume: () -> Unit) {
             .clip(RoundedCornerShape(16.dp))
             .background(
                 Brush.horizontalGradient(
-                    listOf(AccentTeal.copy(alpha = 0.25f), NightCard)
+                    listOf(AccentTeal.copy(alpha = 0.25f), palette.card)
                 )
             )
             .clickable(onClick = onResume)
@@ -577,7 +578,7 @@ private fun ResumeCard(resume: ResumeSnapshot, onResume: () -> Unit) {
             Text(
                 resume.artist,
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
+                color = palette.textSecondary,
                 maxLines = 1
             )
         }
@@ -593,6 +594,7 @@ private fun FeatureCard(
     brush: Brush,
     onClick: (() -> Unit)?
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Box(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -607,7 +609,7 @@ private fun FeatureCard(
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = palette.textSecondary)
             }
         }
     }

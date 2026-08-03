@@ -56,9 +56,7 @@ import androidx.media3.common.Player
 import io.karpilabs.simplemp3.player.PlayerUiState
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.DeepViolet
-import io.karpilabs.simplemp3.ui.theme.NightBlack
-import io.karpilabs.simplemp3.ui.theme.TextMuted
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatDuration
 import kotlinx.coroutines.delay
 
@@ -77,6 +75,7 @@ fun NowPlayingSheet(
     onOpenQueue: () -> Unit = {},
     onSleepTimer: (Int) -> Unit = {}
 ) {
+    val palette = LocalSimpleMP3Palette.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     LaunchedEffect(state.isPlaying) {
@@ -89,7 +88,7 @@ fun NowPlayingSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = NightBlack,
+        containerColor = MaterialTheme.colorScheme.background,
         dragHandle = null
     ) {
         Box(
@@ -100,7 +99,7 @@ fun NowPlayingSheet(
                         listOf(
                             Color(0xFF0F2A26),
                             Color(0xFF0C1418),
-                            NightBlack,
+                            MaterialTheme.colorScheme.background,
                             DeepViolet
                         )
                     )
@@ -196,7 +195,7 @@ fun NowPlayingSheet(
                 Text(
                     text = state.artist.ifBlank { "Select a track" },
                     style = MaterialTheme.typography.bodyLarge,
-                    color = TextSecondary,
+                    color = palette.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -204,7 +203,7 @@ fun NowPlayingSheet(
                     Text(
                         text = state.album,
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted,
+                        color = palette.textMuted,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -250,12 +249,12 @@ fun NowPlayingSheet(
                     Text(
                         text = formatDuration(shownPos),
                         style = MaterialTheme.typography.labelMedium,
-                        color = TextMuted
+                        color = palette.textMuted
                     )
                     Text(
                         text = formatDuration(state.durationMs),
                         style = MaterialTheme.typography.labelMedium,
-                        color = TextMuted
+                        color = palette.textMuted
                     )
                 }
 
@@ -270,7 +269,7 @@ fun NowPlayingSheet(
                         Icon(
                             Icons.Rounded.Shuffle,
                             contentDescription = "Shuffle",
-                            tint = if (state.shuffleModeEnabled) AccentTeal else TextSecondary,
+                            tint = if (state.shuffleModeEnabled) AccentTeal else palette.textSecondary,
                             modifier = Modifier.size(26.dp)
                         )
                     }
@@ -296,7 +295,7 @@ fun NowPlayingSheet(
                             Icon(
                                 imageVector = if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                                 contentDescription = if (state.isPlaying) "Pause" else "Play",
-                                tint = NightBlack,
+                                tint = MaterialTheme.colorScheme.background,
                                 modifier = Modifier.size(40.dp)
                             )
                         }
@@ -313,7 +312,7 @@ fun NowPlayingSheet(
                         val (icon, tint) = when (state.repeatMode) {
                             Player.REPEAT_MODE_ONE -> Icons.Rounded.RepeatOne to AccentTeal
                             Player.REPEAT_MODE_ALL -> Icons.Rounded.Repeat to AccentTeal
-                            else -> Icons.Rounded.Repeat to TextSecondary
+                            else -> Icons.Rounded.Repeat to palette.textSecondary
                         }
                         Icon(
                             icon,

@@ -56,10 +56,7 @@ import io.karpilabs.simplemp3.data.quickconnect.QuickConnectSession
 import io.karpilabs.simplemp3.ui.theme.AccentCoral
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.AccentViolet
-import io.karpilabs.simplemp3.ui.theme.NightCard
-import io.karpilabs.simplemp3.ui.theme.NightElevated
-import io.karpilabs.simplemp3.ui.theme.TextMuted
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.viewmodel.QuickConnectViewModel
 
 @Composable
@@ -67,6 +64,7 @@ fun QuickConnectScreen(
     viewModel: QuickConnectViewModel,
     onBack: () -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     val session by viewModel.session.collectAsStateWithLifecycle()
 
     // Portal lives only while this screen is in the composition tree.
@@ -116,7 +114,7 @@ fun QuickConnectScreen(
                 Text(
                     text = "LAN portal · closes when you leave",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = palette.textSecondary
                 )
             }
             Icon(
@@ -166,6 +164,7 @@ fun QuickConnectScreen(
 
 @Composable
 private fun StatusHero(session: QuickConnectSession) {
+    val palette = LocalSimpleMP3Palette.current
     Box(
         modifier = Modifier
             .padding(horizontal = 16.dp)
@@ -175,7 +174,7 @@ private fun StatusHero(session: QuickConnectSession) {
                 Brush.horizontalGradient(
                     listOf(
                         AccentTeal.copy(alpha = 0.28f),
-                        NightElevated,
+                        palette.elevated,
                         AccentViolet.copy(alpha = 0.2f)
                     )
                 )
@@ -199,7 +198,7 @@ private fun StatusHero(session: QuickConnectSession) {
                         session.error ?: "Starting…"
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
+                color = palette.textSecondary
             )
         }
     }
@@ -207,6 +206,7 @@ private fun StatusHero(session: QuickConnectSession) {
 
 @Composable
 private fun QrCodeCard(session: QuickConnectSession) {
+    val palette = LocalSimpleMP3Palette.current
     val qrPayload = session.qrUrl ?: session.url
     val bitmap: Bitmap? = remember(qrPayload) {
         qrPayload?.let { QrCodeEncoder.encode(it, sizePx = 640) }
@@ -217,7 +217,7 @@ private fun QrCodeCard(session: QuickConnectSession) {
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(NightCard)
+            .background(palette.card)
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -251,7 +251,7 @@ private fun QrCodeCard(session: QuickConnectSession) {
             Text(
                 text = "Includes the access code — unlocks after scan",
                 style = MaterialTheme.typography.bodySmall,
-                color = TextMuted,
+                color = palette.textMuted,
                 textAlign = TextAlign.Center
             )
         } else {
@@ -259,12 +259,12 @@ private fun QrCodeCard(session: QuickConnectSession) {
                 modifier = Modifier
                     .size(220.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(NightElevated),
+                    .background(palette.elevated),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = if (session.running) "QR unavailable" else "Waiting…",
-                    color = TextMuted,
+                    color = palette.textMuted,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -274,12 +274,13 @@ private fun QrCodeCard(session: QuickConnectSession) {
 
 @Composable
 private fun AccessCodeCard(code: String, running: Boolean) {
+    val palette = LocalSimpleMP3Palette.current
     Column(
         modifier = Modifier
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(NightCard)
+            .background(palette.card)
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -303,7 +304,7 @@ private fun AccessCodeCard(code: String, running: Boolean) {
         Text(
             text = "Required once on the computer to unlock the portal",
             style = MaterialTheme.typography.bodySmall,
-            color = TextMuted,
+            color = palette.textMuted,
             textAlign = TextAlign.Center
         )
     }
@@ -311,6 +312,7 @@ private fun AccessCodeCard(code: String, running: Boolean) {
 
 @Composable
 private fun UrlCard(session: QuickConnectSession) {
+    val palette = LocalSimpleMP3Palette.current
     val context = LocalContext.current
     val url = session.url
 
@@ -319,7 +321,7 @@ private fun UrlCard(session: QuickConnectSession) {
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(NightCard)
+            .background(palette.card)
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -336,7 +338,7 @@ private fun UrlCard(session: QuickConnectSession) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .background(NightElevated)
+                .background(palette.elevated)
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -366,7 +368,7 @@ private fun UrlCard(session: QuickConnectSession) {
             Text(
                 text = "IP ${session.ip} · port ${session.port}",
                 style = MaterialTheme.typography.bodySmall,
-                color = TextMuted
+                color = palette.textMuted
             )
         }
     }
@@ -374,12 +376,13 @@ private fun UrlCard(session: QuickConnectSession) {
 
 @Composable
 private fun HowToCard() {
+    val palette = LocalSimpleMP3Palette.current
     Column(
         modifier = Modifier
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(NightCard)
+            .background(palette.card)
             .padding(16.dp)
     ) {
         Text(
@@ -396,13 +399,14 @@ private fun HowToCard() {
         Text(
             text = "Uses plain HTTP on your LAN (fine for a temporary local portal). Only LAN-uploaded tracks can be deleted from the portal; your MediaStore library is never wiped.",
             style = MaterialTheme.typography.bodySmall,
-            color = TextMuted
+            color = palette.textMuted
         )
     }
 }
 
 @Composable
 private fun HowToStep(n: String, text: String) {
+    val palette = LocalSimpleMP3Palette.current
     Row(
         modifier = Modifier.padding(vertical = 4.dp),
         verticalAlignment = Alignment.Top
@@ -420,7 +424,7 @@ private fun HowToStep(n: String, text: String) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
+            color = palette.textSecondary,
             modifier = Modifier.padding(top = 2.dp)
         )
     }
@@ -428,12 +432,13 @@ private fun HowToStep(n: String, text: String) {
 
 @Composable
 private fun EventRow(event: QuickConnectEvent) {
+    val palette = LocalSimpleMP3Palette.current
     Row(
         modifier = Modifier
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(NightCard)
+            .background(palette.card)
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -447,7 +452,7 @@ private fun EventRow(event: QuickConnectEvent) {
         Text(
             text = event.message,
             style = MaterialTheme.typography.bodySmall,
-            color = TextSecondary
+            color = palette.textSecondary
         )
     }
 }

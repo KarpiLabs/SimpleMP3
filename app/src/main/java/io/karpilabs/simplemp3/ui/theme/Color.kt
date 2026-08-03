@@ -25,3 +25,18 @@ val TextMuted = Color(0xFF6E6E7A)
 val GradientStart = Color(0xFF0D1B1A)
 val GradientMid = Color(0xFF0C0A12)
 val GradientEnd = DeepViolet
+
+// Car-day palette — same brand accents, paper-white surfaces for daylight readability.
+val DayBackground = Color(0xFFFAFAFC)
+val DaySurface = Color(0xFFFFFFFF)
+val DayCard = Color(0xFFF0EEF6)
+val DayElevated = Color(0xFFE4E0EF)
+
+val DayTextPrimary = Color(0xFF1A1723)
+val DayTextSecondary = Color(0xFF4E4B5C)
+val DayTextMuted = Color(0xFF8B8894)
+
+// Light-surface gradient echoing the dark GradientStart/Mid/End trio.
+val DayGradientStart = Color(0xFFEAFBF7)
+val DayGradientMid = Color(0xFFFAFAFC)
+val DayGradientEnd = Color(0xFFF1E9FB)

@@ -32,9 +32,7 @@ import androidx.compose.ui.unit.dp
 import io.karpilabs.simplemp3.data.local.PlaylistWithMeta
 import io.karpilabs.simplemp3.ui.components.PlaylistListRow
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
-import io.karpilabs.simplemp3.ui.theme.NightBlack
-import io.karpilabs.simplemp3.ui.theme.NightCard
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 
 @Composable
 fun PlaylistsScreen(
@@ -42,6 +40,7 @@ fun PlaylistsScreen(
     onOpenPlaylist: (Long) -> Unit,
     onCreatePlaylist: (String) -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     var showCreate by remember { mutableStateOf(false) }
 
     androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
@@ -62,7 +61,7 @@ fun PlaylistsScreen(
                     Text(
                         text = "Manage collections that sync to Android Auto",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = palette.textSecondary
                     )
                 }
             }
@@ -85,7 +84,7 @@ fun PlaylistsScreen(
                 .align(Alignment.BottomEnd)
                 .padding(end = 20.dp, bottom = 100.dp),
             containerColor = AccentTeal,
-            contentColor = NightBlack
+            contentColor = MaterialTheme.colorScheme.onPrimary
         ) {
             Icon(Icons.Rounded.Add, contentDescription = "New playlist")
         }
@@ -108,10 +107,11 @@ fun CreatePlaylistDialog(
     onConfirm: (String) -> Unit,
     initialName: String = ""
 ) {
+    val palette = LocalSimpleMP3Palette.current
     var name by remember { mutableStateOf(initialName) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = NightCard,
+        containerColor = palette.card,
         title = {
             Text("New playlist", color = MaterialTheme.colorScheme.onSurface)
         },
@@ -134,7 +134,7 @@ fun CreatePlaylistDialog(
                 enabled = name.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AccentTeal,
-                    contentColor = NightBlack
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text("Create")
@@ -142,7 +142,7 @@ fun CreatePlaylistDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = TextSecondary)
+                Text("Cancel", color = palette.textSecondary)
             }
         }
     )

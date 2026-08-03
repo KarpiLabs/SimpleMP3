@@ -1,5 +1,6 @@
 package io.karpilabs.simplemp3.service
 
+import android.provider.MediaStore
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -15,6 +16,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import io.karpilabs.simplemp3.data.local.PlaylistEntity
+import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import io.karpilabs.simplemp3.data.repository.MusicRepository
 import io.karpilabs.simplemp3.data.storage.LargeFileStorageManager
@@ -250,6 +252,20 @@ class LibrarySessionCallback(
         browser: MediaSession.ControllerInfo,
         params: MediaLibraryService.LibraryParams?
     ): ListenableFuture<LibraryResult<MediaItem>> {
+        // Auto's media resumption card asks for the "recent" root — point it straight
+        // at Continue so the launcher tile can resume playback without a full browse.
+        if (params?.isRecent == true) {
+            return Futures.immediateFuture(
+                LibraryResult.ofItem(
+                    MediaItemFactory.category(
+                        MediaIds.CONTINUE,
+                        "Continue",
+                        isPlayable = true
+                    ),
+                    params
+                )
+            )
+        }
         return Futures.immediateFuture(
             LibraryResult.ofItem(MediaItemFactory.root(), params)
         )
@@ -485,6 +501,15 @@ class LibrarySessionCallback(
         val only = mediaItems.first()
         val mediaId = only.mediaId
 
+        // Google Assistant / "Hey Google, play X in Simple MP3" voice commands arrive as an
+        // empty mediaId with the spoken phrase (and sometimes structured artist/album/title
+        // extras) in requestMetadata — not as one of our browse tree ids.
+        val voiceQuery = only.requestMetadata?.searchQuery?.trim()
+        if (mediaId.isBlank() && !voiceQuery.isNullOrBlank()) {
+            val list = resolveVoiceQueue(only)
+            return ResolvedQueue(list, 0)
+        }
+
         // Shuffle play action
         if (MediaIds.isShuffle(mediaId)) {
             val target = MediaIds.unwrapShuffle(mediaId) ?: return ResolvedQueue(emptyList(), 0)
@@ -508,6 +533,65 @@ class LibrarySessionCallback(
         val start = expanded.indexOfFirst { it.mediaId == mediaId }.coerceAtLeast(0)
         return ResolvedQueue(expanded, start)
     }
+
+    /**
+     * Resolve a voice-search play request ("Hey Google, play Bohemian Rhapsody in
+     * Simple MP3") into a queue. Assistant sends structured artist/album/title extras
+     * when it can parse them — those are more reliable than the raw phrase, so they're
+     * tried first; the freeform [MediaItem.RequestMetadata.searchQuery] is the fallback.
+     */
+    private suspend fun resolveVoiceQueue(item: MediaItem): List<MediaItem> {
+        val extras = item.requestMetadata?.extras
+        val artistHint = extras?.getString(MediaStore.EXTRA_MEDIA_ARTIST)?.trim()?.takeIf { it.isNotBlank() }
+        val albumHint = extras?.getString(MediaStore.EXTRA_MEDIA_ALBUM)?.trim()?.takeIf { it.isNotBlank() }
+        val titleHint = extras?.getString(MediaStore.EXTRA_MEDIA_TITLE)?.trim()?.takeIf { it.isNotBlank() }
+        val query = item.requestMetadata?.searchQuery?.trim().orEmpty()
+
+        titleHint?.let { name ->
+            val tracks = repository.searchOnce(name)
+            if (tracks.isNotEmpty()) return readyTracks(tracks)
+        }
+        albumHint?.let { name ->
+            val album = repository.getAlbumsOnce().firstOrNull { it.name.equals(name, ignoreCase = true) }
+                ?: repository.getAlbumsOnce().firstOrNull { it.name.contains(name, ignoreCase = true) }
+            if (album != null) {
+                val tracks = repository.getTracksByAlbumOnce(album.name)
+                if (tracks.isNotEmpty()) return readyTracks(tracks)
+            }
+        }
+        artistHint?.let { name ->
+            val artist = repository.getArtistsOnce().firstOrNull { it.name.equals(name, ignoreCase = true) }
+                ?: repository.getArtistsOnce().firstOrNull { it.name.contains(name, ignoreCase = true) }
+            if (artist != null) {
+                val tracks = repository.getTracksByArtistOnce(artist.name)
+                if (tracks.isNotEmpty()) return readyTracks(tracks)
+            }
+        }
+
+        if (query.isBlank()) return emptyList()
+
+        // Same ranking as the on-screen search box: named collections first ("play my
+        // road trip playlist"), then album/artist, then a plain track title match.
+        visiblePlaylists().firstOrNull { it.name.contains(query, ignoreCase = true) }?.let { pl ->
+            val tracks = repository.getPlaylistTracksOnce(pl.id)
+            if (tracks.isNotEmpty()) return readyTracks(tracks)
+        }
+        repository.getAlbumsOnce().firstOrNull { it.name.contains(query, ignoreCase = true) }?.let { album ->
+            val tracks = repository.getTracksByAlbumOnce(album.name)
+            if (tracks.isNotEmpty()) return readyTracks(tracks)
+        }
+        repository.getArtistsOnce().firstOrNull { it.name.contains(query, ignoreCase = true) }?.let { artist ->
+            val tracks = repository.getTracksByArtistOnce(artist.name)
+            if (tracks.isNotEmpty()) return readyTracks(tracks)
+        }
+        val tracks = repository.searchOnce(query)
+        if (tracks.isNotEmpty()) return readyTracks(tracks)
+
+        return emptyList()
+    }
+
+    private suspend fun readyTracks(tracks: List<TrackEntity>): List<MediaItem> =
+        MediaItemFactory.fromTracks(storageManager.ensurePlayable(tracks))
 
     private suspend fun expandSingleTrack(trackMediaId: String): List<MediaItem> {
         val trackId = MediaIds.parseTrackId(trackMediaId) ?: return emptyList()

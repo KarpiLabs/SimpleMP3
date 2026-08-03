@@ -41,9 +41,7 @@ import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.player.PlayerUiState
 import io.karpilabs.simplemp3.ui.components.TrackRow
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
-import io.karpilabs.simplemp3.ui.theme.NightElevated
-import io.karpilabs.simplemp3.ui.theme.TextMuted
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatTrackCount
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,6 +59,7 @@ fun FolderDetailScreen(
     onToggleFavorite: (Long) -> Unit,
     onAddToPlaylist: (TrackEntity) -> Unit = {}
 ) {
+    val palette = LocalSimpleMP3Palette.current
     val title = FolderBrowser.displayName(folderPath).ifBlank { "Folders" }
     val subtitle = folderPath.ifBlank { "Browse by path" }
 
@@ -73,7 +72,7 @@ fun FolderDetailScreen(
                         Text(
                             text = subtitle,
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary,
+                            color = palette.textSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -164,7 +163,7 @@ fun FolderDetailScreen(
                     Text(
                         text = "No songs in this folder",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextMuted,
+                        color = palette.textMuted,
                         modifier = Modifier.padding(24.dp)
                     )
                 }
@@ -179,6 +178,7 @@ fun FolderRow(
     subtitle: String,
     onClick: () -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -190,7 +190,7 @@ fun FolderRow(
             modifier = Modifier
                 .size(56.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(NightElevated),
+                .background(palette.elevated),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -212,7 +212,7 @@ fun FolderRow(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
+                color = palette.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

@@ -62,8 +62,7 @@ import io.karpilabs.simplemp3.ui.screens.ToolsScreen
 import io.karpilabs.simplemp3.ui.screens.YoutubeScreen
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.DeepViolet
-import io.karpilabs.simplemp3.ui.theme.NightBlack
-import io.karpilabs.simplemp3.ui.theme.TextMuted
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.viewmodel.JellyfinViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.MusicViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.QuickConnectViewModel
@@ -96,6 +95,8 @@ fun SimpleMP3AppRoot(
     val wifiOnlyDownloads by viewModel.wifiOnlyDownloads.collectAsStateWithLifecycle()
     val resume by viewModel.resumeSnapshot.collectAsStateWithLifecycle()
     val resumeEnabled by viewModel.resumeEnabled.collectAsStateWithLifecycle()
+
+    val palette = LocalSimpleMP3Palette.current
 
     val visiblePlaylists = remember(playlists, jellyfinEnabled) {
         if (jellyfinEnabled) playlists
@@ -151,7 +152,7 @@ fun SimpleMP3AppRoot(
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
-                    containerColor = NightBlack,
+                    containerColor = MaterialTheme.colorScheme.background,
                     tonalElevation = 0.dp
                 ) {
                     tabs.forEach { tab ->
@@ -170,8 +171,8 @@ fun SimpleMP3AppRoot(
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = AccentTeal,
                                 selectedTextColor = AccentTeal,
-                                unselectedIconColor = TextMuted,
-                                unselectedTextColor = TextMuted,
+                                unselectedIconColor = palette.textMuted,
+                                unselectedTextColor = palette.textMuted,
                                 indicatorColor = DeepViolet.copy(alpha = 0.55f)
                             )
                         )
@@ -230,6 +231,7 @@ fun SimpleMP3AppRoot(
                     )
                 }
                 composable(Routes.SETTINGS) {
+                    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
                     SettingsScreen(
                         jellyfinEnabled = jellyfinEnabled,
                         autoDriveModeOnCar = autoDriveModeOnCar,
@@ -239,6 +241,7 @@ fun SimpleMP3AppRoot(
                         wifiOnlyDownloads = wifiOnlyDownloads,
                         largeFileOptimize = largeFileOptimize,
                         largeFileColdPack = largeFileColdPack,
+                        themeMode = themeMode,
                         onBack = { navController.popBackStack() },
                         onJellyfinEnabledChange = viewModel::setJellyfinEnabled,
                         onAutoDriveModeOnCarChange = viewModel::setAutoDriveModeOnCar,
@@ -248,6 +251,7 @@ fun SimpleMP3AppRoot(
                         onWifiOnlyDownloadsChange = viewModel::setWifiOnlyDownloads,
                         onLargeFileOptimizeChange = viewModel::setLargeFileOptimize,
                         onLargeFileColdPackChange = viewModel::setLargeFileColdPack,
+                        onThemeModeChange = viewModel::setThemeMode,
                         onOpenQuickConnect = { navController.navigate(Routes.QUICK_CONNECT) },
                         onOpenLibraryFolders = { navController.navigate(Routes.LIBRARY_FOLDERS) }
                     )

@@ -30,9 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.karpilabs.simplemp3.player.PlayerUiState
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
-import io.karpilabs.simplemp3.ui.theme.NightCard
-import io.karpilabs.simplemp3.ui.theme.NightElevated
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 
 @Composable
 fun MiniPlayer(
@@ -44,6 +42,7 @@ fun MiniPlayer(
 ) {
     if (state.currentMediaId == null && state.queueSize == 0) return
 
+    val palette = LocalSimpleMP3Palette.current
     val progress = if (state.durationMs > 0) {
         (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f)
     } else 0f
@@ -53,7 +52,7 @@ fun MiniPlayer(
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(NightElevated)
+            .background(palette.elevated)
             .clickable(onClick = onExpand)
     ) {
         LinearProgressIndicator(
@@ -62,7 +61,7 @@ fun MiniPlayer(
                 .fillMaxWidth()
                 .height(2.dp),
             color = AccentTeal,
-            trackColor = NightCard
+            trackColor = palette.card
         )
         Row(
             modifier = Modifier
@@ -88,7 +87,7 @@ fun MiniPlayer(
                 Text(
                     text = state.artist.ifBlank { "Simple MP3" },
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
+                    color = palette.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

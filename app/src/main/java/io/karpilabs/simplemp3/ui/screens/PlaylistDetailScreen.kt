@@ -63,10 +63,7 @@ import io.karpilabs.simplemp3.player.PlayerUiState
 import io.karpilabs.simplemp3.ui.components.TrackActionsMenu
 import io.karpilabs.simplemp3.ui.components.TrackRow
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
-import io.karpilabs.simplemp3.ui.theme.NightBlack
-import io.karpilabs.simplemp3.ui.theme.NightElevated
-import io.karpilabs.simplemp3.ui.theme.TextMuted
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatDuration
 import io.karpilabs.simplemp3.ui.util.formatTrackCount
 import kotlin.math.roundToInt
@@ -90,6 +87,7 @@ fun PlaylistDetailScreen(
     onAddToQueue: (TrackEntity) -> Unit = {},
     onAddToPlaylist: (TrackEntity) -> Unit = {}
 ) {
+    val palette = LocalSimpleMP3Palette.current
     var menuOpen by remember { mutableStateOf(false) }
     var actionTrack by remember { mutableStateOf<TrackEntity?>(null) }
     var localTracks by remember { mutableStateOf(tracks) }
@@ -152,7 +150,7 @@ fun PlaylistDetailScreen(
                             .clip(RoundedCornerShape(16.dp))
                             .background(
                                 Brush.linearGradient(
-                                    listOf(AccentTeal.copy(alpha = 0.4f), NightElevated)
+                                    listOf(AccentTeal.copy(alpha = 0.4f), palette.elevated)
                                 )
                             ),
                         contentAlignment = Alignment.Center
@@ -182,20 +180,20 @@ fun PlaylistDetailScreen(
                             }
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        color = palette.textSecondary
                     )
                     if (!playlist?.description.isNullOrBlank()) {
                         Text(
                             text = playlist!!.description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
+                            color = palette.textSecondary
                         )
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = "Long-press ☰ to drag-reorder",
                         style = MaterialTheme.typography.labelSmall,
-                        color = TextMuted
+                        color = palette.textMuted
                     )
                     Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -204,7 +202,7 @@ fun PlaylistDetailScreen(
                             enabled = localTracks.isNotEmpty(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = AccentTeal,
-                                contentColor = NightBlack
+                                contentColor = MaterialTheme.colorScheme.onPrimary
                             ),
                             modifier = Modifier.weight(1f)
                         ) {
@@ -239,7 +237,7 @@ fun PlaylistDetailScreen(
                             if (isDragging) Modifier.shadow(8.dp) else Modifier
                         )
                         .background(
-                            if (isDragging) NightElevated
+                            if (isDragging) palette.elevated
                             else MaterialTheme.colorScheme.background
                         ),
                     verticalAlignment = Alignment.CenterVertically
@@ -247,7 +245,7 @@ fun PlaylistDetailScreen(
                     Icon(
                         Icons.Rounded.DragHandle,
                         contentDescription = "Drag to reorder",
-                        tint = TextMuted,
+                        tint = palette.textMuted,
                         modifier = Modifier
                             .padding(start = 8.dp)
                             .size(28.dp)
@@ -308,7 +306,7 @@ fun PlaylistDetailScreen(
                         )
                     }
                     IconButton(onClick = { onRemoveTrack(track.id) }) {
-                        Icon(Icons.Rounded.Delete, contentDescription = "Remove", tint = TextMuted)
+                        Icon(Icons.Rounded.Delete, contentDescription = "Remove", tint = palette.textMuted)
                     }
                 }
             }
@@ -318,7 +316,7 @@ fun PlaylistDetailScreen(
                     Text(
                         text = "This playlist is empty. Long-press a song → Add to playlist. Tracks also show on Android Auto.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
+                        color = palette.textSecondary,
                         modifier = Modifier.padding(24.dp)
                     )
                 }

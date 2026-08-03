@@ -55,11 +55,7 @@ import io.karpilabs.simplemp3.ui.components.AlbumArt
 import io.karpilabs.simplemp3.ui.theme.AccentCoral
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.AccentViolet
-import io.karpilabs.simplemp3.ui.theme.NightBlack
-import io.karpilabs.simplemp3.ui.theme.NightCard
-import io.karpilabs.simplemp3.ui.theme.NightElevated
-import io.karpilabs.simplemp3.ui.theme.TextMuted
-import io.karpilabs.simplemp3.ui.theme.TextSecondary
+import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatDuration
 import io.karpilabs.simplemp3.ui.viewmodel.YoutubeUiState
 
@@ -77,6 +73,7 @@ fun YoutubeScreen(
     onToggleNeverCompress: (Long) -> Unit = {},
     onClearAll: () -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     val clipboard = LocalClipboardManager.current
 
     LazyColumn(
@@ -108,7 +105,7 @@ fun YoutubeScreen(
                     Text(
                         text = "Paste a link · title + album art saved offline",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = palette.textSecondary
                     )
                 }
             }
@@ -124,7 +121,7 @@ fun YoutubeScreen(
                         Brush.horizontalGradient(
                             listOf(
                                 AccentCoral.copy(alpha = 0.28f),
-                                NightElevated,
+                                palette.elevated,
                                 AccentViolet.copy(alpha = 0.2f)
                             )
                         )
@@ -150,7 +147,7 @@ fun YoutubeScreen(
                     Text(
                         text = "Downloads the best audio, converts to MP3 with FFmpeg (like yt-dl), embeds the thumbnail as cover art, and tags title/artist for Android Auto.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = palette.textSecondary
                     )
                 }
             }
@@ -165,7 +162,7 @@ fun YoutubeScreen(
                     label = { Text("YouTube link") },
                     placeholder = { Text("https://youtube.com/watch?v=…") },
                     leadingIcon = {
-                        Icon(Icons.Rounded.Link, contentDescription = null, tint = TextMuted)
+                        Icon(Icons.Rounded.Link, contentDescription = null, tint = palette.textMuted)
                     },
                     trailingIcon = {
                         IconButton(
@@ -188,7 +185,7 @@ fun YoutubeScreen(
                     keyboardActions = KeyboardActions(onGo = { onDownload() }),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = AccentTeal,
-                        unfocusedBorderColor = NightCard,
+                        unfocusedBorderColor = palette.card,
                         focusedLabelColor = AccentTeal,
                         cursorColor = AccentTeal
                     ),
@@ -203,16 +200,16 @@ fun YoutubeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AccentCoral,
-                        contentColor = NightBlack,
-                        disabledContainerColor = NightCard,
-                        disabledContentColor = TextMuted
+                        contentColor = MaterialTheme.colorScheme.onTertiary,
+                        disabledContainerColor = palette.card,
+                        disabledContentColor = palette.textMuted
                     )
                 ) {
                     if (progress.isActive) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
                             strokeWidth = 2.dp,
-                            color = NightBlack
+                            color = MaterialTheme.colorScheme.onTertiary
                         )
                         Spacer(Modifier.width(10.dp))
                         Text(progress.phase.ifBlank { "Working…" })
@@ -232,12 +229,12 @@ fun YoutubeScreen(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(4.dp)),
                             color = AccentTeal,
-                            trackColor = NightCard
+                            trackColor = palette.card
                         )
                         Text(
                             text = "${progress.percent}% · ${progress.title}",
                             style = MaterialTheme.typography.labelSmall,
-                            color = TextMuted,
+                            color = palette.textMuted,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     } else {
@@ -246,13 +243,13 @@ fun YoutubeScreen(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(4.dp)),
                             color = AccentTeal,
-                            trackColor = NightCard
+                            trackColor = palette.card
                         )
                         if (progress.title.isNotBlank()) {
                             Text(
                                 text = progress.title,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = TextMuted,
+                                color = palette.textMuted,
                                 modifier = Modifier.padding(top = 4.dp)
                             )
                         }
@@ -303,14 +300,14 @@ fun YoutubeScreen(
                     Icon(
                         Icons.Rounded.VideoLibrary,
                         contentDescription = null,
-                        tint = TextMuted,
+                        tint = palette.textMuted,
                         modifier = Modifier.size(48.dp)
                     )
                     Spacer(Modifier.height(12.dp))
                     Text(
                         text = "Paste any YouTube video or Shorts link above.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        color = palette.textSecondary
                     )
                 }
             }
@@ -334,12 +331,13 @@ private fun YoutubeDownloadRow(
     onToggleNeverCompress: () -> Unit,
     onRemove: () -> Unit
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(NightCard)
+            .background(palette.card)
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -370,7 +368,7 @@ private fun YoutubeDownloadRow(
                     else if (track.isCold) append(" · Cold")
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = if (track.neverCompress) AccentTeal else TextSecondary,
+                color = if (track.neverCompress) AccentTeal else palette.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -383,14 +381,14 @@ private fun YoutubeDownloadRow(
                 } else {
                     "Never compress"
                 },
-                tint = if (track.neverCompress) AccentTeal else TextMuted
+                tint = if (track.neverCompress) AccentTeal else palette.textMuted
             )
         }
         IconButton(onClick = onPlay) {
             Icon(Icons.Rounded.PlayArrow, contentDescription = "Play", tint = AccentTeal)
         }
         IconButton(onClick = onRemove) {
-            Icon(Icons.Rounded.Delete, contentDescription = "Remove", tint = TextMuted)
+            Icon(Icons.Rounded.Delete, contentDescription = "Remove", tint = palette.textMuted)
         }
     }
 }
