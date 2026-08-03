@@ -41,6 +41,11 @@ class AppPreferences @Inject constructor(
          * queue + position and start playback (if nothing is already playing).
          */
         val AUTO_RESUME_ON_DRIVE = booleanPreferencesKey("auto_resume_on_drive")
+        /**
+         * When Android Auto / Automotive disconnects, pause playback so audio
+         * does not keep running on the phone.
+         */
+        val PAUSE_ON_CAR_DISCONNECT = booleanPreferencesKey("pause_on_car_disconnect")
         val WIFI_ONLY_DOWNLOADS = booleanPreferencesKey("wifi_only_downloads")
         /** Re-encode very large/high-bitrate app-owned audio to save space. */
         val LARGE_FILE_OPTIMIZE = booleanPreferencesKey("large_file_optimize")
@@ -109,6 +114,17 @@ class AppPreferences @Inject constructor(
     }
 
     suspend fun isAutoResumeOnDrive(): Boolean = autoResumeOnDriveFlow.first()
+
+    /** Default on: pause when Android Auto / the car disconnects. */
+    val pauseOnCarDisconnectFlow: Flow<Boolean> = context.appDataStore.data.map {
+        it[Keys.PAUSE_ON_CAR_DISCONNECT] ?: true
+    }
+
+    suspend fun setPauseOnCarDisconnect(enabled: Boolean) {
+        context.appDataStore.edit { it[Keys.PAUSE_ON_CAR_DISCONNECT] = enabled }
+    }
+
+    suspend fun isPauseOnCarDisconnect(): Boolean = pauseOnCarDisconnectFlow.first()
 
     val wifiOnlyDownloadsFlow: Flow<Boolean> = context.appDataStore.data.map {
         it[Keys.WIFI_ONLY_DOWNLOADS] ?: true

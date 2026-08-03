@@ -81,6 +81,9 @@ class MusicViewModel @Inject constructor(
     val autoResumeOnDrive: StateFlow<Boolean> = appPreferences.autoResumeOnDriveFlow
         .stateIn(viewModelScope, share, true)
 
+    val pauseOnCarDisconnect: StateFlow<Boolean> = appPreferences.pauseOnCarDisconnectFlow
+        .stateIn(viewModelScope, share, true)
+
     val largeFileOptimize: StateFlow<Boolean> = appPreferences.largeFileOptimizeFlow
         .stateIn(viewModelScope, share, true)
 
@@ -149,6 +152,12 @@ class MusicViewModel @Inject constructor(
     fun setAutoResumeOnDrive(enabled: Boolean) {
         viewModelScope.launch {
             appPreferences.setAutoResumeOnDrive(enabled)
+        }
+    }
+
+    fun setPauseOnCarDisconnect(enabled: Boolean) {
+        viewModelScope.launch {
+            appPreferences.setPauseOnCarDisconnect(enabled)
         }
     }
 

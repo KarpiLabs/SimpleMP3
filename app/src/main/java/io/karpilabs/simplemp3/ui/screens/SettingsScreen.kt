@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.Compress
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Wifi
@@ -54,6 +55,7 @@ fun SettingsScreen(
     jellyfinEnabled: Boolean,
     autoDriveModeOnCar: Boolean,
     autoResumeOnDrive: Boolean,
+    pauseOnCarDisconnect: Boolean,
     resumeEnabled: Boolean,
     wifiOnlyDownloads: Boolean,
     largeFileOptimize: Boolean,
@@ -62,6 +64,7 @@ fun SettingsScreen(
     onJellyfinEnabledChange: (Boolean) -> Unit,
     onAutoDriveModeOnCarChange: (Boolean) -> Unit,
     onAutoResumeOnDriveChange: (Boolean) -> Unit,
+    onPauseOnCarDisconnectChange: (Boolean) -> Unit,
     onResumeEnabledChange: (Boolean) -> Unit,
     onWifiOnlyDownloadsChange: (Boolean) -> Unit,
     onLargeFileOptimizeChange: (Boolean) -> Unit,
@@ -213,6 +216,19 @@ fun SettingsScreen(
                     },
                     checked = autoResumeOnDrive,
                     onCheckedChange = onAutoResumeOnDriveChange
+                )
+            }
+            item {
+                SettingsSwitchRow(
+                    icon = Icons.Rounded.PauseCircle,
+                    title = "Pause when car disconnects",
+                    subtitle = if (pauseOnCarDisconnect) {
+                        "Stop audio when Android Auto / the car disconnects"
+                    } else {
+                        "Keep playing on the phone after disconnect"
+                    },
+                    checked = pauseOnCarDisconnect,
+                    onCheckedChange = onPauseOnCarDisconnectChange
                 )
             }
 

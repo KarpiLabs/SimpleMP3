@@ -20,7 +20,9 @@ import io.karpilabs.simplemp3.data.repository.MusicRepository
 import io.karpilabs.simplemp3.data.storage.LargeFileStorageManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
@@ -58,6 +60,12 @@ class LibrarySessionCallback(
     /** Cached search hits so [onGetSearchResult] matches [onSearch]. */
     private val searchCache = ConcurrentHashMap<String, List<MediaItem>>()
 
+    /**
+     * Pending pause after a car controller leaves. Cancelled if Auto reconnects
+     * within [CAR_DISCONNECT_PAUSE_DELAY_MS] (common during brief USB/wireless glitches).
+     */
+    private var carDisconnectPauseJob: Job? = null
+
     companion object {
         const val ACTION_TOGGLE_SHUFFLE = "io.karpilabs.simplemp3.TOGGLE_SHUFFLE"
         const val ACTION_CYCLE_REPEAT = "io.karpilabs.simplemp3.CYCLE_REPEAT"
@@ -67,6 +75,12 @@ class LibrarySessionCallback(
 
         /** Ignore repeated Auto controller connects within this window. */
         private const val AUTO_RESUME_COOLDOWN_MS = 45_000L
+
+        /**
+         * Wait before pausing on car disconnect so short reconnects (common with
+         * wireless Auto / head-unit handshakes) do not interrupt a trip mid-song.
+         */
+        private const val CAR_DISCONNECT_PAUSE_DELAY_MS = 2_000L
 
         /** Packages that mean “the car is connected”. */
         private val CAR_PACKAGES = setOf(
@@ -100,13 +114,58 @@ class LibrarySessionCallback(
             .build()
     }
 
-    private fun maybeEnableDriveModeForCar(controller: MediaSession.ControllerInfo) {
+    /**
+     * When Android Auto / Automotive drops, stop audio so it does not keep
+     * playing on the phone (or through a dead route). Debounced so brief
+     * controller churn during reconnect does not pause mid-drive.
+     */
+    override fun onDisconnected(
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo
+    ) {
+        super.onDisconnected(session, controller)
+        if (!isCarController(controller)) return
+
+        carDisconnectPauseJob?.cancel()
+        carDisconnectPauseJob = scope.launch {
+            delay(CAR_DISCONNECT_PAUSE_DELAY_MS)
+            if (hasConnectedCarController(session)) return@launch
+            handleCarDisconnect()
+        }
+    }
+
+    private fun isCarController(controller: MediaSession.ControllerInfo): Boolean {
         val pkg = controller.packageName.orEmpty()
-        val looksLikeCar = pkg in CAR_PACKAGES ||
+        return pkg in CAR_PACKAGES ||
             pkg.contains("gearhead", ignoreCase = true) ||
             pkg.contains("android.car", ignoreCase = true) ||
             pkg.contains("projection", ignoreCase = true)
-        if (!looksLikeCar) return
+    }
+
+    private fun hasConnectedCarController(session: MediaSession): Boolean =
+        session.connectedControllers.any { isCarController(it) }
+
+    private suspend fun handleCarDisconnect() {
+        val shouldPause = withContext(Dispatchers.IO) {
+            appPreferences.isPauseOnCarDisconnect()
+        }
+        if (shouldPause && (player.playWhenReady || player.isPlaying)) {
+            player.pause()
+        }
+        // Clear Drive Mode if we auto-enabled it for the car session.
+        val autoDrive = withContext(Dispatchers.IO) {
+            appPreferences.isAutoDriveModeOnCar()
+        }
+        if (autoDrive) {
+            withContext(Dispatchers.IO) { appPreferences.setDriveMode(false) }
+        }
+    }
+
+    private fun maybeEnableDriveModeForCar(controller: MediaSession.ControllerInfo) {
+        if (!isCarController(controller)) return
+        // Car came back — do not pause from a prior disconnect race.
+        carDisconnectPauseJob?.cancel()
+        carDisconnectPauseJob = null
         scope.launch {
             val enableDrive = withContext(Dispatchers.IO) {
                 appPreferences.isAutoDriveModeOnCar()

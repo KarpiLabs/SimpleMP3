@@ -89,6 +89,7 @@ fun SimpleMP3AppRoot(
     val driveMode by viewModel.driveMode.collectAsStateWithLifecycle()
     val autoDriveModeOnCar by viewModel.autoDriveModeOnCar.collectAsStateWithLifecycle()
     val autoResumeOnDrive by viewModel.autoResumeOnDrive.collectAsStateWithLifecycle()
+    val pauseOnCarDisconnect by viewModel.pauseOnCarDisconnect.collectAsStateWithLifecycle()
     val largeFileOptimize by viewModel.largeFileOptimize.collectAsStateWithLifecycle()
     val largeFileColdPack by viewModel.largeFileColdPack.collectAsStateWithLifecycle()
     val wifiOnlyDownloads by viewModel.wifiOnlyDownloads.collectAsStateWithLifecycle()
@@ -232,6 +233,7 @@ fun SimpleMP3AppRoot(
                         jellyfinEnabled = jellyfinEnabled,
                         autoDriveModeOnCar = autoDriveModeOnCar,
                         autoResumeOnDrive = autoResumeOnDrive,
+                        pauseOnCarDisconnect = pauseOnCarDisconnect,
                         resumeEnabled = resumeEnabled,
                         wifiOnlyDownloads = wifiOnlyDownloads,
                         largeFileOptimize = largeFileOptimize,
@@ -240,6 +242,7 @@ fun SimpleMP3AppRoot(
                         onJellyfinEnabledChange = viewModel::setJellyfinEnabled,
                         onAutoDriveModeOnCarChange = viewModel::setAutoDriveModeOnCar,
                         onAutoResumeOnDriveChange = viewModel::setAutoResumeOnDrive,
+                        onPauseOnCarDisconnectChange = viewModel::setPauseOnCarDisconnect,
                         onResumeEnabledChange = viewModel::setResumeEnabled,
                         onWifiOnlyDownloadsChange = viewModel::setWifiOnlyDownloads,
                         onLargeFileOptimizeChange = viewModel::setLargeFileOptimize,
