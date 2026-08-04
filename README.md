@@ -1,6 +1,11 @@
 # Simple MP3
 
-Local music player for Android with playlists, Jellyfin offline sync, and Android Auto.
+Local music player with playlists, Jellyfin offline sync, and Android Auto / CarPlay.
+
+This repo hosts native apps per platform:
+
+- [`android/`](android/) — Kotlin / Jetpack Compose app (see below)
+- [`ios/`](ios/) — Swift / SwiftUI app (in progress, see [`ios/README.md`](ios/README.md))
 
 <p align="center">
   <img src="store-listing/screenshots/01-home.png" alt="Home screen" width="280" />
@@ -31,9 +36,9 @@ More assets live under [`store-listing/`](store-listing/).
 - JDK 17+
 - Android device or emulator, **minSdk 29** (Android 10)
 
-## Build
+## Build (Android)
 
-Using the Makefile (recommended):
+Using the Makefile (recommended, run from repo root):
 
 ```bash
 make help          # list all targets
@@ -50,10 +55,10 @@ make aab           # release App Bundle
 Or Gradle directly:
 
 ```bash
-./gradlew assembleDebug
+cd android && ./gradlew assembleDebug
 ```
 
-Install the debug APK from `app/build/outputs/apk/debug/`, or open the project in Android Studio and run the **app** configuration.
+Install the debug APK from `android/app/build/outputs/apk/debug/`, or open `android/` in Android Studio and run the **app** configuration.
 
 Release builds should be signed with your own keystore (do not commit signing keys or `.aab` / `.apk` files).
 

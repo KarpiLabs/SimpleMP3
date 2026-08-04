@@ -1,0 +1,44 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-ci.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-ci.yml'
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: ios
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Run tests
+        run: |
+          SIM_NAME=$(xcrun simctl list devices available -j | grep -o '"name" : "iPhone[^"]*"' | head -1 | sed 's/"name" : "//;s/"$//')
+          xcodebuild test \
+            -project "Simple MP3.xcodeproj" \
+            -scheme "Simple MP3" \
+            -destination "platform=iOS Simulator,name=$SIM_NAME"
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project "Simple MP3.xcodeproj" \
+            -scheme "Simple MP3" \
+            -sdk iphonesimulator
