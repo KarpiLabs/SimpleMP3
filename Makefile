@@ -188,6 +188,9 @@ signing-report: ## Print signing config / SHA fingerprints
 IOS_PROJECT     ?= $(IOS_DIR)/Simple MP3.xcodeproj
 IOS_SCHEME      ?= Simple MP3
 IOS_DESTINATION ?= generic/platform=iOS Simulator
+# Tests need a concrete (booted-capable) simulator, not a generic destination;
+# pick the first available iPhone runtime unless the caller overrides it.
+IOS_TEST_DESTINATION ?= platform=iOS Simulator,name=$(shell xcrun simctl list devices available iPhone -j | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(v["name"] for k in d for v in d[k] if "iPhone" in v["name"]))' 2>/dev/null || echo "iPhone 17")
 
 .PHONY: ios-build
 ios-build: ## Build the iOS app for the simulator
@@ -195,7 +198,7 @@ ios-build: ## Build the iOS app for the simulator
 
 .PHONY: ios-test
 ios-test: ## Run iOS unit/UI tests
-	xcodebuild -project "$(IOS_PROJECT)" -scheme "$(IOS_SCHEME)" -destination "$(IOS_DESTINATION)" test
+	xcodebuild -project "$(IOS_PROJECT)" -scheme "$(IOS_SCHEME)" -destination "$(IOS_TEST_DESTINATION)" test
 
 .PHONY: ios-run
 ios-run: ## Build and launch the iOS app in the Simulator

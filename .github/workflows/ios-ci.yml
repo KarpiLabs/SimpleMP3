@@ -33,7 +33,7 @@ jobs:
           xcodebuild test \
             -project "Simple MP3.xcodeproj" \
             -scheme "Simple MP3" \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest'
+            -destination 'generic/platform=iOS Simulator'
 
       - name: Build
         run: |
