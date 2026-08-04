@@ -1,6 +1,6 @@
 *.iml
 .gradle
-/local.properties
+android/local.properties
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
@@ -19,7 +19,7 @@ local.properties
 *.aab
 *.ap_
 *.dex
-app/release/
+android/app/release/
 **/build/
 
 # Signing keys & secrets (never commit)
@@ -35,3 +35,11 @@ secrets.properties
 
 # Local tooling (e.g. make format downloads ktlint here)
 .tools/
+
+# iOS
+ios/**/xcuserdata/
+ios/**/*.xcworkspace/xcuserdata/
+ios/DerivedData/
+ios/build/
+ios/.build/
+ios/Pods/

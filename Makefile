@@ -3,7 +3,9 @@
 
 .DEFAULT_GOAL := help
 
-GRADLE   ?= ./gradlew
+ANDROID_DIR ?= android
+IOS_DIR     ?= ios
+GRADLE   ?= $(ANDROID_DIR)/gradlew -p $(ANDROID_DIR)
 ADB      ?= adb
 MODULE   ?= :app
 
@@ -80,7 +82,7 @@ test-android: ## Run instrumentation tests on a connected device/emulator
 
 .PHONY: test-report
 test-report: test ## Run unit tests and print report path
-	@echo "Unit test report: app/build/reports/tests/testDebugUnitTest/index.html"
+	@echo "Unit test report: $(ANDROID_DIR)/app/build/reports/tests/testDebugUnitTest/index.html"
 
 # ── Lint & format ──────────────────────────────────────────────────
 
@@ -98,15 +100,15 @@ lint-fix: ## Apply safe Android Lint auto-fixes
 
 .PHONY: lint-report
 lint-report: lint ## Run lint and print HTML report path
-	@echo "Lint report: app/build/reports/lint-results-debug.html"
+	@echo "Lint report: $(ANDROID_DIR)/app/build/reports/lint-results-debug.html"
 
 .PHONY: format
 format: $(KTLINT) ## Format Kotlin sources with ktlint
-	$(KTLINT) -F "app/src/**/*.kt" "app/src/**/*.kts" "*.kts" "build.gradle.kts" "settings.gradle.kts"
+	$(KTLINT) -F "$(ANDROID_DIR)/app/src/**/*.kt" "$(ANDROID_DIR)/app/src/**/*.kts" "$(ANDROID_DIR)/*.kts" "$(ANDROID_DIR)/build.gradle.kts" "$(ANDROID_DIR)/settings.gradle.kts"
 
 .PHONY: format-check
 format-check: $(KTLINT) ## Check Kotlin formatting (no write)
-	$(KTLINT) "app/src/**/*.kt" "app/src/**/*.kts" "*.kts" "build.gradle.kts" "settings.gradle.kts"
+	$(KTLINT) "$(ANDROID_DIR)/app/src/**/*.kt" "$(ANDROID_DIR)/app/src/**/*.kts" "$(ANDROID_DIR)/*.kts" "$(ANDROID_DIR)/build.gradle.kts" "$(ANDROID_DIR)/settings.gradle.kts"
 
 $(KTLINT):
 	@mkdir -p $(TOOLS_DIR)
@@ -179,3 +181,23 @@ wrapper: ## Refresh Gradle wrapper (requires local Gradle)
 .PHONY: signing-report
 signing-report: ## Print signing config / SHA fingerprints
 	$(GRADLE) $(MODULE):signingReport $(ARGS)
+
+# ── iOS ────────────────────────────────────────────────────────────
+# Requires Xcode + xcodebuild on macOS.
+
+IOS_PROJECT     ?= $(IOS_DIR)/Simple MP3.xcodeproj
+IOS_SCHEME      ?= Simple MP3
+IOS_DESTINATION ?= generic/platform=iOS Simulator
+
+.PHONY: ios-build
+ios-build: ## Build the iOS app for the simulator
+	xcodebuild -project "$(IOS_PROJECT)" -scheme "$(IOS_SCHEME)" -destination "$(IOS_DESTINATION)" build
+
+.PHONY: ios-test
+ios-test: ## Run iOS unit/UI tests
+	xcodebuild -project "$(IOS_PROJECT)" -scheme "$(IOS_SCHEME)" -destination "$(IOS_DESTINATION)" test
+
+.PHONY: ios-run
+ios-run: ## Build and launch the iOS app in the Simulator
+	xcodebuild -project "$(IOS_PROJECT)" -scheme "$(IOS_SCHEME)" -destination "$(IOS_DESTINATION)" build
+	open -a Simulator
