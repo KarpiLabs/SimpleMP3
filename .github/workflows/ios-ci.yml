@@ -30,10 +30,11 @@ jobs:
 
       - name: Run tests
         run: |
+          SIM_NAME=$(xcrun simctl list devices available -j | grep -o '"name" : "iPhone[^"]*"' | head -1 | sed 's/"name" : "//;s/"$//')
           xcodebuild test \
             -project "Simple MP3.xcodeproj" \
             -scheme "Simple MP3" \
-            -destination 'generic/platform=iOS Simulator'
+            -destination "platform=iOS Simulator,name=$SIM_NAME"
 
       - name: Build
         run: |
