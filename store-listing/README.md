@@ -1,18 +1,23 @@
-# Simple MP3 — Play Store package
+# Simple MP3 — Store packages
 
-Everything under `store-listing/` is ready to upload to **Google Play Console**.
+- **Android (Play Store):** assets in this folder (`screenshots/`, `graphics/`, `listing/`, …)
+- **iOS (App Store):** see [`ios/`](ios/) — real Simulator captures + marketing frames
 
 ## Quick map
 
 ```
 store-listing/
-├── screenshots/          # 5× phone (1080×1920) — device mock + marketing text
+├── screenshots/          # Android phone (1080×1920) — device mock + marketing text
 ├── graphics/             # Feature graphic 1024×500
 ├── icons/                # Hi-res 512×512 icon (+ round)
 ├── listing/              # Title, descriptions, privacy, contact
-├── html/                 # Source templates (edit & re-render)
-├── render.sh             # Rebuild all PNGs via Chrome headless
-└── PLAY_STORE_CHECKLIST.md
+├── html/                 # Android source templates (edit & re-render)
+├── render.sh             # Rebuild Android PNGs via Chrome headless
+├── PLAY_STORE_CHECKLIST.md
+└── ios/                  # App Store screenshots (iPhone + iPad) + icon
+    ├── README.md
+    ├── capture-screenshots.sh
+    └── render.sh
 ```
 
 ## Copy-paste listing

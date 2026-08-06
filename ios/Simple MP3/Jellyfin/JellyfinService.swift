@@ -19,6 +19,8 @@ final class JellyfinService {
     private(set) var isLoading = false
     private(set) var statusMessage: String?
     private(set) var syncProgress = SyncProgress()
+    /// When true, network library refreshes are skipped (screenshot demo).
+    private(set) var isDemoSession = false
 
     init(preferences: AppPreferences, repository: MusicRepository) {
         self.preferences = preferences
@@ -36,6 +38,45 @@ final class JellyfinService {
     }
 
     var isLoggedIn: Bool { session != nil }
+
+    /// Fake signed-in server + offline-looking library for App Store screenshots.
+    func applyDemoSession(tracks: [Track]) {
+        isDemoSession = true
+        session = JellyfinSession(
+            serverUrl: preferences.jellyfinServerUrl.isEmpty
+                ? "http://192.168.1.50:8096"
+                : preferences.jellyfinServerUrl,
+            accessToken: preferences.jellyfinToken.isEmpty ? "demo-token" : preferences.jellyfinToken,
+            userId: preferences.jellyfinUserId.isEmpty ? "demo-user" : preferences.jellyfinUserId,
+            userName: preferences.jellyfinUser.isEmpty ? "alex" : preferences.jellyfinUser,
+            serverId: "demo-server",
+            deviceId: preferences.jellyfinDeviceId
+        )
+        preferences.jellyfinEnabled = true
+        remoteItems = tracks.map { t in
+            JellyfinItem.demo(
+                id: t.externalId ?? t.id,
+                title: t.title,
+                artist: t.artist,
+                album: t.album,
+                durationMs: t.duration
+            )
+        }
+        if remoteItems.isEmpty {
+            remoteItems = [
+                .demo(id: "jf-1", title: "Coastline", artist: "Atlas", album: "Salt Air", durationMs: 198_000),
+                .demo(id: "jf-2", title: "Static Bloom", artist: "Kite", album: "Greenhouse", durationMs: 214_000),
+                .demo(id: "jf-3", title: "Glass Harbor", artist: "Northbound", album: "Ports", durationMs: 187_000),
+                .demo(id: "jf-4", title: "Violet Hour", artist: "Lumen", album: "Dusk Collection", durationMs: 192_000)
+            ]
+        }
+        remoteAlbums = [
+            .demo(id: "alb-1", title: "Salt Air", artist: "Atlas", album: "Salt Air", durationMs: 0),
+            .demo(id: "alb-2", title: "Greenhouse", artist: "Kite", album: "Greenhouse", durationMs: 0),
+            .demo(id: "alb-3", title: "Ports", artist: "Northbound", album: "Ports", durationMs: 0)
+        ]
+        statusMessage = "Home Media · offline ready"
+    }
 
     func login(serverUrl: String, username: String, password: String) async {
         isLoading = true
@@ -72,6 +113,10 @@ final class JellyfinService {
 
     func loadLibrary() async {
         guard let session else { return }
+        if isDemoSession {
+            statusMessage = "Home Media · offline ready"
+            return
+        }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -88,6 +133,7 @@ final class JellyfinService {
 
     func search(_ query: String) async {
         guard let session else { return }
+        if isDemoSession { return }
         isLoading = true
         defer { isLoading = false }
         do {

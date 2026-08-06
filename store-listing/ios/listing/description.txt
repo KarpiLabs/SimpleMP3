@@ -1,0 +1,46 @@
+Simple MP3 is a fast, beautiful local music player built for real listening — on your iPhone, iPad, and in the car with Apple CarPlay.
+
+NO STREAMING ACCOUNT REQUIRED
+Play the audio already on your device. Your library stays private on your phone.
+
+PLAYLISTS THAT FEEL FAMILIAR
+• Create and manage playlists with ease
+• Liked Songs and Recently Played built in
+• Add to playlist and queue from any track
+• Same collections available when you connect CarPlay
+
+APPLE CARPLAY READY
+• Browse Playlists, Jellyfin Offline, Albums, Artists, Songs, and Recently Played from the dash
+• Steering-wheel and CarPlay Now Playing controls
+• Dark, high-contrast “car night” UI designed for night driving
+
+JELLYFIN OFFLINE SYNC
+• Connect to your Jellyfin server (LAN or manual URL)
+• Download tracks for offline play
+• Offline library works in the app and on CarPlay
+• Optional Wi‑Fi-only downloads
+
+MADE FOR THE ROAD
+• Drive Mode — oversized controls and one-tap resume
+• Resume last session (queue + position)
+• Mini player + immersive Now Playing
+• Auto Drive Mode when CarPlay connects (optional)
+
+IMPORT & TOOLS
+• Quick Connect — upload audio over your local Wi‑Fi from another device
+• YouTube → Audio — look up titles and import files you already have (App Store–safe workflow)
+• Search, library browser (songs, albums, artists, folders), shuffle & repeat
+
+FAST & POLISHED
+• Instant library from cache
+• Deep violet night theme with electric teal accents
+• Light theme available in Settings
+
+PERMISSIONS
+• Media Library — scan and play local music
+• Network — Jellyfin sync and Quick Connect only (optional)
+• Local network — discover servers and LAN uploads
+
+Simple MP3 is free of streaming clutter. Your files. Your playlists. Your car.
+
+Privacy policy: see the app listing or the developer website for the latest policy URL.
