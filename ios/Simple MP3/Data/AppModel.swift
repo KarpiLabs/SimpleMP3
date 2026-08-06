@@ -28,6 +28,8 @@ final class AppModel {
     var showQueue = false
     var addToPlaylistTrack: Track?
     var selectedTab: AppTab = .home
+    /// Forced full-screen destination for App Store screenshot capture.
+    var screenshotOverlay: ScreenshotOverlay?
 
     /// Launch experience state (splash screen).
     private(set) var launchPhase: LaunchPhase = .starting
@@ -74,6 +76,11 @@ final class AppModel {
             case .refreshed:
                 self.setLaunch(.finishing, status: "Cueing the UI…", progress: 0.95)
             }
+        }
+
+        if ScreenshotDemo.isEnabled {
+            setLaunch(.finishing, status: "Loading demo library…", progress: 0.92)
+            await ScreenshotDemo.seed(into: self)
         }
 
         setLaunch(.finishing, status: "Almost there…", progress: 0.98)

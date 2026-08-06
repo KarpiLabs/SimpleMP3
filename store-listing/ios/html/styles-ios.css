@@ -1,0 +1,206 @@
+/* iOS App Store marketing frames — iPhone 6.9" + iPad 13" */
+:root {
+  --teal: #00E5C0;
+  --teal-dim: #00B89A;
+  --violet: #A78BFA;
+  --coral: #FF6B6B;
+  --night: #0C0A12;
+  --surface: #14121C;
+  --card: #1C1828;
+  --text: #F5F5F7;
+  --muted: #B0B0BC;
+  --dim: #6E6E7A;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #0C0A12;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: var(--text);
+}
+
+/* ── iPhone 6.7" App Store: 1284 × 2778 (also accepted: 1242×2688) ── */
+body.iphone-page { width: 1284px; height: 2778px; }
+.shot.iphone {
+  width: 1284px;
+  height: 2778px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 88px 48px 56px;
+}
+
+/* ── iPad 13" App Store: 2064 × 2752 ── */
+body.ipad-page { width: 2064px; height: 2752px; }
+.shot.ipad {
+  width: 2064px;
+  height: 2752px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 100px 80px 72px;
+}
+
+.shot-1 { background: linear-gradient(160deg, #0A1F1C 0%, #0C0A12 45%, #1A0A28 100%); }
+.shot-2 { background: linear-gradient(160deg, #140A22 0%, #0C0A12 50%, #0A1A1C 100%); }
+.shot-3 { background: linear-gradient(160deg, #0A1620 0%, #0C0A12 48%, #1A1008 100%); }
+.shot-4 { background: linear-gradient(160deg, #0F1A12 0%, #0C0A12 50%, #140A1A 100%); }
+.shot-5 { background: linear-gradient(160deg, #0A1814 0%, #0C0A12 50%, #1A0A18 100%); }
+.shot-6 { background: linear-gradient(160deg, #1A0A14 0%, #0C0A12 50%, #0A1818 100%); }
+
+.glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.42;
+  pointer-events: none;
+}
+.shot-1 .glow { width: 640px; height: 640px; background: var(--teal); top: -100px; right: -140px; }
+.shot-2 .glow { width: 600px; height: 600px; background: var(--violet); top: 120px; left: -120px; }
+.shot-3 .glow { width: 620px; height: 620px; background: #3B82F6; bottom: 280px; right: -100px; }
+.shot-4 .glow { width: 560px; height: 560px; background: var(--teal); top: 60px; left: 35%; }
+.shot-5 .glow { width: 600px; height: 600px; background: var(--teal); top: -40px; left: -80px; }
+.shot-6 .glow { width: 620px; height: 620px; background: var(--coral); top: -80px; left: -100px; }
+
+.copy {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  margin-bottom: 48px;
+  max-width: 1100px;
+}
+.iphone .copy { margin-bottom: 52px; max-width: 1180px; }
+.ipad .copy { margin-bottom: 56px; max-width: 1600px; }
+
+.eyebrow {
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 18px;
+}
+.iphone .eyebrow { font-size: 34px; }
+.ipad .eyebrow { font-size: 36px; }
+
+.headline {
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  margin-bottom: 20px;
+}
+.iphone .headline { font-size: 78px; }
+.ipad .headline { font-size: 84px; }
+
+.subhead {
+  font-weight: 400;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.iphone .subhead { font-size: 36px; }
+.ipad .subhead { font-size: 38px; }
+
+.device-wrap {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+}
+
+/* Device bezel around real simulator capture */
+.device {
+  position: relative;
+  background: #0a0a0c;
+  box-shadow:
+    0 48px 120px rgba(0,0,0,0.55),
+    0 0 0 3px #2A2A34,
+    0 0 0 7px #0E0E12,
+    inset 0 0 0 1px rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+
+.iphone .device {
+  width: 940px;
+  height: 2030px;
+  border-radius: 72px;
+  padding: 14px;
+}
+
+.ipad .device {
+  width: 1480px;
+  height: 1970px;
+  border-radius: 42px;
+  padding: 18px;
+}
+
+.device-screen {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  position: relative;
+}
+.iphone .device-screen { border-radius: 64px; }
+.ipad .device-screen { border-radius: 28px; }
+
+.device-screen img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+/* Subtle island/notch accent (visual only — real capture already has status bar) */
+.iphone .device::after {
+  content: "";
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  height: 34px;
+  background: transparent;
+  border-radius: 20px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Brand chip */
+.brand {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 0.9;
+}
+.brand-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--teal);
+  box-shadow: 0 0 16px rgba(0,229,192,0.45);
+}
+.brand span {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}

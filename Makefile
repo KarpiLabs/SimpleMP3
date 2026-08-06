@@ -30,6 +30,8 @@ help: ## Show this help
 	@echo "  make test lint      # unit tests + Android lint"
 	@echo "  make install run    # install debug and launch"
 	@echo "  make format         # ktlint format (downloads ktlint once)"
+	@echo "  make screenshots-ios # App Store: sim capture + marketing frames"
+	@echo "  make screenshots-android # Play Store: HTML → PNGs"
 
 # ── Build ──────────────────────────────────────────────────────────
 
@@ -205,3 +207,30 @@ ios-test: ## Run iOS unit/UI tests
 ios-run: ## Build and launch the iOS app in the Simulator
 	xcodebuild -project "$(IOS_PROJECT)" -scheme "$(IOS_SCHEME)" -destination "$(IOS_DESTINATION)" build
 	open -a Simulator
+
+# ── Store screenshots ──────────────────────────────────────────────
+# Re-runnable marketing asset pipelines. See store-listing/ and store-listing/ios/.
+
+STORE_DIR     ?= store-listing
+IOS_STORE_DIR ?= $(STORE_DIR)/ios
+
+.PHONY: screenshots-android
+screenshots-android: ## Play Store: re-render icons, feature graphic, phone screenshots (Chrome)
+	@chmod +x "$(STORE_DIR)/render.sh"
+	"$(STORE_DIR)/render.sh"
+
+.PHONY: screenshots-ios-capture
+screenshots-ios-capture: ## App Store: build + Simulator capture (iPhone + iPad, needs Xcode, free disk)
+	@chmod +x "$(IOS_STORE_DIR)/capture-screenshots.sh"
+	"$(IOS_STORE_DIR)/capture-screenshots.sh"
+
+.PHONY: screenshots-ios-render
+screenshots-ios-render: ## App Store: marketing frames + resize to 1284×2778 / 1242×2688 (Chrome)
+	@chmod +x "$(IOS_STORE_DIR)/render.sh"
+	"$(IOS_STORE_DIR)/render.sh"
+
+.PHONY: screenshots-ios
+screenshots-ios: screenshots-ios-capture screenshots-ios-render ## App Store: capture then render (full pipeline)
+
+.PHONY: screenshots
+screenshots: screenshots-android screenshots-ios ## All store screenshots (Android HTML + iOS sim)

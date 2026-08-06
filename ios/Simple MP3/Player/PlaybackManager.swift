@@ -200,6 +200,31 @@ final class PlaybackManager {
         }
     }
 
+    /// Sets Now Playing UI without loading audio — used by App Store screenshot demo mode.
+    func presentDemoState(
+        track: Track,
+        queue: [Track],
+        positionMs: Int64,
+        isPlaying: Bool
+    ) {
+        let q = queue.isEmpty ? [track] : queue
+        let idx = q.firstIndex(where: { $0.id == track.id }) ?? 0
+        state.queue = q
+        state.index = idx
+        state.current = track
+        state.durationMs = track.duration
+        state.positionMs = min(max(0, positionMs), max(0, track.duration - 1))
+        state.isPlaying = isPlaying
+        state.isBuffering = false
+        state.shuffle = true
+        order = Array(q.indices)
+        shuffleOrder = order
+        player.pause()
+        player.replaceCurrentItem(with: nil)
+        publishNowPlaying(for: track)
+        NotificationCenter.default.post(name: .playbackDidChange, object: nil)
+    }
+
     // MARK: - Load
 
     private func loadAndPlay(at index: Int, positionMs: Int64, autoPlay: Bool) {
