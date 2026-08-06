@@ -52,6 +52,18 @@ Playback is shared between the phone UI and CarPlay via `AppModel.shared` / `Pla
 
 - **CarPlay entitlement** requires Apple approval for distribution; development builds work with a properly configured App ID.
 - **YouTube**: in-process stream extraction is not used (App Store policy). Import downloaded audio via Files / Share into Tools → YouTube.
+
+## App Store screenshots
+
+Marketing + clean device captures live under [`../store-listing/ios/`](../store-listing/ios/).
+
+```bash
+cd ../store-listing/ios
+./capture-screenshots.sh   # Simulator → raw PNGs (iPhone + iPad)
+./render.sh                # Optional marketing frames
+```
+
+Launch with `-ScreenshotDemo -ScreenshotScene home` to seed demo data for captures.
 - **Cleartext Jellyfin** (`http://` on LAN) is allowed via ATS local-networking exceptions in `Info.plist`.
 
 ## License

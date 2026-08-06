@@ -38,7 +38,10 @@ final class MusicRepository {
         isLoaded = true
 
         onEvent?(.scanStarted)
-        await scanLibrary(force: false)
+        // Screenshot mode seeds a polished library; skip Media Library auth dialog.
+        if !ScreenshotDemo.isEnabled {
+            await scanLibrary(force: false)
+        }
         onEvent?(.scanFinished(trackCount: trackCount))
         await refresh()
         onEvent?(.refreshed)

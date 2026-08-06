@@ -33,8 +33,10 @@ struct RootView: View {
         .task {
             await app.bootstrap()
             // Hold a beat so the progress bar lands at 100% and exit feels intentional.
+            // Screenshot capture skips the hold so scenes settle faster.
             splashReady = true
-            try? await Task.sleep(for: .milliseconds(420))
+            let holdMs: UInt64 = ScreenshotDemo.isEnabled ? 80 : 420
+            try? await Task.sleep(for: .milliseconds(holdMs))
             showSplash = false
         }
     }

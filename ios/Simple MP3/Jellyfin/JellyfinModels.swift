@@ -75,6 +75,28 @@ struct JellyfinItem: Decodable, Identifiable, Hashable {
     var hasPrimaryImage: Bool {
         ImageTags?["Primary"] != nil || !(AlbumPrimaryImageTag ?? "").isEmpty
     }
+
+    /// Convenience builder for screenshot / preview fixtures.
+    static func demo(
+        id: String,
+        title: String,
+        artist: String,
+        album: String,
+        durationMs: Int64
+    ) -> JellyfinItem {
+        // Decode from a minimal JSON payload so we don't fight Decodable-only fields.
+        let json: [String: Any] = [
+            "Id": id,
+            "Name": title,
+            "Type": "Audio",
+            "Album": album,
+            "Artists": [artist],
+            "AlbumArtist": artist,
+            "RunTimeTicks": durationMs * 10_000
+        ]
+        let data = try! JSONSerialization.data(withJSONObject: json)
+        return try! JSONDecoder().decode(JellyfinItem.self, from: data)
+    }
 }
 
 struct JellyfinSession: Equatable, Sendable {
