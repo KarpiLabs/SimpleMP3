@@ -1,11 +1,76 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# Dependabot version updates for multiplatform Simple MP3
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates
 
 version: 2
+
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # ── Android (Gradle) ─────────────────────────────────────────────
+  # Manifests: android/settings.gradle.kts, build.gradle.kts,
+  # android/app/build.gradle.kts, android/gradle/libs.versions.toml
+  - package-ecosystem: gradle
+    directory: /android
     schedule:
-      interval: "weekly"
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - android
+    # Keep noisy transitive churn grouped; core platform libs stay visible
+    groups:
+      android-gradle-plugins:
+        patterns:
+          - "com.android.*"
+          - "org.jetbrains.kotlin.*"
+          - "com.google.devtools.ksp"
+      androidx:
+        patterns:
+          - "androidx.*"
+      compose:
+        patterns:
+          - "androidx.compose.*"
+          - "androidx.activity:activity-compose"
+      hilt:
+        patterns:
+          - "com.google.dagger*"
+          - "*hilt*"
+      networking:
+        patterns:
+          - "com.squareup.okhttp3*"
+          - "com.squareup.retrofit2*"
+          - "com.squareup.moshi*"
+      room:
+        patterns:
+          - "androidx.room*"
+
+  # ── GitHub Actions (Android CI + iOS CI) ──────────────────────────
+  # Scans .github/workflows/* (android-ci.yml, ios-ci.yml, etc.)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - ci
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # ── iOS (Swift Package Manager) ──────────────────────────────────
+  # Dependabot updates SPM packages when a Package.swift (and typically
+  # Package.resolved) exists under ios/. Pure Apple-framework apps with
+  # no remote packages produce no updates until SPM deps are added.
+  # Xcode package refs also resolve under:
+  #   ios/*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+  - package-ecosystem: swift
+    directory: /ios
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - ios
