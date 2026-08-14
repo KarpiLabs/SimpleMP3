@@ -12,7 +12,7 @@ struct ContentView: View {
     var body: some View {
         @Bindable var app = app
         ZStack {
-            NightBackground()
+            AppBackground()
 
             TabView(selection: $app.selectedTab) {
                 NavigationStack {
@@ -50,7 +50,7 @@ struct ContentView: View {
                 .tabItem { Label(AppTab.tools.title, systemImage: AppTab.tools.systemImage) }
                 .tag(AppTab.tools)
             }
-            .tint(AppColors.accentTeal)
+            .tint(palette.accent)
             .toolbarBackground(palette.background.opacity(0.9), for: .tabBar)
             .toolbarBackground(.visible, for: .tabBar)
 

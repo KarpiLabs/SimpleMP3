@@ -5,36 +5,137 @@
 //  Apple CarPlay audio template — browse tree mirrors Android Auto:
 //  Continue · Liked · Playlists · Offline · Albums · Artists · Songs · Recent
 //
+//  Requires entitlement: com.apple.developer.carplay-audio
+//
 
 import CarPlay
 import Foundation
 import MediaPlayer
 import UIKit
 
+@objc(CarPlaySceneDelegate)
 final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     private var interfaceController: CPInterfaceController?
+    private var carWindow: CPWindow?
+    private var libraryObserver: NSObjectProtocol?
+    private var playbackObserver: NSObjectProtocol?
+
     private var app: AppModel { AppModel.shared }
+
+    // MARK: - Connect / disconnect
 
     func templateApplicationScene(
         _ templateApplicationScene: CPTemplateApplicationScene,
         didConnect interfaceController: CPInterfaceController
     ) {
-        self.interfaceController = interfaceController
-        Task { @MainActor in
-            app.player.handleCarConnect()
-            let root = await buildRootTemplate()
-            interfaceController.setRootTemplate(root, animated: true) { _, _ in }
-        }
+        connect(interfaceController: interfaceController, window: nil)
+    }
+
+    /// Preferred path on modern iOS — window hosts Now Playing chrome when needed.
+    func templateApplicationScene(
+        _ templateApplicationScene: CPTemplateApplicationScene,
+        didConnect interfaceController: CPInterfaceController,
+        to window: CPWindow
+    ) {
+        connect(interfaceController: interfaceController, window: window)
     }
 
     func templateApplicationScene(
         _ templateApplicationScene: CPTemplateApplicationScene,
         didDisconnect interfaceController: CPInterfaceController
     ) {
+        disconnect()
+    }
+
+    func templateApplicationScene(
+        _ templateApplicationScene: CPTemplateApplicationScene,
+        didDisconnect interfaceController: CPInterfaceController,
+        from window: CPWindow
+    ) {
+        disconnect()
+    }
+
+    private func connect(interfaceController: CPInterfaceController, window: CPWindow?) {
+        self.interfaceController = interfaceController
+        self.carWindow = window
+
+        configureNowPlayingTemplate()
+        startObserving()
+
+        Task { @MainActor in
+            // Ensure library is warm if CarPlay launches before (or instead of) the phone UI.
+            if !app.repository.isLoaded {
+                await app.bootstrap()
+            }
+            app.player.handleCarConnect()
+            let root = await buildRootTemplate()
+            interfaceController.setRootTemplate(root, animated: true) { _, error in
+                if let error {
+                    print("CarPlay setRootTemplate error: \(error)")
+                }
+            }
+        }
+    }
+
+    private func disconnect() {
+        stopObserving()
         Task { @MainActor in
             app.player.handleCarDisconnect()
         }
-        self.interfaceController = nil
+        interfaceController = nil
+        carWindow = nil
+    }
+
+    // MARK: - Now Playing
+
+    private func configureNowPlayingTemplate() {
+        let np = CPNowPlayingTemplate.shared
+        // Default system buttons (play/pause, next, previous) use MPRemoteCommandCenter
+        // already wired in PlaybackManager.
+        np.isUpNextButtonEnabled = false
+        np.isAlbumArtistButtonEnabled = true
+    }
+
+    // MARK: - Library refresh
+
+    private func startObserving() {
+        stopObserving()
+        libraryObserver = NotificationCenter.default.addObserver(
+            forName: .libraryDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.reloadRootIfNeeded() }
+        }
+        playbackObserver = NotificationCenter.default.addObserver(
+            forName: .playbackDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.reloadRootIfNeeded() }
+        }
+    }
+
+    private func stopObserving() {
+        if let libraryObserver {
+            NotificationCenter.default.removeObserver(libraryObserver)
+            self.libraryObserver = nil
+        }
+        if let playbackObserver {
+            NotificationCenter.default.removeObserver(playbackObserver)
+            self.playbackObserver = nil
+        }
+    }
+
+    @MainActor
+    private func reloadRootIfNeeded() {
+        guard let interfaceController else { return }
+        // Only refresh when at root so we don't interrupt deep navigation mid-browse.
+        guard interfaceController.templates.count <= 1 else { return }
+        Task {
+            let root = await buildRootTemplate()
+            interfaceController.setRootTemplate(root, animated: false) { _, _ in }
+        }
     }
 
     // MARK: - Root
@@ -54,7 +155,9 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         items.append(folderItem(title: "Artists", detail: "\(app.repository.artists.count)", id: "artists"))
         items.append(folderItem(title: "Songs", detail: Formatters.trackCount(app.repository.trackCount), id: "songs"))
         items.append(folderItem(title: "Recently Played", detail: "History", id: "recent"))
-        items.append(folderItem(title: "Now Playing", detail: app.player.state.current?.title ?? "—", id: "now"))
+
+        let nowDetail = app.player.state.current?.title ?? "Nothing playing"
+        items.append(folderItem(title: "Now Playing", detail: nowDetail, id: "now"))
 
         for item in items {
             item.handler = { [weak self] _, completion in
@@ -114,6 +217,8 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         }
     }
 
+    // MARK: - Sections
+
     @MainActor
     private func pushPlaylists() {
         let items: [CPListItem] = app.visiblePlaylists.map { pl in
@@ -130,7 +235,10 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             }
             return item
         }
-        let template = CPListTemplate(title: "Playlists", sections: [CPListSection(items: items)])
+        let safe = items.isEmpty
+            ? [CPListItem(text: "No playlists", detailText: "Create one on your iPhone")]
+            : items
+        let template = CPListTemplate(title: "Playlists", sections: [CPListSection(items: safe)])
         interfaceController?.pushTemplate(template, animated: true) { _, _ in }
     }
 
@@ -149,7 +257,10 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             }
             return item
         }
-        let template = CPListTemplate(title: "Albums", sections: [CPListSection(items: Array(items))])
+        let safe = items.isEmpty
+            ? [CPListItem(text: "No albums", detailText: "Add music on your iPhone")]
+            : Array(items)
+        let template = CPListTemplate(title: "Albums", sections: [CPListSection(items: safe)])
         interfaceController?.pushTemplate(template, animated: true) { _, _ in }
     }
 
@@ -168,7 +279,10 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             }
             return item
         }
-        let template = CPListTemplate(title: "Artists", sections: [CPListSection(items: Array(items))])
+        let safe = items.isEmpty
+            ? [CPListItem(text: "No artists", detailText: "Add music on your iPhone")]
+            : Array(items)
+        let template = CPListTemplate(title: "Artists", sections: [CPListSection(items: safe)])
         interfaceController?.pushTemplate(template, animated: true) { _, _ in }
     }
 
@@ -181,6 +295,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             playAll.handler = { [weak self] _, completion in
                 Task { @MainActor in
                     self?.app.playAll(tracks)
+                    self?.presentSystemNowPlaying()
                     completion()
                 }
             }
@@ -190,6 +305,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             shuffle.handler = { [weak self] _, completion in
                 Task { @MainActor in
                     self?.app.player.play(tracks: tracks.shuffled(), startIndex: 0)
+                    self?.presentSystemNowPlaying()
                     completion()
                 }
             }
@@ -198,9 +314,14 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
 
         for (index, track) in tracks.prefix(200).enumerated() {
             let item = CPListItem(text: track.title, detailText: track.artist)
+            let playing = app.player.state.current?.id == track.id
+            if playing {
+                item.isPlaying = true
+            }
             item.handler = { [weak self] _, completion in
                 Task { @MainActor in
                     self?.app.player.play(tracks: tracks, startIndex: index)
+                    self?.presentSystemNowPlaying()
                     completion()
                 }
             }
@@ -220,11 +341,19 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         let state = app.player.state
         var items: [CPListItem] = []
 
-        let title = CPListItem(
+        items.append(CPListItem(
             text: state.current?.title ?? "Nothing playing",
             detailText: state.current?.artist
-        )
-        items.append(title)
+        ))
+
+        if state.current != nil {
+            let open = CPListItem(text: "Open Now Playing", detailText: "Full screen controls")
+            open.handler = { [weak self] _, completion in
+                self?.presentSystemNowPlaying()
+                completion()
+            }
+            items.append(open)
+        }
 
         let playPause = CPListItem(
             text: state.isPlaying ? "Pause" : "Play",
@@ -261,5 +390,24 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
 
         let template = CPListTemplate(title: "Now Playing", sections: [CPListSection(items: items)])
         interfaceController?.pushTemplate(template, animated: true) { _, _ in }
+    }
+
+    /// Pushes the system Now Playing template (CarPlay media chrome).
+    private func presentSystemNowPlaying() {
+        guard let interfaceController else { return }
+        let np = CPNowPlayingTemplate.shared
+        // Avoid stacking multiple Now Playing templates.
+        if interfaceController.topTemplate === np { return }
+        if interfaceController.templates.contains(where: { $0 === np }) {
+            interfaceController.popToRootTemplate(animated: false) { _, _ in
+                interfaceController.pushTemplate(np, animated: true) { _, _ in }
+            }
+            return
+        }
+        interfaceController.pushTemplate(np, animated: true) { _, error in
+            if let error {
+                print("CarPlay Now Playing push error: \(error)")
+            }
+        }
     }
 }

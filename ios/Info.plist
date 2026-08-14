@@ -18,6 +18,11 @@
 	<array>
 		<string>audio</string>
 	</array>
+	<!--
+	  CarPlay Audio scene. Do not enable INFOPLIST_KEY_UIApplicationSceneManifest_Generation
+	  in the Xcode target — it can replace this custom CarPlay configuration.
+	  Phone UI is provided by SwiftUI @main App / WindowGroup.
+	-->
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

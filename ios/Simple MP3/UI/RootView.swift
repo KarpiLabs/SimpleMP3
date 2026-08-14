@@ -9,6 +9,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppModel.self) private var app
+    @Environment(\.colorScheme) private var colorScheme
     @State private var showSplash = true
     @State private var splashReady = false
 
@@ -16,6 +17,7 @@ struct RootView: View {
         ZStack {
             if app.launchPhase == .ready || !showSplash {
                 ContentView()
+                    .environment(\.appPalette, app.palette(for: colorScheme))
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
             }
 

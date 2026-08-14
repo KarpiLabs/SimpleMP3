@@ -236,7 +236,11 @@ actor LibraryStore {
 
     func playlistMetas() -> [PlaylistMeta] {
         allPlaylists().map { p in
-            let firstArt = p.trackIds.compactMap { tracks[$0]?.artworkUri }.first
+            let firstId = p.trackIds.first
+            let firstArt = firstId.flatMap { tracks[$0]?.artworkUri }
+                ?? firstId.flatMap { id -> String? in
+                    id.hasPrefix("mp-") ? "mpmedia://\(id.dropFirst(3))" : nil
+                }
             return PlaylistMeta(
                 id: p.id,
                 name: p.name,
@@ -299,6 +303,14 @@ actor LibraryStore {
     func removeFromPlaylist(playlistId: String, trackId: String) {
         guard var p = playlists[playlistId] else { return }
         p.trackIds.removeAll { $0 == trackId }
+        p.touch()
+        playlists[playlistId] = p
+        persist()
+    }
+
+    func setPlaylistTrackIds(playlistId: String, trackIds: [String]) {
+        guard var p = playlists[playlistId] else { return }
+        p.trackIds = trackIds
         p.touch()
         playlists[playlistId] = p
         persist()

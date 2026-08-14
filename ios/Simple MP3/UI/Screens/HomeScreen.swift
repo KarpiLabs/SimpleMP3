@@ -65,7 +65,7 @@ struct HomeScreen: View {
                     app.preferences.driveMode.toggle()
                 } label: {
                     Image(systemName: "car.fill")
-                        .foregroundStyle(app.preferences.driveMode ? AppColors.accentTeal : palette.textSecondary)
+                        .foregroundStyle(app.preferences.driveMode ? palette.accent : palette.textSecondary)
                         .padding(10)
                         .background(Circle().fill(palette.card))
                 }
@@ -100,7 +100,7 @@ struct HomeScreen: View {
             HStack {
                 Image(systemName: "play.circle.fill")
                     .font(.system(size: 36))
-                    .foregroundStyle(AppColors.accentTeal)
+                    .foregroundStyle(palette.accent)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Continue listening")
                         .font(.headline)

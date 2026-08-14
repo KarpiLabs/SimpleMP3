@@ -48,7 +48,7 @@ struct LibraryScreen: View {
                         Image(systemName: "arrow.clockwise")
                     }
                 }
-                .foregroundStyle(AppColors.accentTeal)
+                .foregroundStyle(palette.accent)
             }
         }
     }
@@ -184,7 +184,7 @@ struct CollectionDetailScreen: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Play all") { app.playAll(tracks) }
-                    .foregroundStyle(AppColors.accentTeal)
+                    .foregroundStyle(palette.accent)
                     .disabled(tracks.isEmpty)
             }
         }

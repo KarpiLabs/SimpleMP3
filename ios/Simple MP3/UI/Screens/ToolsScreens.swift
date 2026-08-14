@@ -5,6 +5,7 @@
 
 import SwiftUI
 import UniformTypeIdentifiers
+import UIKit
 
 struct ToolsScreen: View {
     @Environment(AppModel.self) private var app
@@ -166,7 +167,7 @@ struct JellyfinScreen: View {
                                 Task { await app.jellyfin.playRemote(item, player: app.player) }
                             } label: {
                                 Image(systemName: "play.fill")
-                                    .foregroundStyle(AppColors.accentTeal)
+                                    .foregroundStyle(palette.accent)
                             }
                             Button {
                                 Task { await app.jellyfin.downloadItem(item) }
@@ -228,7 +229,7 @@ struct YoutubeScreen: View {
                 Button("Import audio file…") {
                     showImporter = true
                 }
-                .foregroundStyle(AppColors.accentTeal)
+                .foregroundStyle(palette.accent)
             }
 
             if let msg = app.youtube.statusMessage {
@@ -284,14 +285,36 @@ struct QuickConnectScreen: View {
     var body: some View {
         List {
             Section {
-                Text("Start a local web portal. On another device on the same Wi‑Fi, open the URL and upload audio. Files appear in LAN Imports and work offline / CarPlay.")
+                Text("Start a local web portal. On another device on the same Wi‑Fi, open the URL and enter the access code. Files appear in LAN Imports and play offline / on CarPlay.")
                     .font(.caption)
                     .foregroundStyle(palette.textSecondary)
-                if app.quickConnect.isRunning {
+                if app.quickConnect.isLockedOut {
+                    Text("Portal locked after too many wrong codes. Stop and start again for a new code.")
+                        .foregroundStyle(AppColors.accentCoral)
+                    Button("Stop portal", role: .destructive) {
+                        app.quickConnect.stop()
+                    }
+                } else if app.quickConnect.isRunning {
+                    VStack(spacing: 6) {
+                        Text("ACCESS CODE")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(palette.textMuted)
+                            .tracking(1.5)
+                        Text(app.quickConnect.accessCode)
+                            .font(.system(size: 36, weight: .bold, design: .monospaced))
+                            .foregroundStyle(palette.textPrimary)
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    Button("Copy code") {
+                        UIPasteboard.general.string = app.quickConnect.accessCode
+                    }
+                    .foregroundStyle(palette.accent)
                     ForEach(app.quickConnect.portalURLs, id: \.self) { url in
                         Text(url)
                             .font(.system(.body, design: .monospaced))
-                            .foregroundStyle(AppColors.accentTeal)
+                            .foregroundStyle(palette.accent)
                             .textSelection(.enabled)
                     }
                     Button("Stop portal", role: .destructive) {
@@ -301,7 +324,7 @@ struct QuickConnectScreen: View {
                     Button("Start portal") {
                         app.quickConnect.start()
                     }
-                    .foregroundStyle(AppColors.accentTeal)
+                    .foregroundStyle(palette.accent)
                 }
             }
 

@@ -113,11 +113,14 @@ final class AppModel {
     }
 
     var palette: AppPalette {
+        palette(for: UITraitCollection.current.userInterfaceStyle == .light ? .light : .dark)
+    }
+
+    func palette(for colorScheme: ColorScheme) -> AppPalette {
         switch preferences.themeMode {
         case .dark: return .night
         case .light: return .day
-        case .system:
-            return UITraitCollection.current.userInterfaceStyle == .light ? .day : .night
+        case .system: return colorScheme == .light ? .day : .night
         }
     }
 

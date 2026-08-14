@@ -175,6 +175,11 @@
 				TargetAttributes = {
 					E8A0C8FD3021794800530A3C = {
 						CreatedOnToolsVersion = 26.2;
+						SystemCapabilities = {
+							com.apple.CarPlay = {
+								enabled = 1;
+							};
+						};
 					};
 					E8A0C90A3021794900530A3C = {
 						CreatedOnToolsVersion = 26.2;
@@ -404,7 +409,7 @@
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Simple MP3 needs access to your music library to play local tracks and show them on CarPlay.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Simple MP3 uses the local network for Jellyfin sync and Quick Connect LAN uploads.";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UIBackgroundModes = audio;
 				INFOPLIST_KEY_UILaunchScreen_Generation = NO;
@@ -442,7 +447,7 @@
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Simple MP3 needs access to your music library to play local tracks and show them on CarPlay.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Simple MP3 uses the local network for Jellyfin sync and Quick Connect LAN uploads.";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UIBackgroundModes = audio;
 				INFOPLIST_KEY_UILaunchScreen_Generation = NO;

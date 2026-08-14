@@ -138,6 +138,11 @@ struct PlaylistMeta: Identifiable, Hashable, Sendable {
     let firstArtworkUri: String?
 
     var displayCover: String? { coverUri ?? firstArtworkUri }
+
+    var acceptsManualAdds: Bool {
+        if !isSystem { return true }
+        return systemType == SystemPlaylist.favorites.rawValue
+    }
 }
 
 enum SystemPlaylist: String, CaseIterable, Sendable {

@@ -18,8 +18,18 @@ Local music player for **iPhone** with playlists, Jellyfin offline sync, Quick C
 ## Requirements
 
 - Xcode 16+ (project targets current iOS SDK)
-- Apple Developer team with **CarPlay Audio** capability (for device / App Store CarPlay)
-- Physical device recommended for Media Library + CarPlay Simulator
+- Apple Developer team with **CarPlay Audio App** entitlement assigned to the App ID (`io.karpilabs.Simple-MP3`)
+- Physical device recommended for Media Library + real head-unit CarPlay (Simulator supports CarPlay window)
+
+## CarPlay (enabled)
+
+| Piece | Location |
+|--------|----------|
+| Entitlement | `Simple MP3/Simple_MP3.entitlements` → `com.apple.developer.carplay-audio` |
+| Scene config | `Info.plist` → `CPTemplateApplicationSceneSessionRoleApplication` |
+| Delegate | `CarPlay/CarPlaySceneDelegate.swift` |
+| Playback | `PlaybackManager` remote commands + Now Playing info |
+| Drive Mode | Auto-enables on CarPlay connect (Settings toggle) |
 
 ## Open & run
 
@@ -27,10 +37,11 @@ Local music player for **iPhone** with playlists, Jellyfin offline sync, Quick C
 open "Simple MP3.xcodeproj"
 ```
 
-1. Select the **Simple MP3** scheme and your team under Signing.
-2. Enable the **CarPlay** capability in the developer portal for the App ID (`io.karpilabs.Simple-MP3`) if you need CarPlay on a real head unit. The project already includes `com.apple.developer.carplay-audio`.
+1. Select the **Simple MP3** scheme and your team under **Signing & Capabilities**.
+2. Confirm **CarPlay** appears under capabilities and the App ID provisioning profile includes **CarPlay Audio** (assigned in the Developer portal).
 3. Run on a device or simulator. Grant **Media Library** access when prompted.
-4. For CarPlay: **I/O → External Displays → CarPlay** in the Simulator, or connect a CarPlay-capable system.
+4. **Simulator CarPlay:** I/O → External Displays → CarPlay.  
+   **Device:** plug into a CarPlay head unit / wireless CarPlay.
 
 ## Architecture
 
@@ -50,7 +61,7 @@ Playback is shared between the phone UI and CarPlay via `AppModel.shared` / `Pla
 
 ## Notes
 
-- **CarPlay entitlement** requires Apple approval for distribution; development builds work with a properly configured App ID.
+- **CarPlay Audio** entitlement is in the project; the App ID must keep the capability enabled in the Apple Developer portal and provisioning profiles must be regenerated if signing fails.
 - **YouTube**: in-process stream extraction is not used (App Store policy). Import downloaded audio via Files / Share into Tools → YouTube.
 
 ## App Store screenshots

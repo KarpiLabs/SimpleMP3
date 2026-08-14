@@ -8,6 +8,7 @@
 import AVFoundation
 import Foundation
 import MediaPlayer
+import UIKit
 
 enum MediaLibraryScanner {
     static let audioExtensions: Set<String> = [
@@ -58,7 +59,7 @@ enum MediaLibraryScanner {
             let artist = item.artist ?? item.albumArtist ?? "Unknown Artist"
             let album = item.albumTitle ?? "Unknown Album"
             let durationMs = Int64((item.playbackDuration) * 1000)
-            let artworkUri: String? = nil // Artwork resolved at display time from MPMediaItem
+            let artworkUri: String? = "mpmedia://\(pid)"
             let dateAdded = Int64((item.dateAdded ?? Date()).timeIntervalSince1970 * 1000)
             let folder = item.albumTitle.map { "Music/\($0)" } ?? "Music"
             return Track(
@@ -197,5 +198,45 @@ enum MediaLibraryScanner {
             return "\(source.rawValue)-\(externalId)"
         }
         return "file-\(url.path.hashValue)"
+    }
+}
+
+enum MediaArtwork {
+    private static let cache = NSCache<NSString, UIImage>()
+
+    static func image(artworkUri: String?, trackId: String? = nil, side: CGFloat) -> UIImage? {
+        let size = max(side, 64)
+        if let uri = artworkUri, !uri.isEmpty {
+            if uri.hasPrefix("mpmedia://") {
+                let pid = String(uri.dropFirst("mpmedia://".count))
+                if let img = mediaItemImage(persistentID: pid, side: size) { return img }
+            } else if let url = URL(string: uri), url.isFileURL,
+                      let img = UIImage(contentsOfFile: url.path) {
+                return img
+            }
+        }
+        if let trackId, trackId.hasPrefix("mp-") {
+            return mediaItemImage(persistentID: String(trackId.dropFirst(3)), side: size)
+        }
+        return nil
+    }
+
+    private static func mediaItemImage(persistentID: String, side: CGFloat) -> UIImage? {
+        let key = "\(persistentID)-\(Int(side))" as NSString
+        if let cached = cache.object(forKey: key) { return cached }
+        guard let pid = UInt64(persistentID) else { return nil }
+        let query = MPMediaQuery.songs()
+        query.addFilterPredicate(
+            MPMediaPropertyPredicate(
+                value: NSNumber(value: pid),
+                forProperty: MPMediaItemPropertyPersistentID
+            )
+        )
+        guard let item = query.items?.first,
+              let artwork = item.artwork,
+              let img = artwork.image(at: CGSize(width: side * 2, height: side * 2))
+        else { return nil }
+        cache.setObject(img, forKey: key)
+        return img
     }
 }

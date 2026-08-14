@@ -24,6 +24,7 @@ final class MusicRepository {
     private(set) var isScanning = false
     private(set) var folderPaths: [String] = []
     private(set) var isLoaded = false
+    private(set) var favoriteIds: Set<String> = []
 
     init(preferences: AppPreferences) {
         self.preferences = preferences
@@ -58,6 +59,12 @@ final class MusicRepository {
         jellyfinCount = await store.count(source: .jellyfin)
         youtubeCount = await store.count(source: .youtube)
         folderPaths = await store.folderPaths()
+        if let fav = await store.systemPlaylist(.favorites) {
+            favoriteIds = Set(fav.trackIds)
+        } else {
+            favoriteIds = []
+        }
+        NotificationCenter.default.post(name: .libraryDidChange, object: nil)
     }
 
     func scanLibrary(force: Bool = true) async {
@@ -161,6 +168,11 @@ final class MusicRepository {
 
     func moveTrack(playlistId: String, trackId: String, to: Int) async {
         await store.moveTrack(playlistId: playlistId, trackId: trackId, toPosition: to)
+        await refresh()
+    }
+
+    func setPlaylistTrackIds(playlistId: String, trackIds: [String]) async {
+        await store.setPlaylistTrackIds(playlistId: playlistId, trackIds: trackIds)
         await refresh()
     }
 

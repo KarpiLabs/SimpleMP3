@@ -18,6 +18,8 @@ enum AppColors {
 
     static let accentTeal = Color(hex: 0x00E5C0)
     static let accentTealDim = Color(hex: 0x00B89A)
+    /// Darker teal for text/tints on light surfaces (electric teal fails contrast on white).
+    static let dayAccent = Color(hex: 0x007A68)
     static let accentCoral = Color(hex: 0xFF6B6B)
     static let accentGold = Color(hex: 0xFFD166)
     static let accentViolet = Color(hex: 0xA78BFA)
@@ -38,6 +40,9 @@ enum AppColors {
     static let dayTextPrimary = Color(hex: 0x1A1723)
     static let dayTextSecondary = Color(hex: 0x4E4B5C)
     static let dayTextMuted = Color(hex: 0x8B8894)
+    static let dayGradientStart = Color(hex: 0xEAFBF7)
+    static let dayGradientMid = Color(hex: 0xFAFAFC)
+    static let dayGradientEnd = Color(hex: 0xF1E9FB)
 }
 
 struct AppPalette {
@@ -71,7 +76,7 @@ struct AppPalette {
         textPrimary: AppColors.dayTextPrimary,
         textSecondary: AppColors.dayTextSecondary,
         textMuted: AppColors.dayTextMuted,
-        accent: AppColors.accentTealDim,
+        accent: AppColors.dayAccent,
         isDark: false
     )
 }
@@ -96,6 +101,22 @@ extension Color {
     }
 }
 
+struct AppBackground: View {
+    @Environment(\.appPalette) private var palette
+
+    var body: some View {
+        LinearGradient(
+            colors: palette.isDark
+                ? [AppColors.gradientStart, AppColors.gradientMid, AppColors.gradientEnd]
+                : [AppColors.dayGradientStart, AppColors.dayGradientMid, AppColors.dayGradientEnd],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea()
+    }
+}
+
+/// Dark cinematic wash — splash, CarPlay mock, and other always-night surfaces.
 struct NightBackground: View {
     var body: some View {
         LinearGradient(

@@ -6,23 +6,39 @@
 import SwiftUI
 
 struct AlbumArtView: View {
-    let artworkUri: String?
+    var artworkUri: String?
+    var trackId: String? = nil
     var size: CGFloat = 56
     var cornerRadius: CGFloat = 10
+
+    @Environment(\.appPalette) private var palette
+
+    init(artworkUri: String?, trackId: String? = nil, size: CGFloat = 56, cornerRadius: CGFloat = 10) {
+        self.artworkUri = artworkUri
+        self.trackId = trackId
+        self.size = size
+        self.cornerRadius = cornerRadius
+    }
+
+    init(track: Track, size: CGFloat = 56, cornerRadius: CGFloat = 10) {
+        self.artworkUri = track.artworkUri
+        self.trackId = track.id
+        self.size = size
+        self.cornerRadius = cornerRadius
+    }
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(AppColors.nightElevated)
-            if let artworkUri, let url = URL(string: artworkUri), url.isFileURL,
-               let ui = UIImage(contentsOfFile: url.path) {
+                .fill(palette.elevated)
+            if let ui = MediaArtwork.image(artworkUri: artworkUri, trackId: trackId, side: size) {
                 Image(uiImage: ui)
                     .resizable()
                     .scaledToFill()
             } else {
                 Image(systemName: "music.note")
                     .font(.system(size: size * 0.35))
-                    .foregroundStyle(AppColors.accentTeal.opacity(0.7))
+                    .foregroundStyle(palette.accent.opacity(0.7))
             }
         }
         .frame(width: size, height: size)
@@ -37,15 +53,16 @@ struct TrackRowView: View {
     var onFavorite: (() -> Void)?
     var onMore: (() -> Void)?
 
+    @Environment(AppModel.self) private var app
     @Environment(\.appPalette) private var palette
 
     var body: some View {
         HStack(spacing: 12) {
-            AlbumArtView(artworkUri: track.artworkUri, size: 52)
+            AlbumArtView(track: track, size: 52)
             VStack(alignment: .leading, spacing: 3) {
                 Text(track.title)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(isPlaying ? AppColors.accentTeal : palette.textPrimary)
+                    .foregroundStyle(isPlaying ? palette.accent : palette.textPrimary)
                     .lineLimit(1)
                 Text("\(track.artist) · \(Formatters.duration(track.duration))")
                     .font(.system(size: 13))
@@ -55,7 +72,7 @@ struct TrackRowView: View {
             Spacer(minLength: 0)
             if let onFavorite {
                 Button(action: onFavorite) {
-                    Image(systemName: "heart")
+                    Image(systemName: app.repository.favoriteIds.contains(track.id) ? "heart.fill" : "heart")
                         .foregroundStyle(AppColors.accentCoral.opacity(0.9))
                 }
                 .buttonStyle(.plain)
@@ -90,7 +107,7 @@ struct SectionHeader: View {
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(AppColors.accentTeal)
+                    .foregroundStyle(palette.accent)
             }
         }
         .padding(.horizontal, 4)
@@ -110,7 +127,9 @@ struct PlaylistCardView: View {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(
                             LinearGradient(
-                                colors: [AppColors.deepViolet, AppColors.nightCard],
+                                colors: palette.isDark
+                                    ? [AppColors.deepViolet, AppColors.nightCard]
+                                    : [AppColors.dayElevated, AppColors.dayCard],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -120,7 +139,7 @@ struct PlaylistCardView: View {
                     if playlist.displayCover == nil {
                         Image(systemName: systemIcon)
                             .font(.system(size: 36))
-                            .foregroundStyle(AppColors.accentTeal)
+                            .foregroundStyle(palette.accent)
                     }
                 }
                 .frame(width: 140, height: 140)
@@ -157,7 +176,7 @@ struct MiniPlayerBar: View {
     var body: some View {
         if let track = app.player.state.current {
             HStack(spacing: 12) {
-                AlbumArtView(artworkUri: track.artworkUri, size: 44, cornerRadius: 8)
+                AlbumArtView(track: track, size: 44, cornerRadius: 8)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(track.title)
                         .font(.system(size: 14, weight: .semibold))
@@ -180,7 +199,7 @@ struct MiniPlayerBar: View {
                 } label: {
                     Image(systemName: app.player.state.isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 20))
-                        .foregroundStyle(AppColors.accentTeal)
+                        .foregroundStyle(palette.accent)
                         .frame(width: 36, height: 36)
                 }
                 Button {
@@ -218,8 +237,23 @@ struct NowPlayingSheet: View {
                     .frame(width: 40, height: 5)
                     .padding(.top, 8)
 
-                AlbumArtView(artworkUri: state.current?.artworkUri, size: 280, cornerRadius: 20)
-                    .shadow(color: AppColors.accentTeal.opacity(0.2), radius: 30)
+                AlbumArtView(
+                    artworkUri: state.current?.artworkUri,
+                    trackId: state.current?.id,
+                    size: 280,
+                    cornerRadius: 20
+                )
+                    .shadow(color: palette.accent.opacity(0.2), radius: 30)
+                    .gesture(
+                        DragGesture(minimumDistance: 40)
+                            .onEnded { value in
+                                if value.translation.width < -50 {
+                                    app.player.skipNext()
+                                } else if value.translation.width > 50 {
+                                    app.player.skipPrevious()
+                                }
+                            }
+                    )
 
                 VStack(spacing: 6) {
                     Text(state.current?.title ?? "Nothing playing")
@@ -240,7 +274,7 @@ struct NowPlayingSheet: View {
                         ),
                         in: 0...1
                     )
-                    .tint(AppColors.accentTeal)
+                    .tint(palette.accent)
                     HStack {
                         Text(Formatters.duration(state.positionMs))
                         Spacer()
@@ -254,7 +288,7 @@ struct NowPlayingSheet: View {
                 HStack(spacing: 36) {
                     Button { app.player.toggleShuffle() } label: {
                         Image(systemName: "shuffle")
-                            .foregroundStyle(state.shuffle ? AppColors.accentTeal : palette.textMuted)
+                            .foregroundStyle(state.shuffle ? palette.accent : palette.textMuted)
                     }
                     Button { app.player.skipPrevious() } label: {
                         Image(systemName: "backward.fill").font(.title)
@@ -263,7 +297,7 @@ struct NowPlayingSheet: View {
                     Button { app.player.togglePlayPause() } label: {
                         Image(systemName: state.isPlaying ? "pause.circle.fill" : "play.circle.fill")
                             .font(.system(size: 68))
-                            .foregroundStyle(AppColors.accentTeal)
+                            .foregroundStyle(palette.accent)
                     }
                     Button { app.player.skipNext() } label: {
                         Image(systemName: "forward.fill").font(.title)
@@ -271,18 +305,18 @@ struct NowPlayingSheet: View {
                     }
                     Button { app.player.cycleRepeat() } label: {
                         Image(systemName: state.repeatMode.systemImage)
-                            .foregroundStyle(state.repeatMode == .off ? palette.textMuted : AppColors.accentTeal)
+                            .foregroundStyle(state.repeatMode == .off ? palette.textMuted : palette.accent)
                     }
                 }
 
                 Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(NightBackground())
+            .background(AppBackground())
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Queue") { app.showQueue = true }
-                        .foregroundStyle(AppColors.accentTeal)
+                        .foregroundStyle(palette.accent)
                 }
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") { dismiss() }
@@ -313,7 +347,7 @@ struct QueueSheet: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(NightBackground())
+            .background(AppBackground())
             .navigationTitle("Queue")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
