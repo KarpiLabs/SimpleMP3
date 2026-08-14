@@ -21,14 +21,15 @@ object NetworkAddresses {
                     if (addr !is Inet4Address || addr.isLoopbackAddress) continue
                     val host = addr.hostAddress ?: continue
                     if (host.startsWith("169.254.")) continue // link-local
-                    val score = when {
-                        name.startsWith("wlan") || name.startsWith("wifi") -> 0
-                        name.startsWith("eth") || name.startsWith("en") -> 1
-                        name.startsWith("ap") || name.contains("swlan") -> 2
-                        host.startsWith("192.168.") || host.startsWith("10.") -> 3
-                        host.startsWith("172.") -> 4
-                        else -> 10
-                    }
+                    val score =
+                        when {
+                            name.startsWith("wlan") || name.startsWith("wifi") -> 0
+                            name.startsWith("eth") || name.startsWith("en") -> 1
+                            name.startsWith("ap") || name.contains("swlan") -> 2
+                            host.startsWith("192.168.") || host.startsWith("10.") -> 3
+                            host.startsWith("172.") -> 4
+                            else -> 10
+                        }
                     candidates += score to host
                 }
             }

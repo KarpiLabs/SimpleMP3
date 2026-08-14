@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PlaylistDao {
-
     @Query("SELECT * FROM playlists ORDER BY isSystem DESC, updatedAt DESC")
     fun getAllPlaylists(): Flow<List<PlaylistEntity>>
 
@@ -45,7 +44,7 @@ interface PlaylistDao {
         INNER JOIN playlist_tracks pt ON t.id = pt.trackId
         WHERE pt.playlistId = :playlistId
         ORDER BY pt.position ASC
-        """
+        """,
     )
     fun getTracksForPlaylist(playlistId: Long): Flow<List<TrackEntity>>
 
@@ -55,7 +54,7 @@ interface PlaylistDao {
         INNER JOIN playlist_tracks pt ON t.id = pt.trackId
         WHERE pt.playlistId = :playlistId
         ORDER BY pt.position ASC
-        """
+        """,
     )
     suspend fun getTracksForPlaylistOnce(playlistId: Long): List<TrackEntity>
 
@@ -71,9 +70,12 @@ interface PlaylistDao {
             SELECT 1 FROM playlist_tracks
             WHERE playlistId = :playlistId AND trackId = :trackId
         )
-        """
+        """,
     )
-    suspend fun containsTrack(playlistId: Long, trackId: Long): Boolean
+    suspend fun containsTrack(
+        playlistId: Long,
+        trackId: Long,
+    ): Boolean
 
     @Query(
         """
@@ -81,9 +83,12 @@ interface PlaylistDao {
             SELECT 1 FROM playlist_tracks
             WHERE playlistId = :playlistId AND trackId = :trackId
         )
-        """
+        """,
     )
-    fun observeContainsTrack(playlistId: Long, trackId: Long): Flow<Boolean>
+    fun observeContainsTrack(
+        playlistId: Long,
+        trackId: Long,
+    ): Flow<Boolean>
 
     @Query("SELECT COALESCE(MAX(position), -1) FROM playlist_tracks WHERE playlistId = :playlistId")
     suspend fun getMaxPosition(playlistId: Long): Int
@@ -95,7 +100,10 @@ interface PlaylistDao {
     suspend fun insertPlaylistTracks(crossRefs: List<PlaylistTrackCrossRef>)
 
     @Query("DELETE FROM playlist_tracks WHERE playlistId = :playlistId AND trackId = :trackId")
-    suspend fun removeTrackFromPlaylist(playlistId: Long, trackId: Long)
+    suspend fun removeTrackFromPlaylist(
+        playlistId: Long,
+        trackId: Long,
+    )
 
     @Query("DELETE FROM playlist_tracks WHERE playlistId = :playlistId")
     suspend fun clearPlaylist(playlistId: Long)
@@ -105,26 +113,33 @@ interface PlaylistDao {
         SELECT pt.* FROM playlist_tracks pt
         WHERE pt.playlistId = :playlistId
         ORDER BY pt.position ASC
-        """
+        """,
     )
     suspend fun getCrossRefs(playlistId: Long): List<PlaylistTrackCrossRef>
 
     @Transaction
-    suspend fun addTrackToEnd(playlistId: Long, trackId: Long) {
+    suspend fun addTrackToEnd(
+        playlistId: Long,
+        trackId: Long,
+    ) {
         if (containsTrack(playlistId, trackId)) return
         val next = getMaxPosition(playlistId) + 1
         insertPlaylistTrack(
             PlaylistTrackCrossRef(
                 playlistId = playlistId,
                 trackId = trackId,
-                position = next
-            )
+                position = next,
+            ),
         )
         touchPlaylist(playlistId)
     }
 
     @Transaction
-    suspend fun moveTrack(playlistId: Long, trackId: Long, toPosition: Int) {
+    suspend fun moveTrack(
+        playlistId: Long,
+        trackId: Long,
+        toPosition: Int,
+    ) {
         val refs = getCrossRefs(playlistId).toMutableList()
         val fromIndex = refs.indexOfFirst { it.trackId == trackId }
         if (fromIndex < 0) return
@@ -138,7 +153,10 @@ interface PlaylistDao {
     }
 
     @Query("UPDATE playlists SET updatedAt = :now WHERE id = :playlistId")
-    suspend fun touchPlaylist(playlistId: Long, now: Long = System.currentTimeMillis())
+    suspend fun touchPlaylist(
+        playlistId: Long,
+        now: Long = System.currentTimeMillis(),
+    )
 
     @Query(
         """
@@ -150,7 +168,7 @@ interface PlaylistDao {
                 ORDER BY pt.position ASC LIMIT 1) AS firstArtworkUri
         FROM playlists p
         ORDER BY p.isSystem DESC, p.updatedAt DESC
-        """
+        """,
     )
     fun getPlaylistsWithMeta(): Flow<List<PlaylistWithMeta>>
 
@@ -164,7 +182,7 @@ interface PlaylistDao {
                 ORDER BY pt.position ASC LIMIT 1) AS firstArtworkUri
         FROM playlists p
         ORDER BY p.isSystem DESC, p.updatedAt DESC
-        """
+        """,
     )
     suspend fun getPlaylistsWithMetaOnce(): List<PlaylistWithMeta>
 }
@@ -179,7 +197,7 @@ data class PlaylistWithMeta(
     val isSystem: Boolean,
     val systemType: String?,
     val trackCount: Int,
-    val firstArtworkUri: String?
+    val firstArtworkUri: String?,
 ) {
     val displayCover: String?
         get() = coverUri ?: firstArtworkUri

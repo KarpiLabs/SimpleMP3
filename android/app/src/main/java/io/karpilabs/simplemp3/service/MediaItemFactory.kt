@@ -21,10 +21,13 @@ object MediaIds {
 
     /** Resume last session / continue listening */
     const val CONTINUE = "continue"
+
     /** Liked Songs system playlist */
     const val LIKED = "liked"
+
     /** YouTube → MP3 downloads */
     const val YOUTUBE = "youtube"
+
     /** Current player queue (Up Next) */
     const val QUEUE = "queue"
 
@@ -37,8 +40,11 @@ object MediaIds {
     const val SHUFFLE_PREFIX = "shuffle:"
 
     fun playlist(id: Long) = "$PLAYLIST_PREFIX$id"
+
     fun album(name: String) = "$ALBUM_PREFIX${Uri.encode(name)}"
+
     fun artist(name: String) = "$ARTIST_PREFIX${Uri.encode(name)}"
+
     fun track(id: Long) = "$TRACK_PREFIX$id"
 
     fun shuffleOf(targetMediaId: String) = "$SHUFFLE_PREFIX$targetMediaId"
@@ -54,35 +60,38 @@ object MediaIds {
         }
 
     fun parsePlaylistId(mediaId: String): Long? =
-        mediaId.removePrefix(PLAYLIST_PREFIX).toLongOrNull()
+        mediaId
+            .removePrefix(PLAYLIST_PREFIX)
+            .toLongOrNull()
             .takeIf { mediaId.startsWith(PLAYLIST_PREFIX) }
 
     fun parseTrackId(mediaId: String): Long? =
-        mediaId.removePrefix(TRACK_PREFIX).toLongOrNull()
+        mediaId
+            .removePrefix(TRACK_PREFIX)
+            .toLongOrNull()
             .takeIf { mediaId.startsWith(TRACK_PREFIX) }
 
     fun isShuffle(mediaId: String): Boolean = mediaId.startsWith(SHUFFLE_PREFIX)
 
-    fun unwrapShuffle(mediaId: String): String? =
-        mediaId.removePrefix(SHUFFLE_PREFIX).takeIf { isShuffle(mediaId) && it.isNotBlank() }
+    fun unwrapShuffle(mediaId: String): String? = mediaId.removePrefix(SHUFFLE_PREFIX).takeIf { isShuffle(mediaId) && it.isNotBlank() }
 }
 
 object MediaItemFactory {
-
     /** Android Auto content-style hints: grid vs. list layout for a browsable node's children. */
     const val EXTRA_CONTENT_STYLE_BROWSABLE = "android.media.browse.CONTENT_STYLE_BROWSABLE_HINT"
     const val EXTRA_CONTENT_STYLE_PLAYABLE = "android.media.browse.CONTENT_STYLE_PLAYABLE_HINT"
     const val CONTENT_STYLE_LIST = 1
     const val CONTENT_STYLE_GRID = 2
 
-    fun root(): MediaItem = browsable(
-        mediaId = MediaIds.ROOT,
-        title = "Simple MP3",
-        isPlayable = false,
-        // Root categories (Albums, Artists, Playlists…) read better as a grid with art.
-        browsableHint = CONTENT_STYLE_GRID,
-        playableHint = CONTENT_STYLE_LIST
-    )
+    fun root(): MediaItem =
+        browsable(
+            mediaId = MediaIds.ROOT,
+            title = "Simple MP3",
+            isPlayable = false,
+            // Root categories (Albums, Artists, Playlists…) read better as a grid with art.
+            browsableHint = CONTENT_STYLE_GRID,
+            playableHint = CONTENT_STYLE_LIST,
+        )
 
     fun category(
         mediaId: String,
@@ -91,16 +100,17 @@ object MediaItemFactory {
         isPlayable: Boolean = false,
         artworkUri: String? = null,
         browsableHint: Int = CONTENT_STYLE_GRID,
-        playableHint: Int = CONTENT_STYLE_LIST
-    ): MediaItem = browsable(
-        mediaId = mediaId,
-        title = title,
-        subtitle = subtitle,
-        isPlayable = isPlayable,
-        artworkUri = artworkUri,
-        browsableHint = browsableHint,
-        playableHint = playableHint
-    )
+        playableHint: Int = CONTENT_STYLE_LIST,
+    ): MediaItem =
+        browsable(
+            mediaId = mediaId,
+            title = title,
+            subtitle = subtitle,
+            isPlayable = isPlayable,
+            artworkUri = artworkUri,
+            browsableHint = browsableHint,
+            playableHint = playableHint,
+        )
 
     /**
      * Non-browsable play action shown at the top of a folder
@@ -109,88 +119,99 @@ object MediaItemFactory {
     @OptIn(UnstableApi::class)
     fun shufflePlayAction(
         targetMediaId: String,
-        subtitle: String? = "Play in random order"
+        subtitle: String? = "Play in random order",
     ): MediaItem {
-        val metadata = MediaMetadata.Builder()
-            .setTitle("Shuffle play")
-            .setSubtitle(subtitle)
-            .setIsPlayable(true)
-            .setIsBrowsable(false)
-            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
-            .build()
-        return MediaItem.Builder()
+        val metadata =
+            MediaMetadata
+                .Builder()
+                .setTitle("Shuffle play")
+                .setSubtitle(subtitle)
+                .setIsPlayable(true)
+                .setIsBrowsable(false)
+                .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                .build()
+        return MediaItem
+            .Builder()
             .setMediaId(MediaIds.shuffleOf(targetMediaId))
             .setMediaMetadata(metadata)
             .build()
     }
 
-    fun fromPlaylist(playlist: PlaylistWithMeta): MediaItem = browsable(
-        mediaId = MediaIds.playlist(playlist.id),
-        title = playlist.name,
-        subtitle = buildString {
-            append(playlist.trackCount)
-            append(if (playlist.trackCount == 1) " song" else " songs")
-            if (playlist.description.isNotBlank()) {
-                append(" · ")
-                append(playlist.description)
-            }
-        },
-        artworkUri = playlist.displayCover,
-        isPlayable = playlist.trackCount > 0,
-        folderType = MediaMetadata.FOLDER_TYPE_PLAYLISTS,
-        // Contains tracks — render as a list, not a grid.
-        browsableHint = CONTENT_STYLE_LIST,
-        playableHint = CONTENT_STYLE_LIST
-    )
+    fun fromPlaylist(playlist: PlaylistWithMeta): MediaItem =
+        browsable(
+            mediaId = MediaIds.playlist(playlist.id),
+            title = playlist.name,
+            subtitle =
+                buildString {
+                    append(playlist.trackCount)
+                    append(if (playlist.trackCount == 1) " song" else " songs")
+                    if (playlist.description.isNotBlank()) {
+                        append(" · ")
+                        append(playlist.description)
+                    }
+                },
+            artworkUri = playlist.displayCover,
+            isPlayable = playlist.trackCount > 0,
+            folderType = MediaMetadata.FOLDER_TYPE_PLAYLISTS,
+            // Contains tracks — render as a list, not a grid.
+            browsableHint = CONTENT_STYLE_LIST,
+            playableHint = CONTENT_STYLE_LIST,
+        )
 
-    fun fromAlbum(album: AlbumRow): MediaItem = browsable(
-        mediaId = MediaIds.album(album.name),
-        title = album.name,
-        subtitle = "${album.subtitle} · ${album.trackCount} songs",
-        artworkUri = album.artworkUri,
-        isPlayable = true,
-        folderType = MediaMetadata.FOLDER_TYPE_ALBUMS,
-        browsableHint = CONTENT_STYLE_LIST,
-        playableHint = CONTENT_STYLE_LIST
-    )
+    fun fromAlbum(album: AlbumRow): MediaItem =
+        browsable(
+            mediaId = MediaIds.album(album.name),
+            title = album.name,
+            subtitle = "${album.subtitle} · ${album.trackCount} songs",
+            artworkUri = album.artworkUri,
+            isPlayable = true,
+            folderType = MediaMetadata.FOLDER_TYPE_ALBUMS,
+            browsableHint = CONTENT_STYLE_LIST,
+            playableHint = CONTENT_STYLE_LIST,
+        )
 
-    fun fromArtist(artist: AlbumRow): MediaItem = browsable(
-        mediaId = MediaIds.artist(artist.name),
-        title = artist.name,
-        subtitle = "${artist.trackCount} songs",
-        artworkUri = artist.artworkUri,
-        isPlayable = true,
-        folderType = MediaMetadata.FOLDER_TYPE_ARTISTS,
-        browsableHint = CONTENT_STYLE_LIST,
-        playableHint = CONTENT_STYLE_LIST
-    )
+    fun fromArtist(artist: AlbumRow): MediaItem =
+        browsable(
+            mediaId = MediaIds.artist(artist.name),
+            title = artist.name,
+            subtitle = "${artist.trackCount} songs",
+            artworkUri = artist.artworkUri,
+            isPlayable = true,
+            folderType = MediaMetadata.FOLDER_TYPE_ARTISTS,
+            browsableHint = CONTENT_STYLE_LIST,
+            playableHint = CONTENT_STYLE_LIST,
+        )
 
     @OptIn(UnstableApi::class)
-    fun fromTrack(track: TrackEntity, playable: Boolean = true): MediaItem {
-        val metadata = MediaMetadata.Builder()
-            .setTitle(track.title)
-            .setArtist(track.artist)
-            .setAlbumTitle(track.album)
-            .setIsPlayable(playable)
-            .setIsBrowsable(false)
-            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
-            .setDurationMs(track.duration)
-            .apply {
-                track.artworkUri?.let { setArtworkUri(it.toUri()) }
-                if (track.trackNumber > 0) setTrackNumber(track.trackNumber)
-                if (track.year > 0) setReleaseYear(track.year)
-            }
-            .build()
+    fun fromTrack(
+        track: TrackEntity,
+        playable: Boolean = true,
+    ): MediaItem {
+        val metadata =
+            MediaMetadata
+                .Builder()
+                .setTitle(track.title)
+                .setArtist(track.artist)
+                .setAlbumTitle(track.album)
+                .setIsPlayable(playable)
+                .setIsBrowsable(false)
+                .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                .setDurationMs(track.duration)
+                .apply {
+                    track.artworkUri?.let { setArtworkUri(it.toUri()) }
+                    if (track.trackNumber > 0) setTrackNumber(track.trackNumber)
+                    if (track.year > 0) setReleaseYear(track.year)
+                }.build()
 
-        return MediaItem.Builder()
+        return MediaItem
+            .Builder()
             .setMediaId(MediaIds.track(track.id))
             .setUri(track.uri)
             .setMediaMetadata(metadata)
             .build()
     }
 
-    fun fromTracks(tracks: List<TrackEntity>): List<MediaItem> =
-        tracks.map { fromTrack(it) }
+    fun fromTracks(tracks: List<TrackEntity>): List<MediaItem> = tracks.map { fromTrack(it) }
 
     @OptIn(UnstableApi::class)
     private fun browsable(
@@ -201,27 +222,30 @@ object MediaItemFactory {
         isPlayable: Boolean = false,
         folderType: @MediaMetadata.FolderType Int = MediaMetadata.FOLDER_TYPE_MIXED,
         browsableHint: Int = CONTENT_STYLE_GRID,
-        playableHint: Int = CONTENT_STYLE_LIST
+        playableHint: Int = CONTENT_STYLE_LIST,
     ): MediaItem {
         // Tells Android Auto how to lay out THIS node's children once entered.
-        val extras = android.os.Bundle().apply {
-            putInt(EXTRA_CONTENT_STYLE_BROWSABLE, browsableHint)
-            putInt(EXTRA_CONTENT_STYLE_PLAYABLE, playableHint)
-        }
-        val metadata = MediaMetadata.Builder()
-            .setTitle(title)
-            .setSubtitle(subtitle)
-            .setIsBrowsable(true)
-            .setIsPlayable(isPlayable)
-            .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
-            .setFolderType(folderType)
-            .setExtras(extras)
-            .apply {
-                artworkUri?.let { setArtworkUri(it.toUri()) }
+        val extras =
+            android.os.Bundle().apply {
+                putInt(EXTRA_CONTENT_STYLE_BROWSABLE, browsableHint)
+                putInt(EXTRA_CONTENT_STYLE_PLAYABLE, playableHint)
             }
-            .build()
+        val metadata =
+            MediaMetadata
+                .Builder()
+                .setTitle(title)
+                .setSubtitle(subtitle)
+                .setIsBrowsable(true)
+                .setIsPlayable(isPlayable)
+                .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+                .setFolderType(folderType)
+                .setExtras(extras)
+                .apply {
+                    artworkUri?.let { setArtworkUri(it.toUri()) }
+                }.build()
 
-        return MediaItem.Builder()
+        return MediaItem
+            .Builder()
             .setMediaId(mediaId)
             .setMediaMetadata(metadata)
             .build()

@@ -38,7 +38,7 @@ import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 fun PlaylistsScreen(
     playlists: List<PlaylistWithMeta>,
     onOpenPlaylist: (Long) -> Unit,
-    onCreatePlaylist: (String) -> Unit
+    onCreatePlaylist: (String) -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
     var showCreate by remember { mutableStateOf(false) }
@@ -46,33 +46,34 @@ fun PlaylistsScreen(
     androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
                     Text(
                         text = "Playlists",
                         style = MaterialTheme.typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = "Manage collections that sync to Android Auto",
                         style = MaterialTheme.typography.bodySmall,
-                        color = palette.textSecondary
+                        color = palette.textSecondary,
                     )
                 }
             }
 
             LazyColumn(
-                contentPadding = PaddingValues(bottom = 120.dp)
+                contentPadding = PaddingValues(bottom = 120.dp),
             ) {
                 items(playlists, key = { it.id }) { playlist ->
                     PlaylistListRow(
                         playlist = playlist,
-                        onClick = { onOpenPlaylist(playlist.id) }
+                        onClick = { onOpenPlaylist(playlist.id) },
                     )
                 }
             }
@@ -80,11 +81,12 @@ fun PlaylistsScreen(
 
         FloatingActionButton(
             onClick = { showCreate = true },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 100.dp),
+            modifier =
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 20.dp, bottom = 100.dp),
             containerColor = AccentTeal,
-            contentColor = MaterialTheme.colorScheme.onPrimary
+            contentColor = MaterialTheme.colorScheme.onPrimary,
         ) {
             Icon(Icons.Rounded.Add, contentDescription = "New playlist")
         }
@@ -96,7 +98,7 @@ fun PlaylistsScreen(
             onConfirm = { name ->
                 onCreatePlaylist(name)
                 showCreate = false
-            }
+            },
         )
     }
 }
@@ -105,7 +107,7 @@ fun PlaylistsScreen(
 fun CreatePlaylistDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
-    initialName: String = ""
+    initialName: String = "",
 ) {
     val palette = LocalSimpleMP3Palette.current
     var name by remember { mutableStateOf(initialName) }
@@ -121,21 +123,23 @@ fun CreatePlaylistDialog(
                 onValueChange = { name = it },
                 singleLine = true,
                 placeholder = { Text("Playlist name") },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentTeal,
-                    cursorColor = AccentTeal,
-                    focusedLabelColor = AccentTeal
-                )
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentTeal,
+                        cursorColor = AccentTeal,
+                        focusedLabelColor = AccentTeal,
+                    ),
             )
         },
         confirmButton = {
             Button(
                 onClick = { if (name.isNotBlank()) onConfirm(name.trim()) },
                 enabled = name.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AccentTeal,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = AccentTeal,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
             ) {
                 Text("Create")
             }
@@ -144,6 +148,6 @@ fun CreatePlaylistDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel", color = palette.textSecondary)
             }
-        }
+        },
     )
 }

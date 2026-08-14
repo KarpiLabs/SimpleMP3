@@ -12,22 +12,25 @@ import java.util.concurrent.TimeUnit
  * OkHttp-backed [Downloader] for NewPipeExtractor (mirrors NewPipe's own implementation).
  */
 class YoutubeDownloaderImpl(
-    baseClient: OkHttpClient
+    baseClient: OkHttpClient,
 ) : Downloader() {
-
-    private val client: OkHttpClient = baseClient.newBuilder()
-        .readTimeout(30, TimeUnit.SECONDS)
-        .connectTimeout(20, TimeUnit.SECONDS)
-        .build()
+    private val client: OkHttpClient =
+        baseClient
+            .newBuilder()
+            .readTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(20, TimeUnit.SECONDS)
+            .build()
 
     override fun execute(request: Request): Response {
         val data = request.dataToSend()
         val body = data?.toRequestBody(null)
 
-        val builder = okhttp3.Request.Builder()
-            .method(request.httpMethod(), body)
-            .url(request.url())
-            .header(USER_AGENT_HEADER, USER_AGENT)
+        val builder =
+            okhttp3.Request
+                .Builder()
+                .method(request.httpMethod(), body)
+                .url(request.url())
+                .header(USER_AGENT_HEADER, USER_AGENT)
 
         request.headers().forEach { (name, values) ->
             builder.removeHeader(name)
@@ -44,7 +47,7 @@ class YoutubeDownloaderImpl(
                 response.message,
                 response.headers.toMultimap(),
                 responseBody,
-                response.request.url.toString()
+                response.request.url.toString(),
             )
         }
     }

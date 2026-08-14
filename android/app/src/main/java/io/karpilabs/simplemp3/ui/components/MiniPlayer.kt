@@ -2,8 +2,6 @@ package io.karpilabs.simplemp3.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,7 +27,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.karpilabs.simplemp3.player.PlayerUiState
-import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 
 @Composable
@@ -38,42 +35,48 @@ fun MiniPlayer(
     onExpand: () -> Unit,
     onPlayPause: () -> Unit,
     onSkipNext: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     if (state.currentMediaId == null && state.queueSize == 0) return
 
     val palette = LocalSimpleMP3Palette.current
-    val progress = if (state.durationMs > 0) {
-        (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f)
-    } else 0f
+    val progress =
+        if (state.durationMs > 0) {
+            (state.positionMs.toFloat() / state.durationMs).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(palette.elevated)
-            .clickable(onClick = onExpand)
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 4.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(palette.elevated)
+                .clickable(onClick = onExpand),
     ) {
         LinearProgressIndicator(
             progress = { progress },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(2.dp),
-            color = AccentTeal,
-            trackColor = palette.card
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(2.dp),
+            color = palette.accent,
+            trackColor = palette.card,
         )
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             AlbumArt(
                 artworkUri = state.artworkUri,
                 contentDescription = state.album,
                 size = 44.dp,
-                cornerRadius = 8.dp
+                cornerRadius = 8.dp,
             )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -82,29 +85,29 @@ fun MiniPlayer(
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = state.artist.ifBlank { "Simple MP3" },
                     style = MaterialTheme.typography.bodySmall,
                     color = palette.textSecondary,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             IconButton(onClick = onPlayPause) {
                 Icon(
                     imageVector = if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = if (state.isPlaying) "Pause" else "Play",
-                    tint = AccentTeal,
-                    modifier = Modifier.size(28.dp)
+                    tint = palette.accent,
+                    modifier = Modifier.size(28.dp),
                 )
             }
             IconButton(onClick = onSkipNext) {
                 Icon(
                     imageVector = Icons.Rounded.SkipNext,
                     contentDescription = "Next",
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }

@@ -34,7 +34,7 @@ fun SearchScreen(
     onQueryChange: (String) -> Unit,
     onPlayTrack: (TrackEntity, List<TrackEntity>) -> Unit,
     onToggleFavorite: (Long) -> Unit,
-    onAddToPlaylist: (TrackEntity) -> Unit = {}
+    onAddToPlaylist: (TrackEntity) -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
     Column(modifier = Modifier.fillMaxSize()) {
@@ -42,15 +42,16 @@ fun SearchScreen(
             text = "Search",
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         )
 
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
             placeholder = { Text("Songs, artists, albums") },
             leadingIcon = {
                 Icon(Icons.Rounded.Search, contentDescription = null, tint = palette.textMuted)
@@ -64,13 +65,14 @@ fun SearchScreen(
             },
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = AccentTeal,
-                unfocusedBorderColor = palette.card,
-                focusedContainerColor = palette.card,
-                unfocusedContainerColor = palette.card,
-                cursorColor = AccentTeal
-            )
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentTeal,
+                    unfocusedBorderColor = palette.card,
+                    focusedContainerColor = palette.card,
+                    unfocusedContainerColor = palette.card,
+                    cursorColor = AccentTeal,
+                ),
         )
 
         if (query.isBlank()) {
@@ -78,18 +80,18 @@ fun SearchScreen(
                 text = "Find anything in your local library — same search works on Android Auto.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = palette.textSecondary,
-                modifier = Modifier.padding(24.dp)
+                modifier = Modifier.padding(24.dp),
             )
         } else if (results.isEmpty()) {
             Text(
                 text = "No matches for \"$query\"",
                 style = MaterialTheme.typography.bodyMedium,
                 color = palette.textSecondary,
-                modifier = Modifier.padding(24.dp)
+                modifier = Modifier.padding(24.dp),
             )
         } else {
             LazyColumn(
-                contentPadding = PaddingValues(top = 12.dp, bottom = 120.dp)
+                contentPadding = PaddingValues(top = 12.dp, bottom = 120.dp),
             ) {
                 items(results, key = { it.id }) { track ->
                     TrackRow(
@@ -97,7 +99,7 @@ fun SearchScreen(
                         isPlaying = playerState.currentMediaId == "track:${track.id}",
                         onClick = { onPlayTrack(track, results) },
                         onLongClick = { onAddToPlaylist(track) },
-                        onFavoriteClick = { onToggleFavorite(track.id) }
+                        onFavoriteClick = { onToggleFavorite(track.id) },
                     )
                 }
             }

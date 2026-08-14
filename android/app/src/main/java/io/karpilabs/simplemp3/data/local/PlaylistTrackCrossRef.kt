@@ -12,24 +12,24 @@ import androidx.room.Index
             entity = PlaylistEntity::class,
             parentColumns = ["id"],
             childColumns = ["playlistId"],
-            onDelete = ForeignKey.CASCADE
+            onDelete = ForeignKey.CASCADE,
         ),
         ForeignKey(
             entity = TrackEntity::class,
             parentColumns = ["id"],
             childColumns = ["trackId"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
     indices = [
         Index("playlistId"),
         Index("trackId"),
-        Index(value = ["playlistId", "position"])
-    ]
+        Index(value = ["playlistId", "position"]),
+    ],
 )
 data class PlaylistTrackCrossRef(
     val playlistId: Long,
     val trackId: Long,
     val position: Int,
-    val addedAt: Long = System.currentTimeMillis()
+    val addedAt: Long = System.currentTimeMillis(),
 )

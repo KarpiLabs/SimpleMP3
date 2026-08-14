@@ -5,7 +5,8 @@ package io.karpilabs.simplemp3.data.quickconnect
  * Dark theme to match Simple MP3; works offline on the LAN with no CDN.
  */
 object QuickConnectPortalHtml {
-    val PAGE: String = """
+    val PAGE: String =
+        """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -503,5 +504,5 @@ object QuickConnectPortalHtml {
 </script>
 </body>
 </html>
-""".trimIndent()
+        """.trimIndent()
 }

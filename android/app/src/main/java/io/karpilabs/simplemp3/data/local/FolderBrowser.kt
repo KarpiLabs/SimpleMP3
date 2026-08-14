@@ -5,7 +5,6 @@ package io.karpilabs.simplemp3.data.local
  * (MediaStore-style relative paths without a trailing slash).
  */
 object FolderBrowser {
-
     data class FolderEntry(
         /** Full relative path, e.g. "Music/Rock". */
         val path: String,
@@ -15,7 +14,7 @@ object FolderBrowser {
         val directTrackCount: Int,
         /** Tracks in this folder and all descendants. */
         val totalTrackCount: Int,
-        val hasSubfolders: Boolean
+        val hasSubfolders: Boolean,
     )
 
     fun normalize(path: String?): String {
@@ -42,7 +41,7 @@ object FolderBrowser {
     fun childFolders(
         allFolderPaths: List<String>,
         parentPath: String,
-        trackCountByFolder: Map<String, Int> = emptyMap()
+        trackCountByFolder: Map<String, Int> = emptyMap(),
     ): List<FolderEntry> {
         val parent = normalize(parentPath)
         val prefix = if (parent.isEmpty()) "" else "$parent/"
@@ -64,36 +63,41 @@ object FolderBrowser {
             }
         }
 
-        return childNames.values.map { childPath ->
-            val direct = trackCountByFolder[childPath] ?: 0
-            val descendantPrefix = "$childPath/"
-            var total = direct
-            var hasSubs = false
-            for ((folder, count) in trackCountByFolder) {
-                if (folder.startsWith(descendantPrefix)) {
-                    total += count
-                    hasSubs = true
+        return childNames.values
+            .map { childPath ->
+                val direct = trackCountByFolder[childPath] ?: 0
+                val descendantPrefix = "$childPath/"
+                var total = direct
+                var hasSubs = false
+                for ((folder, count) in trackCountByFolder) {
+                    if (folder.startsWith(descendantPrefix)) {
+                        total += count
+                        hasSubs = true
+                    }
                 }
-            }
-            // Also detect subfolders that might have zero tracks counted only via path list
-            if (!hasSubs) {
-                hasSubs = allFolderPaths.any {
-                    val p = normalize(it)
-                    p.startsWith(descendantPrefix)
+                // Also detect subfolders that might have zero tracks counted only via path list
+                if (!hasSubs) {
+                    hasSubs =
+                        allFolderPaths.any {
+                            val p = normalize(it)
+                            p.startsWith(descendantPrefix)
+                        }
                 }
-            }
-            FolderEntry(
-                path = childPath,
-                name = displayName(childPath),
-                directTrackCount = direct,
-                totalTrackCount = total,
-                hasSubfolders = hasSubs
-            )
-        }.sortedBy { it.name.lowercase() }
+                FolderEntry(
+                    path = childPath,
+                    name = displayName(childPath),
+                    directTrackCount = direct,
+                    totalTrackCount = total,
+                    hasSubfolders = hasSubs,
+                )
+            }.sortedBy { it.name.lowercase() }
     }
 
     /** Whether [folderPath] is under any of [roots] (or roots empty = allow all). */
-    fun matchesAnyRoot(folderPath: String, roots: Set<String>): Boolean {
+    fun matchesAnyRoot(
+        folderPath: String,
+        roots: Set<String>,
+    ): Boolean {
         if (roots.isEmpty()) return true
         val path = normalize(folderPath)
         if (path.isEmpty()) return false

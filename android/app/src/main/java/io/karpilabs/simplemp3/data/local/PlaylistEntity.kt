@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "playlists",
-    indices = [Index(value = ["systemType"], unique = true)]
+    indices = [Index(value = ["systemType"], unique = true)],
 )
 data class PlaylistEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -17,7 +17,7 @@ data class PlaylistEntity(
     val updatedAt: Long = System.currentTimeMillis(),
     val isSystem: Boolean = false,
     /** favorites | recently_played — unique when set */
-    val systemType: String? = null
+    val systemType: String? = null,
 ) {
     companion object {
         const val SYSTEM_FAVORITES = "favorites"

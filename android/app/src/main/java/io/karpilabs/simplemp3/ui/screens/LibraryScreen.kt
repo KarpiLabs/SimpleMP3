@@ -65,7 +65,7 @@ fun LibraryScreen(
     onOpenArtist: (String) -> Unit,
     onOpenFolder: (String) -> Unit,
     onToggleFavorite: (Long) -> Unit,
-    onAddToPlaylist: (TrackEntity) -> Unit = {}
+    onAddToPlaylist: (TrackEntity) -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
     var tab by rememberSaveable { mutableIntStateOf(0) }
@@ -73,45 +73,62 @@ fun LibraryScreen(
     val q = filter.trim()
 
     // In-memory filter is instant (no Room round-trip) once the list is warm.
-    val filteredTracks = remember(tracks, q) {
-        if (q.isEmpty()) tracks
-        else tracks.filter {
-            it.title.contains(q, true) ||
-                it.artist.contains(q, true) ||
-                it.album.contains(q, true)
+    val filteredTracks =
+        remember(tracks, q) {
+            if (q.isEmpty()) {
+                tracks
+            } else {
+                tracks.filter {
+                    it.title.contains(q, true) ||
+                        it.artist.contains(q, true) ||
+                        it.album.contains(q, true)
+                }
+            }
         }
-    }
-    val filteredAlbums = remember(albums, q) {
-        if (q.isEmpty()) albums
-        else albums.filter {
-            it.name.contains(q, true) || it.subtitle.contains(q, true)
+    val filteredAlbums =
+        remember(albums, q) {
+            if (q.isEmpty()) {
+                albums
+            } else {
+                albums.filter {
+                    it.name.contains(q, true) || it.subtitle.contains(q, true)
+                }
+            }
         }
-    }
-    val filteredArtists = remember(artists, q) {
-        if (q.isEmpty()) artists
-        else artists.filter { it.name.contains(q, true) }
-    }
-    val filteredFolders = remember(rootFolders, q) {
-        if (q.isEmpty()) rootFolders
-        else rootFolders.filter {
-            it.name.contains(q, true) || it.path.contains(q, true)
+    val filteredArtists =
+        remember(artists, q) {
+            if (q.isEmpty()) {
+                artists
+            } else {
+                artists.filter { it.name.contains(q, true) }
+            }
         }
-    }
+    val filteredFolders =
+        remember(rootFolders, q) {
+            if (q.isEmpty()) {
+                rootFolders
+            } else {
+                rootFolders.filter {
+                    it.name.contains(q, true) || it.path.contains(q, true)
+                }
+            }
+        }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
             text = "Library",
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         )
 
         OutlinedTextField(
             value = filter,
             onValueChange = onFilterChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
             placeholder = { Text("Filter this tab…") },
             singleLine = true,
             leadingIcon = { Icon(Icons.Rounded.Search, null, tint = palette.textMuted) },
@@ -123,13 +140,14 @@ fun LibraryScreen(
                 }
             },
             shape = RoundedCornerShape(14.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = AccentTeal,
-                unfocusedBorderColor = palette.card,
-                focusedContainerColor = palette.card,
-                unfocusedContainerColor = palette.card,
-                cursorColor = AccentTeal
-            )
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentTeal,
+                    unfocusedBorderColor = palette.card,
+                    focusedContainerColor = palette.card,
+                    unfocusedContainerColor = palette.card,
+                    cursorColor = AccentTeal,
+                ),
         )
 
         ScrollableTabRow(
@@ -140,10 +158,10 @@ fun LibraryScreen(
             indicator = { positions ->
                 SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(positions[tab]),
-                    color = AccentTeal
+                    color = AccentTeal,
                 )
             },
-            divider = {}
+            divider = {},
         ) {
             tabs.forEachIndexed { index, title ->
                 Tab(
@@ -152,73 +170,78 @@ fun LibraryScreen(
                     text = {
                         Text(
                             title,
-                            color = if (tab == index) AccentTeal else palette.textSecondary
+                            color = if (tab == index) AccentTeal else palette.textSecondary,
                         )
-                    }
+                    },
                 )
             }
         }
 
         when (tab) {
-            0 -> LazyColumn(contentPadding = PaddingValues(bottom = 120.dp)) {
-                items(filteredTracks, key = { it.id }, contentType = { "track" }) { track ->
-                    TrackRow(
-                        track = track,
-                        isPlaying = playerState.currentMediaId == "track:${track.id}",
-                        onClick = { onPlayTrack(track, filteredTracks) },
-                        onLongClick = { onAddToPlaylist(track) },
-                        onFavoriteClick = { onToggleFavorite(track.id) }
-                    )
-                }
-            }
-            1 -> LazyColumn(contentPadding = PaddingValues(bottom = 120.dp)) {
-                items(
-                    filteredAlbums,
-                    key = { "${it.name}|${it.subtitle}" },
-                    contentType = { "album" }
-                ) { album ->
-                    MediaCollectionRow(
-                        title = album.name,
-                        subtitle = "${album.subtitle} · ${formatTrackCount(album.trackCount)}",
-                        artworkUri = album.artworkUri,
-                        onClick = { onOpenAlbum(album.name) }
-                    )
-                }
-            }
-            2 -> LazyColumn(contentPadding = PaddingValues(bottom = 120.dp)) {
-                items(filteredArtists, key = { it.name }, contentType = { "artist" }) { artist ->
-                    MediaCollectionRow(
-                        title = artist.name,
-                        subtitle = formatTrackCount(artist.trackCount),
-                        artworkUri = artist.artworkUri,
-                        onClick = { onOpenArtist(artist.name) }
-                    )
-                }
-            }
-            3 -> LazyColumn(contentPadding = PaddingValues(bottom = 120.dp)) {
-                if (filteredFolders.isEmpty()) {
-                    item {
-                        Text(
-                            text = if (q.isNotEmpty()) {
-                                "No folders match “$q”"
-                            } else {
-                                "No folders yet — rescan the library from Home"
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = palette.textMuted,
-                            modifier = Modifier.padding(24.dp)
-                        )
-                    }
-                } else {
-                    items(filteredFolders, key = { it.path }, contentType = { "folder" }) { folder ->
-                        FolderRow(
-                            name = folder.name,
-                            subtitle = buildRootFolderSubtitle(folder),
-                            onClick = { onOpenFolder(folder.path) }
+            0 ->
+                LazyColumn(contentPadding = PaddingValues(bottom = 120.dp)) {
+                    items(filteredTracks, key = { it.id }, contentType = { "track" }) { track ->
+                        TrackRow(
+                            track = track,
+                            isPlaying = playerState.currentMediaId == "track:${track.id}",
+                            onClick = { onPlayTrack(track, filteredTracks) },
+                            onLongClick = { onAddToPlaylist(track) },
+                            onFavoriteClick = { onToggleFavorite(track.id) },
                         )
                     }
                 }
-            }
+            1 ->
+                LazyColumn(contentPadding = PaddingValues(bottom = 120.dp)) {
+                    items(
+                        filteredAlbums,
+                        key = { "${it.name}|${it.subtitle}" },
+                        contentType = { "album" },
+                    ) { album ->
+                        MediaCollectionRow(
+                            title = album.name,
+                            subtitle = "${album.subtitle} · ${formatTrackCount(album.trackCount)}",
+                            artworkUri = album.artworkUri,
+                            onClick = { onOpenAlbum(album.name) },
+                        )
+                    }
+                }
+            2 ->
+                LazyColumn(contentPadding = PaddingValues(bottom = 120.dp)) {
+                    items(filteredArtists, key = { it.name }, contentType = { "artist" }) { artist ->
+                        MediaCollectionRow(
+                            title = artist.name,
+                            subtitle = formatTrackCount(artist.trackCount),
+                            artworkUri = artist.artworkUri,
+                            onClick = { onOpenArtist(artist.name) },
+                        )
+                    }
+                }
+            3 ->
+                LazyColumn(contentPadding = PaddingValues(bottom = 120.dp)) {
+                    if (filteredFolders.isEmpty()) {
+                        item {
+                            Text(
+                                text =
+                                    if (q.isNotEmpty()) {
+                                        "No folders match “$q”"
+                                    } else {
+                                        "No folders yet — rescan the library from Home"
+                                    },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = palette.textMuted,
+                                modifier = Modifier.padding(24.dp),
+                            )
+                        }
+                    } else {
+                        items(filteredFolders, key = { it.path }, contentType = { "folder" }) { folder ->
+                            FolderRow(
+                                name = folder.name,
+                                subtitle = buildRootFolderSubtitle(folder),
+                                onClick = { onOpenFolder(folder.path) },
+                            )
+                        }
+                    }
+                }
         }
     }
 }
@@ -235,29 +258,31 @@ private fun MediaCollectionRow(
     title: String,
     subtitle: String,
     artworkUri: String?,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(palette.elevated),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(palette.elevated),
+            contentAlignment = Alignment.Center,
         ) {
             if (!artworkUri.isNullOrBlank()) {
                 AsyncImage(
                     model = artworkUri,
                     contentDescription = title,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
                 )
             } else {
                 AlbumArt(artworkUri = null, contentDescription = title, size = 56.dp)
@@ -270,14 +295,14 @@ private fun MediaCollectionRow(
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = palette.textSecondary,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

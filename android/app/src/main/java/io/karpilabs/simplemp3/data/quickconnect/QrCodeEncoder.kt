@@ -15,22 +15,24 @@ object QrCodeEncoder {
         content: String,
         sizePx: Int = 512,
         foreground: Int = Color.BLACK,
-        background: Int = Color.WHITE
+        background: Int = Color.WHITE,
     ): Bitmap? {
         if (content.isBlank() || sizePx <= 0) return null
         return runCatching {
-            val hints = mapOf(
-                EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.M,
-                EncodeHintType.MARGIN to 1,
-                EncodeHintType.CHARACTER_SET to "UTF-8"
-            )
-            val matrix = QRCodeWriter().encode(
-                content,
-                BarcodeFormat.QR_CODE,
-                sizePx,
-                sizePx,
-                hints
-            )
+            val hints =
+                mapOf(
+                    EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.M,
+                    EncodeHintType.MARGIN to 1,
+                    EncodeHintType.CHARACTER_SET to "UTF-8",
+                )
+            val matrix =
+                QRCodeWriter().encode(
+                    content,
+                    BarcodeFormat.QR_CODE,
+                    sizePx,
+                    sizePx,
+                    hints,
+                )
             val w = matrix.width
             val h = matrix.height
             val pixels = IntArray(w * h)

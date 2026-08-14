@@ -14,8 +14,8 @@ import androidx.room.PrimaryKey
         Index(value = ["jellyfinId"], unique = true),
         Index(value = ["storageState"]),
         Index(value = ["size"]),
-        Index(value = ["folderPath"])
-    ]
+        Index(value = ["folderPath"]),
+    ],
 )
 data class TrackEntity(
     @PrimaryKey val id: Long,
@@ -57,12 +57,13 @@ data class TrackEntity(
      * User starred “never compress” — skip size optimize + cold pack forever
      * (and keep thawed if currently cold).
      */
-    val neverCompress: Boolean = false
+    val neverCompress: Boolean = false,
 ) {
     companion object {
         const val SOURCE_LOCAL = "local"
         const val SOURCE_JELLYFIN = "jellyfin"
         const val SOURCE_YOUTUBE = "youtube"
+
         /** Uploaded via Quick Connect LAN portal */
         const val SOURCE_LAN = "lan"
 
@@ -75,9 +76,10 @@ data class TrackEntity(
     val isLan: Boolean get() = source == SOURCE_LAN
     val isCold: Boolean get() = storageState == STORAGE_COLD
     val isAppOwned: Boolean
-        get() = source == SOURCE_JELLYFIN ||
-            source == SOURCE_YOUTUBE ||
-            source == SOURCE_LAN
+        get() =
+            source == SOURCE_JELLYFIN ||
+                source == SOURCE_YOUTUBE ||
+                source == SOURCE_LAN
 }
 
 /** Stable negative Long id from an external string id (never collides with MediaStore). */

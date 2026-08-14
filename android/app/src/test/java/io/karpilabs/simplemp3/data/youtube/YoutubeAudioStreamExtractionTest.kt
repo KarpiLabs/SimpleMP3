@@ -20,42 +20,42 @@ import org.schabi.newpipe.extractor.stream.StreamInfo
  * `./gradlew testDebugUnitTest --tests '*.YoutubeAudioStreamExtractionTest'`
  */
 class YoutubeAudioStreamExtractionTest {
-
     @Test
     fun `extracts at least one audio stream for known video`() {
         assumeFalse(
             "Skip live YouTube probe on CI (bot challenges / no stable network contract)",
-            isCi()
+            isCi(),
         )
 
         NewPipe.init(YoutubeDownloaderImpl(OkHttpClient()))
 
         val url = "https://www.youtube.com/watch?v=-6Kxx19ejog"
-        val info = try {
-            StreamInfo.getInfo(ServiceList.YouTube, url)
-        } catch (e: SignInConfirmNotBotException) {
-            assumeNoException("YouTube bot check blocked extraction; not an app regression", e)
-            return
-        } catch (e: ExtractionException) {
-            assumeNoException("YouTube extraction unavailable in this environment", e)
-            return
-        }
+        val info =
+            try {
+                StreamInfo.getInfo(ServiceList.YouTube, url)
+            } catch (e: SignInConfirmNotBotException) {
+                assumeNoException("YouTube bot check blocked extraction; not an app regression", e)
+                return
+            } catch (e: ExtractionException) {
+                assumeNoException("YouTube extraction unavailable in this environment", e)
+                return
+            }
 
         println(
             "audioStreams=${info.audioStreams.size} " +
                 "videoStreams=${info.videoStreams.size} " +
-                "videoOnly=${info.videoOnlyStreams.size}"
+                "videoOnly=${info.videoOnlyStreams.size}",
         )
         info.audioStreams.forEach {
             println(
                 "  audio: format=${it.format} bitrate=${it.averageBitrate} " +
-                    "url=${it.content.take(80)}"
+                    "url=${it.content.take(80)}",
             )
         }
 
         assertTrue(
             "Expected at least one audio stream, got ${info.audioStreams.size}",
-            info.audioStreams.isNotEmpty()
+            info.audioStreams.isNotEmpty(),
         )
     }
 

@@ -36,36 +36,37 @@ fun AddToPlaylistSheet(
     trackTitle: String,
     onDismiss: () -> Unit,
     onSelect: (Long) -> Unit,
-    onCreateNew: () -> Unit
+    onCreateNew: () -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = palette.card
+        containerColor = palette.card,
     ) {
         Column(modifier = Modifier.padding(bottom = 32.dp)) {
             Text(
                 text = "Add to playlist",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = 20.dp)
+                modifier = Modifier.padding(horizontal = 20.dp),
             )
             Text(
                 text = trackTitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = palette.textSecondary,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
             )
             Spacer(Modifier.height(8.dp))
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onCreateNew)
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onCreateNew)
+                        .padding(horizontal = 20.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Rounded.Add, contentDescription = null, tint = AccentTeal)
                 Spacer(Modifier.width(12.dp))
@@ -76,28 +77,29 @@ fun AddToPlaylistSheet(
             LazyColumn {
                 items(playlists.filter { !it.isSystem || it.systemType == "favorites" }) { playlist ->
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(playlist.id) }
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(playlist.id) }
+                                .padding(horizontal = 20.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             Icons.Rounded.PlaylistAdd,
                             contentDescription = null,
-                            tint = AccentTeal
+                            tint = AccentTeal,
                         )
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(
                                 text = playlist.name,
                                 style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 text = formatTrackCount(playlist.trackCount),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = palette.textSecondary
+                                color = palette.textSecondary,
                             )
                         }
                     }

@@ -14,42 +14,45 @@ import io.karpilabs.simplemp3.data.storage.StorageMaintenanceWorker
 import javax.inject.Inject
 
 @HiltAndroidApp
-class SimpleMP3App : Application(), ImageLoaderFactory, Configuration.Provider {
-
+class SimpleMP3App :
+    Application(),
+    ImageLoaderFactory,
+    Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
     override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder()
-            .setWorkerFactory(workerFactory)
-            .build()
+        get() =
+            Configuration
+                .Builder()
+                .setWorkerFactory(workerFactory)
+                .build()
 
     override fun onCreate() {
         super.onCreate()
         StorageMaintenanceWorker.enqueue(this)
     }
 
-    override fun newImageLoader(): ImageLoader {
-        return ImageLoader.Builder(this)
+    override fun newImageLoader(): ImageLoader =
+        ImageLoader
+            .Builder(this)
             .crossfade(true)
             .crossfade(120)
             .components {
                 add(AudioThumbnailFetcher.Factory(this@SimpleMP3App))
-            }
-            .memoryCache {
-                MemoryCache.Builder(this)
+            }.memoryCache {
+                MemoryCache
+                    .Builder(this)
                     .maxSizePercent(0.22)
                     .build()
-            }
-            .diskCache {
-                DiskCache.Builder()
+            }.diskCache {
+                DiskCache
+                    .Builder()
                     .directory(cacheDir.resolve("image_cache"))
                     .maxSizeBytes(80L * 1024 * 1024)
                     .build()
-            }
-            .memoryCachePolicy(CachePolicy.ENABLED)
+            }.memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.ENABLED)
             .respectCacheHeaders(false)
             .build()
-    }
 }

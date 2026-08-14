@@ -27,7 +27,6 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
-
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -86,7 +85,7 @@ fun HomeScreen(
     onResume: () -> Unit = {},
     onPlayPause: () -> Unit = {},
     onSkipNext: () -> Unit = {},
-    onSkipPrevious: () -> Unit = {}
+    onSkipPrevious: () -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
     val greeting = rememberGreeting()
@@ -108,7 +107,7 @@ fun HomeScreen(
             onSkipPrevious = onSkipPrevious,
             onOpenPlaylist = onOpenPlaylist,
             onPlayContinue = { onPlayAll(continueListening) },
-            onOpenJellyfin = onOpenJellyfin
+            onOpenJellyfin = onOpenJellyfin,
         )
         return
     }
@@ -116,235 +115,244 @@ fun HomeScreen(
     PullToRefreshBox(
         isRefreshing = isScanning,
         onRefresh = onScan,
-        modifier = Modifier.fillMaxSize()
-    ) {
-    LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 120.dp)
     ) {
-        item {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                Text(
-                    text = greeting,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = AccentTeal
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 120.dp),
+        ) {
+            item {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Text(
-                        text = "Simple MP3",
-                        style = MaterialTheme.typography.displayLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = greeting,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = AccentTeal,
                     )
-                    Row {
-                        FilterChip(
-                            selected = false,
-                            onClick = onToggleDriveMode,
-                            label = { Text("Drive") },
-                            leadingIcon = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Simple MP3",
+                            style = MaterialTheme.typography.displayLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Row {
+                            FilterChip(
+                                selected = false,
+                                onClick = onToggleDriveMode,
+                                label = { Text("Drive") },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Rounded.DirectionsCar,
+                                        null,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                },
+                                colors =
+                                    FilterChipDefaults.filterChipColors(
+                                        containerColor = palette.card,
+                                        labelColor = AccentTeal,
+                                        iconColor = AccentTeal,
+                                    ),
+                            )
+                            IconButton(onClick = onOpenSettings) {
                                 Icon(
-                                    Icons.Rounded.DirectionsCar,
-                                    null,
-                                    modifier = Modifier.size(16.dp)
+                                    Icons.Rounded.Settings,
+                                    contentDescription = "Settings",
+                                    tint = AccentTeal,
                                 )
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                containerColor = palette.card,
-                                labelColor = AccentTeal,
-                                iconColor = AccentTeal
-                            )
-                        )
-                        IconButton(onClick = onOpenSettings) {
-                            Icon(
-                                Icons.Rounded.Settings,
-                                contentDescription = "Settings",
-                                tint = AccentTeal
-                            )
+                            }
                         }
                     }
-                }
-                Text(
-                    text = buildString {
-                        if (trackCount > 0) {
-                            append(formatTrackCount(trackCount))
-                            if (jfCount > 0) {
-                                append(" · ")
-                                append(jfCount)
-                                append(" from Jellyfin")
-                            }
-                        } else {
-                            append(
-                                if (showJellyfin) {
-                                    "Scan your library or sync Jellyfin"
+                    Text(
+                        text =
+                            buildString {
+                                if (trackCount > 0) {
+                                    append(formatTrackCount(trackCount))
+                                    if (jfCount > 0) {
+                                        append(" · ")
+                                        append(jfCount)
+                                        append(" from Jellyfin")
+                                    }
                                 } else {
-                                    "Scan your library to get started"
+                                    append(
+                                        if (showJellyfin) {
+                                            "Scan your library or sync Jellyfin"
+                                        } else {
+                                            "Scan your library to get started"
+                                        },
+                                    )
                                 }
-                            )
-                        }
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = palette.textSecondary
-                )
-            }
-        }
-
-        if (resume != null && resume.hasSession && playerState.queueSize == 0) {
-            item {
-                ResumeCard(resume = resume, onResume = onResume)
-            }
-        }
-
-        if (showJellyfin) {
-            item {
-                FeatureCard(
-                    icon = Icons.Rounded.CloudDownload,
-                    title = "Jellyfin Sync",
-                    subtitle = if (jfCount > 0) {
-                        "$jfCount tracks offline — tap to manage"
-                    } else {
-                        "Download server music for offline & Android Auto"
-                    },
-                    brush = Brush.horizontalGradient(
-                        listOf(
-                            AccentViolet.copy(alpha = 0.35f),
-                            palette.elevated,
-                            AccentTeal.copy(alpha = 0.15f)
-                        )
-                    ),
-                    onClick = onOpenJellyfin
-                )
-            }
-        }
-
-        if (trackCount == 0 && !isScanning) {
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Your music. Your car. Offline.",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = if (showJellyfin) {
-                            "Scan local MP3s or connect Jellyfin to download tracks for the road."
-                        } else {
-                            "Scan local MP3s on this device, or open Tools for YouTube and LAN import."
-                        },
+                            },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = palette.textSecondary
+                        color = palette.textSecondary,
                     )
-                    Spacer(Modifier.height(20.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(
-                            onClick = onScan,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AccentTeal,
-                                contentColor = MaterialTheme.colorScheme.background
-                            )
-                        ) {
-                            Text("Scan library")
-                        }
-                        if (showJellyfin) {
-                            Button(
-                                onClick = onOpenJellyfin,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = AccentViolet,
-                                    contentColor = MaterialTheme.colorScheme.background
-                                )
-                            ) {
-                                Text("Jellyfin")
-                            }
-                        } else {
-                            Button(
-                                onClick = onOpenTools,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = palette.card,
-                                    contentColor = AccentTeal
-                                )
-                            ) {
-                                Text("Tools")
-                            }
-                        }
-                    }
                 }
             }
-        }
 
-        if (playlists.isNotEmpty()) {
-            item { SectionHeader(title = "Playlists") }
-            item {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(playlists, key = { it.id }) { playlist ->
-                        PlaylistCard(
-                            playlist = playlist,
-                            onClick = { onOpenPlaylist(playlist.id) },
-                            modifier = Modifier.width(148.dp)
+            if (resume != null && resume.hasSession && playerState.queueSize == 0) {
+                item {
+                    ResumeCard(resume = resume, onResume = onResume)
+                }
+            }
+
+            if (showJellyfin) {
+                item {
+                    FeatureCard(
+                        icon = Icons.Rounded.CloudDownload,
+                        title = "Jellyfin Sync",
+                        subtitle =
+                            if (jfCount > 0) {
+                                "$jfCount tracks offline — tap to manage"
+                            } else {
+                                "Download server music for offline & Android Auto"
+                            },
+                        brush =
+                            Brush.horizontalGradient(
+                                listOf(
+                                    AccentViolet.copy(alpha = 0.35f),
+                                    palette.elevated,
+                                    AccentTeal.copy(alpha = 0.15f),
+                                ),
+                            ),
+                        onClick = onOpenJellyfin,
+                    )
+                }
+            }
+
+            if (trackCount == 0 && !isScanning) {
+                item {
+                    Column(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = "Your music. Your car. Offline.",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text =
+                                if (showJellyfin) {
+                                    "Scan local MP3s or connect Jellyfin to download tracks for the road."
+                                } else {
+                                    "Scan local MP3s on this device, or open Tools for YouTube and LAN import."
+                                },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = palette.textSecondary,
+                        )
+                        Spacer(Modifier.height(20.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Button(
+                                onClick = onScan,
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = AccentTeal,
+                                        contentColor = MaterialTheme.colorScheme.background,
+                                    ),
+                            ) {
+                                Text("Scan library")
+                            }
+                            if (showJellyfin) {
+                                Button(
+                                    onClick = onOpenJellyfin,
+                                    colors =
+                                        ButtonDefaults.buttonColors(
+                                            containerColor = AccentViolet,
+                                            contentColor = MaterialTheme.colorScheme.background,
+                                        ),
+                                ) {
+                                    Text("Jellyfin")
+                                }
+                            } else {
+                                Button(
+                                    onClick = onOpenTools,
+                                    colors =
+                                        ButtonDefaults.buttonColors(
+                                            containerColor = palette.card,
+                                            contentColor = AccentTeal,
+                                        ),
+                                ) {
+                                    Text("Tools")
+                                }
+                            }
+                        }
                     }
                 }
             }
-        }
 
-        if (continueListening.isNotEmpty()) {
-            item {
-                SectionHeader(
-                    title = "Continue listening",
-                    actionLabel = "Play",
-                    onAction = { onPlayAll(continueListening) }
-                )
+            if (playlists.isNotEmpty()) {
+                item { SectionHeader(title = "Playlists") }
+                item {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(playlists, key = { it.id }) { playlist ->
+                            PlaylistCard(
+                                playlist = playlist,
+                                onClick = { onOpenPlaylist(playlist.id) },
+                                modifier = Modifier.width(148.dp),
+                            )
+                        }
+                    }
+                }
             }
-            items(continueListening.take(10), key = { "cl_${it.id}" }) { track ->
-                TrackRow(
-                    track = track,
-                    isPlaying = playerState.currentMediaId == "track:${track.id}",
-                    onClick = { onPlayTrack(track, continueListening) },
-                    onLongClick = { onAddToPlaylist(track) },
-                    onFavoriteClick = { onToggleFavorite(track.id) }
-                )
-            }
-        }
 
-        if (recentlyAdded.isNotEmpty()) {
-            item {
-                SectionHeader(
-                    title = "Recently added",
-                    actionLabel = "Play all",
-                    onAction = { onPlayAll(recentlyAdded) }
-                )
+            if (continueListening.isNotEmpty()) {
+                item {
+                    SectionHeader(
+                        title = "Continue listening",
+                        actionLabel = "Play",
+                        onAction = { onPlayAll(continueListening) },
+                    )
+                }
+                items(continueListening.take(10), key = { "cl_${it.id}" }) { track ->
+                    TrackRow(
+                        track = track,
+                        isPlaying = playerState.currentMediaId == "track:${track.id}",
+                        onClick = { onPlayTrack(track, continueListening) },
+                        onLongClick = { onAddToPlaylist(track) },
+                        onFavoriteClick = { onToggleFavorite(track.id) },
+                    )
+                }
             }
-            items(recentlyAdded.take(12), key = { "ra_${it.id}" }) { track ->
-                TrackRow(
-                    track = track,
-                    isPlaying = playerState.currentMediaId == "track:${track.id}",
-                    onClick = { onPlayTrack(track, recentlyAdded) },
-                    onLongClick = { onAddToPlaylist(track) },
-                    onFavoriteClick = { onToggleFavorite(track.id) }
-                )
-            }
-        }
 
-        if (showJellyfin && jfCount > 0) {
-            item {
-                SectionHeader(
-                    title = "Jellyfin Offline",
-                    actionLabel = "Manage",
-                    onAction = onOpenJellyfin
-                )
+            if (recentlyAdded.isNotEmpty()) {
+                item {
+                    SectionHeader(
+                        title = "Recently added",
+                        actionLabel = "Play all",
+                        onAction = { onPlayAll(recentlyAdded) },
+                    )
+                }
+                items(recentlyAdded.take(12), key = { "ra_${it.id}" }) { track ->
+                    TrackRow(
+                        track = track,
+                        isPlaying = playerState.currentMediaId == "track:${track.id}",
+                        onClick = { onPlayTrack(track, recentlyAdded) },
+                        onLongClick = { onAddToPlaylist(track) },
+                        onFavoriteClick = { onToggleFavorite(track.id) },
+                    )
+                }
+            }
+
+            if (showJellyfin && jfCount > 0) {
+                item {
+                    SectionHeader(
+                        title = "Jellyfin Offline",
+                        actionLabel = "Manage",
+                        onAction = onOpenJellyfin,
+                    )
+                }
             }
         }
-    }
     }
 }
 
@@ -363,38 +371,39 @@ private fun DriveModeHome(
     onSkipPrevious: () -> Unit,
     onOpenPlaylist: (Long) -> Unit,
     onPlayContinue: () -> Unit,
-    onOpenJellyfin: () -> Unit
+    onOpenJellyfin: () -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
     val background = MaterialTheme.colorScheme.background
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(background, DeepViolet, background)
-                )
-            )
-            .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(background, DeepViolet, background),
+                    ),
+                ).padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 "Drive mode",
                 style = MaterialTheme.typography.headlineMedium,
-                color = AccentTeal
+                color = AccentTeal,
             )
             Text(
                 "Exit",
                 color = palette.textSecondary,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable(onClick = onExitDriveMode)
-                    .padding(12.dp)
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable(onClick = onExitDriveMode)
+                        .padding(12.dp),
             )
         }
 
@@ -404,7 +413,7 @@ private fun DriveModeHome(
             artworkUri = playerState.artworkUri ?: resume?.artworkUri,
             contentDescription = null,
             size = 220.dp,
-            cornerRadius = 20.dp
+            cornerRadius = 20.dp,
         )
 
         Spacer(Modifier.height(20.dp))
@@ -414,43 +423,44 @@ private fun DriveModeHome(
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
         Text(
             text = playerState.artist.ifBlank { resume?.artist ?: "Tap Resume or a playlist" },
             style = MaterialTheme.typography.bodyLarge,
             color = palette.textSecondary,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
 
         Spacer(Modifier.height(28.dp))
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(28.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onSkipPrevious, modifier = Modifier.size(64.dp)) {
                 Icon(
                     Icons.Rounded.SkipPrevious,
                     contentDescription = "Previous",
                     tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(44.dp),
                 )
             }
             Box(
-                modifier = Modifier
-                    .size(88.dp)
-                    .clip(CircleShape)
-                    .background(AccentTeal)
-                    .clickable(onClick = onPlayPause),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(88.dp)
+                        .clip(CircleShape)
+                        .background(AccentTeal)
+                        .clickable(onClick = onPlayPause),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     if (playerState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = "Play/Pause",
                     tint = background,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(48.dp),
                 )
             }
             IconButton(onClick = onSkipNext, modifier = Modifier.size(64.dp)) {
@@ -458,7 +468,7 @@ private fun DriveModeHome(
                     Icons.Rounded.SkipNext,
                     contentDescription = "Next",
                     tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(44.dp),
                 )
             }
         }
@@ -468,14 +478,16 @@ private fun DriveModeHome(
         if (resume != null && resume.hasSession) {
             Button(
                 onClick = onResume,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AccentTeal,
-                    contentColor = background
-                ),
-                shape = RoundedCornerShape(16.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = AccentTeal,
+                        contentColor = background,
+                    ),
+                shape = RoundedCornerShape(16.dp),
             ) {
                 Text("Resume · ${resume.title}", maxLines = 1)
             }
@@ -485,11 +497,12 @@ private fun DriveModeHome(
         if (continueListening.isNotEmpty()) {
             Button(
                 onClick = onPlayContinue,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = palette.card),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
             ) {
                 Text("Play recently played", color = AccentTeal)
             }
@@ -499,11 +512,12 @@ private fun DriveModeHome(
         if (jellyfinEnabled && jellyfinCount > 0) {
             Button(
                 onClick = onOpenJellyfin,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = palette.card),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
             ) {
                 Text("Jellyfin Offline ($jellyfinCount)", color = AccentViolet)
             }
@@ -514,25 +528,27 @@ private fun DriveModeHome(
             "Playlists",
             style = MaterialTheme.typography.titleMedium,
             color = palette.textSecondary,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(playlists.take(8), key = { it.id }) { pl ->
                 Column(
-                    modifier = Modifier
-                        .width(120.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(palette.card)
-                        .clickable { onOpenPlaylist(pl.id) }
-                        .padding(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier =
+                        Modifier
+                            .width(120.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(palette.card)
+                            .clickable { onOpenPlaylist(pl.id) }
+                            .padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     AlbumArt(
                         artworkUri = pl.displayCover,
                         contentDescription = pl.name,
-                        size = 72.dp
+                        size = 72.dp,
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -540,7 +556,7 @@ private fun DriveModeHome(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -549,21 +565,24 @@ private fun DriveModeHome(
 }
 
 @Composable
-private fun ResumeCard(resume: ResumeSnapshot, onResume: () -> Unit) {
+private fun ResumeCard(
+    resume: ResumeSnapshot,
+    onResume: () -> Unit,
+) {
     val palette = LocalSimpleMP3Palette.current
     Row(
-        modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.horizontalGradient(
-                    listOf(AccentTeal.copy(alpha = 0.25f), palette.card)
-                )
-            )
-            .clickable(onClick = onResume)
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(AccentTeal.copy(alpha = 0.25f), palette.card),
+                    ),
+                ).clickable(onClick = onResume)
+                .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         AlbumArt(artworkUri = resume.artworkUri, contentDescription = null, size = 56.dp)
         Spacer(Modifier.width(12.dp))
@@ -573,13 +592,13 @@ private fun ResumeCard(resume: ResumeSnapshot, onResume: () -> Unit) {
                 resume.title.ifBlank { "Last session" },
                 style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 resume.artist,
                 style = MaterialTheme.typography.bodySmall,
                 color = palette.textSecondary,
-                maxLines = 1
+                maxLines = 1,
             )
         }
         Icon(Icons.Rounded.PlayArrow, null, tint = AccentTeal, modifier = Modifier.size(32.dp))
@@ -592,17 +611,18 @@ private fun FeatureCard(
     title: String,
     subtitle: String,
     brush: Brush,
-    onClick: (() -> Unit)?
+    onClick: (() -> Unit)?,
 ) {
     val palette = LocalSimpleMP3Palette.current
     Box(
-        modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(brush)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(16.dp)
+        modifier =
+            Modifier
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(brush)
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                .padding(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, contentDescription = null, tint = AccentTeal, modifier = Modifier.size(36.dp))

@@ -1,11 +1,8 @@
 package io.karpilabs.simplemp3.service
 
-import androidx.media3.session.SessionCommand
-import androidx.media3.session.SessionResult
 import org.junit.Test
 
 class LibrarySessionCallbackTest {
-
     @Test
     fun customCommands_areDefinedForShuffleAndRepeatActions() {
         assert(LibrarySessionCallback.CUSTOM_SHUFFLE.customAction == LibrarySessionCallback.ACTION_TOGGLE_SHUFFLE)

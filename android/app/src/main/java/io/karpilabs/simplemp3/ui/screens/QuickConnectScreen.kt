@@ -62,7 +62,7 @@ import io.karpilabs.simplemp3.ui.viewmodel.QuickConnectViewModel
 @Composable
 fun QuickConnectScreen(
     viewModel: QuickConnectViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
     val session by viewModel.session.collectAsStateWithLifecycle()
@@ -80,27 +80,29 @@ fun QuickConnectScreen(
             text = {
                 Text(
                     "Too many incorrect access codes were entered, so the portal has been " +
-                        "disabled. Go back and reopen Quick Connect to start a fresh session."
+                        "disabled. Go back and reopen Quick Connect to start a fresh session.",
                 )
             },
             confirmButton = {
                 TextButton(onClick = onBack) {
                     Text("Go back")
                 }
-            }
+            },
         )
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
@@ -109,26 +111,26 @@ fun QuickConnectScreen(
                 Text(
                     text = "Quick Connect",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = "LAN portal · closes when you leave",
                     style = MaterialTheme.typography.bodySmall,
-                    color = palette.textSecondary
+                    color = palette.textSecondary,
                 )
             }
             Icon(
                 imageVector = if (session.running) Icons.Rounded.Wifi else Icons.Rounded.WifiOff,
                 contentDescription = null,
-                tint = if (session.running) AccentTeal else AccentCoral,
-                modifier = Modifier.padding(end = 16.dp)
+                tint = if (session.running) palette.accent else AccentCoral,
+                modifier = Modifier.padding(end = 16.dp),
             )
         }
 
         LazyColumn(
             contentPadding = PaddingValues(bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         ) {
             item {
                 StatusHero(session = session)
@@ -150,8 +152,8 @@ fun QuickConnectScreen(
                     Text(
                         text = "Activity",
                         style = MaterialTheme.typography.labelLarge,
-                        color = AccentTeal,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                        color = palette.accent,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
                     )
                 }
                 items(session.events, key = { "${it.timeMs}-${it.message}" }) { event ->
@@ -166,39 +168,40 @@ fun QuickConnectScreen(
 private fun StatusHero(session: QuickConnectSession) {
     val palette = LocalSimpleMP3Palette.current
     Box(
-        modifier = Modifier
-            .padding(horizontal = 16.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.horizontalGradient(
-                    listOf(
-                        AccentTeal.copy(alpha = 0.28f),
-                        palette.elevated,
-                        AccentViolet.copy(alpha = 0.2f)
-                    )
-                )
-            )
-            .padding(20.dp)
+        modifier =
+            Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            AccentTeal.copy(alpha = 0.28f),
+                            palette.elevated,
+                            AccentViolet.copy(alpha = 0.2f),
+                        ),
+                    ),
+                ).padding(20.dp),
     ) {
         Column {
             Text(
                 text = if (session.running) "Portal is live" else "Portal offline",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = when {
-                    session.error != null && session.running ->
-                        session.error
-                    session.running ->
-                        "Keep this screen open. On your computer (same Wi‑Fi), open the address below and enter the access code."
-                    else ->
-                        session.error ?: "Starting…"
-                },
+                text =
+                    when {
+                        session.error != null && session.running ->
+                            session.error
+                        session.running ->
+                            "Keep this screen open. On your computer (same Wi‑Fi), open the address below and enter the access code."
+                        else ->
+                            session.error ?: "Starting…"
+                    },
                 style = MaterialTheme.typography.bodyMedium,
-                color = palette.textSecondary
+                color = palette.textSecondary,
             )
         }
     }
@@ -208,43 +211,46 @@ private fun StatusHero(session: QuickConnectSession) {
 private fun QrCodeCard(session: QuickConnectSession) {
     val palette = LocalSimpleMP3Palette.current
     val qrPayload = session.qrUrl ?: session.url
-    val bitmap: Bitmap? = remember(qrPayload) {
-        qrPayload?.let { QrCodeEncoder.encode(it, sizePx = 640) }
-    }
+    val bitmap: Bitmap? =
+        remember(qrPayload) {
+            qrPayload?.let { QrCodeEncoder.encode(it, sizePx = 640) }
+        }
 
     Column(
-        modifier = Modifier
-            .padding(horizontal = 16.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(palette.card)
-            .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier =
+            Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(palette.card)
+                .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.QrCode2, contentDescription = null, tint = AccentTeal)
+            Icon(Icons.Rounded.QrCode2, contentDescription = null, tint = palette.accent)
             Spacer(Modifier.width(10.dp))
             Text(
                 text = "Scan to open",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
         Spacer(Modifier.height(16.dp))
         if (bitmap != null && session.running) {
             Box(
-                modifier = Modifier
-                    .size(220.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(androidx.compose.ui.graphics.Color.White)
-                    .padding(12.dp),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(220.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(androidx.compose.ui.graphics.Color.White)
+                        .padding(12.dp),
+                contentAlignment = Alignment.Center,
             ) {
                 Image(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = "QR code for Quick Connect URL",
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
+                    contentScale = ContentScale.Fit,
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -252,20 +258,21 @@ private fun QrCodeCard(session: QuickConnectSession) {
                 text = "Includes the access code — unlocks after scan",
                 style = MaterialTheme.typography.bodySmall,
                 color = palette.textMuted,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
         } else {
             Box(
-                modifier = Modifier
-                    .size(220.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(palette.elevated),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(220.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(palette.elevated),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = if (session.running) "QR unavailable" else "Waiting…",
                     color = palette.textMuted,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
         }
@@ -273,39 +280,44 @@ private fun QrCodeCard(session: QuickConnectSession) {
 }
 
 @Composable
-private fun AccessCodeCard(code: String, running: Boolean) {
+private fun AccessCodeCard(
+    code: String,
+    running: Boolean,
+) {
     val palette = LocalSimpleMP3Palette.current
     Column(
-        modifier = Modifier
-            .padding(horizontal = 16.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(palette.card)
-            .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier =
+            Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(palette.card)
+                .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = "ACCESS CODE",
             style = MaterialTheme.typography.labelLarge,
-            color = AccentTeal,
-            letterSpacing = 2.sp
+            color = palette.accent,
+            letterSpacing = 2.sp,
         )
         Spacer(Modifier.height(12.dp))
         Text(
             text = if (running && code.isNotBlank()) code else "——————",
-            style = MaterialTheme.typography.displayLarge.copy(
-                fontFamily = FontFamily.Monospace,
-                letterSpacing = 8.sp
-            ),
+            style =
+                MaterialTheme.typography.displayLarge.copy(
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 8.sp,
+                ),
             color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
         Text(
             text = "Required once on the computer to unlock the portal",
             style = MaterialTheme.typography.bodySmall,
             color = palette.textMuted,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -317,48 +329,50 @@ private fun UrlCard(session: QuickConnectSession) {
     val url = session.url
 
     Column(
-        modifier = Modifier
-            .padding(horizontal = 16.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(palette.card)
-            .padding(16.dp)
+        modifier =
+            Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(palette.card)
+                .padding(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Link, contentDescription = null, tint = AccentTeal)
+            Icon(Icons.Rounded.Link, contentDescription = null, tint = palette.accent)
             Spacer(Modifier.width(10.dp))
             Text(
                 text = "Open on your computer",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
         Spacer(Modifier.height(12.dp))
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(palette.elevated)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(palette.elevated)
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = url ?: "No LAN IP yet",
                 style = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
-                color = if (url != null) AccentTeal else AccentCoral,
-                modifier = Modifier.weight(1f)
+                color = if (url != null) palette.accent else AccentCoral,
+                modifier = Modifier.weight(1f),
             )
             if (url != null) {
                 IconButton(
                     onClick = {
                         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         cm.setPrimaryClip(ClipData.newPlainText("Quick Connect URL", url))
-                    }
+                    },
                 ) {
                     Icon(
                         Icons.Rounded.ContentCopy,
                         contentDescription = "Copy URL",
-                        tint = AccentTeal
+                        tint = palette.accent,
                     )
                 }
             }
@@ -368,7 +382,7 @@ private fun UrlCard(session: QuickConnectSession) {
             Text(
                 text = "IP ${session.ip} · port ${session.port}",
                 style = MaterialTheme.typography.bodySmall,
-                color = palette.textMuted
+                color = palette.textMuted,
             )
         }
     }
@@ -378,17 +392,18 @@ private fun UrlCard(session: QuickConnectSession) {
 private fun HowToCard() {
     val palette = LocalSimpleMP3Palette.current
     Column(
-        modifier = Modifier
-            .padding(horizontal = 16.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(palette.card)
-            .padding(16.dp)
+        modifier =
+            Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(palette.card)
+                .padding(16.dp),
     ) {
         Text(
             text = "How it works",
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Spacer(Modifier.height(10.dp))
         HowToStep("1", "Phone and computer on the same Wi‑Fi (or phone hotspot).")
@@ -399,33 +414,37 @@ private fun HowToCard() {
         Text(
             text = "Uses plain HTTP on your LAN (fine for a temporary local portal). Only LAN-uploaded tracks can be deleted from the portal; your MediaStore library is never wiped.",
             style = MaterialTheme.typography.bodySmall,
-            color = palette.textMuted
+            color = palette.textMuted,
         )
     }
 }
 
 @Composable
-private fun HowToStep(n: String, text: String) {
+private fun HowToStep(
+    n: String,
+    text: String,
+) {
     val palette = LocalSimpleMP3Palette.current
     Row(
         modifier = Modifier.padding(vertical = 4.dp),
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.Top,
     ) {
         Box(
-            modifier = Modifier
-                .size(24.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(AccentTeal.copy(alpha = 0.18f)),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .size(24.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(palette.accent.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(n, color = AccentTeal, style = MaterialTheme.typography.labelLarge)
+            Text(n, color = palette.accent, style = MaterialTheme.typography.labelLarge)
         }
         Spacer(Modifier.width(10.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
             color = palette.textSecondary,
-            modifier = Modifier.padding(top = 2.dp)
+            modifier = Modifier.padding(top = 2.dp),
         )
     }
 }
@@ -434,25 +453,27 @@ private fun HowToStep(n: String, text: String) {
 private fun EventRow(event: QuickConnectEvent) {
     val palette = LocalSimpleMP3Palette.current
     Row(
-        modifier = Modifier
-            .padding(horizontal = 16.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(palette.card)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(palette.card)
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(AccentTeal)
+            modifier =
+                Modifier
+                    .size(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(AccentTeal),
         )
         Spacer(Modifier.width(10.dp))
         Text(
             text = event.message,
             style = MaterialTheme.typography.bodySmall,
-            color = palette.textSecondary
+            color = palette.textSecondary,
         )
     }
 }

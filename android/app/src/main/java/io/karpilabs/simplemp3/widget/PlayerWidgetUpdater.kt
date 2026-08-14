@@ -4,7 +4,6 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.graphics.Bitmap
-import android.net.Uri
 import android.os.Build
 import android.util.Size
 import android.widget.RemoteViews
@@ -29,7 +28,6 @@ import java.util.concurrent.atomic.AtomicReference
  * Called from [PlaybackService] on play / metadata changes and on demand from the provider.
  */
 object PlayerWidgetUpdater {
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var debounceJob: Job? = null
     private val lastArtUri = AtomicReference<String?>(null)
@@ -40,7 +38,7 @@ object PlayerWidgetUpdater {
         val artist: String,
         val artworkUri: String?,
         val isPlaying: Boolean,
-        val hasQueue: Boolean
+        val hasQueue: Boolean,
     )
 
     fun requestRefresh(context: Context) {
@@ -56,14 +54,20 @@ object PlayerWidgetUpdater {
                 }
                 MediaController.releaseFuture(future)
             },
-            MoreExecutors.directExecutor()
+            MoreExecutors.directExecutor(),
         )
     }
 
-    fun publishFromController(context: Context, player: Player) {
+    fun publishFromController(
+        context: Context,
+        player: Player,
+    ) {
         val meta = player.mediaMetadata
-        val title = meta.title?.toString().orEmpty()
-            .ifBlank { if (player.mediaItemCount > 0) "Unknown title" else "" }
+        val title =
+            meta.title
+                ?.toString()
+                .orEmpty()
+                .ifBlank { if (player.mediaItemCount > 0) "Unknown title" else "" }
         val artist = meta.artist?.toString().orEmpty()
         val art = meta.artworkUri?.toString()
         publish(
@@ -73,22 +77,29 @@ object PlayerWidgetUpdater {
                 artist = artist,
                 artworkUri = art,
                 isPlaying = player.isPlaying,
-                hasQueue = player.mediaItemCount > 0
-            )
+                hasQueue = player.mediaItemCount > 0,
+            ),
         )
     }
 
-    fun publishFromPlayer(context: Context, player: Player) {
+    fun publishFromPlayer(
+        context: Context,
+        player: Player,
+    ) {
         if (!PlayerWidgetProvider.hasWidgets(context)) return
         // Debounce bursty player events (seek/shuffle layout refresh).
         debounceJob?.cancel()
-        debounceJob = scope.launch {
-            delay(80)
-            publishFromController(context, player)
-        }
+        debounceJob =
+            scope.launch {
+                delay(80)
+                publishFromController(context, player)
+            }
     }
 
-    fun publish(context: Context, snapshot: Snapshot) {
+    fun publish(
+        context: Context,
+        snapshot: Snapshot,
+    ) {
         if (!PlayerWidgetProvider.hasWidgets(context)) return
         val app = context.applicationContext
         scope.launch {
@@ -103,7 +114,7 @@ object PlayerWidgetUpdater {
     private fun buildViews(
         context: Context,
         snapshot: Snapshot,
-        art: Bitmap?
+        art: Bitmap?,
     ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_player)
         PlayerWidgetProvider.bindClicks(context, views)
@@ -112,22 +123,22 @@ object PlayerWidgetUpdater {
             views.setTextViewText(R.id.widget_title, snapshot.title)
             views.setTextViewText(
                 R.id.widget_artist,
-                snapshot.artist.ifBlank { " " }
+                snapshot.artist.ifBlank { " " },
             )
         } else {
             views.setTextViewText(
                 R.id.widget_title,
-                context.getString(R.string.widget_nothing_playing)
+                context.getString(R.string.widget_nothing_playing),
             )
             views.setTextViewText(
                 R.id.widget_artist,
-                context.getString(R.string.widget_tap_to_open)
+                context.getString(R.string.widget_tap_to_open),
             )
         }
 
         views.setImageViewResource(
             R.id.widget_play_pause,
-            if (snapshot.isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play
+            if (snapshot.isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
         )
 
         if (art != null) {
@@ -138,7 +149,10 @@ object PlayerWidgetUpdater {
         return views
     }
 
-    private suspend fun loadArt(context: Context, artworkUri: String?): Bitmap? {
+    private suspend fun loadArt(
+        context: Context,
+        artworkUri: String?,
+    ): Bitmap? {
         if (artworkUri.isNullOrBlank()) {
             lastArtUri.set(null)
             lastArtBitmap.set(null)
@@ -147,24 +161,26 @@ object PlayerWidgetUpdater {
         if (artworkUri == lastArtUri.get()) {
             return lastArtBitmap.get()
         }
-        val bitmap = withContext(Dispatchers.IO) {
-            runCatching {
-                val uri = artworkUri.toUri()
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    context.contentResolver.loadThumbnail(uri, Size(168, 168), null)
-                } else {
-                    @Suppress("DEPRECATION")
-                    android.provider.MediaStore.Images.Media.getBitmap(
-                        context.contentResolver,
-                        uri
-                    )?.let { src ->
-                        Bitmap.createScaledBitmap(src, 168, 168, true).also {
-                            if (it !== src) src.recycle()
-                        }
+        val bitmap =
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val uri = artworkUri.toUri()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        context.contentResolver.loadThumbnail(uri, Size(168, 168), null)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        android.provider.MediaStore.Images.Media
+                            .getBitmap(
+                                context.contentResolver,
+                                uri,
+                            )?.let { src ->
+                                Bitmap.createScaledBitmap(src, 168, 168, true).also {
+                                    if (it !== src) src.recycle()
+                                }
+                            }
                     }
-                }
-            }.getOrNull()
-        }
+                }.getOrNull()
+            }
         lastArtUri.set(artworkUri)
         lastArtBitmap.set(bitmap)
         return bitmap

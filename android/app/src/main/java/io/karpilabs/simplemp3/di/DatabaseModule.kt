@@ -15,18 +15,18 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
-
     @Provides
     @Singleton
-    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
-        return Room.databaseBuilder(
-            context,
-            AppDatabase::class.java,
-            "simple_mp3_db"
-        )
-            .fallbackToDestructiveMigration(dropAllTables = true)
+    fun provideAppDatabase(
+        @ApplicationContext context: Context,
+    ): AppDatabase =
+        Room
+            .databaseBuilder(
+                context,
+                AppDatabase::class.java,
+                "simple_mp3_db",
+            ).fallbackToDestructiveMigration(dropAllTables = true)
             .build()
-    }
 
     @Provides
     fun provideTrackDao(database: AppDatabase): TrackDao = database.trackDao()

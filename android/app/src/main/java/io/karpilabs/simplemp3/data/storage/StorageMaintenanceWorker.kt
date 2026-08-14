@@ -17,36 +17,39 @@ import java.util.concurrent.TimeUnit
  * Runs when device is idle + charging when possible to avoid hitching playback.
  */
 @HiltWorker
-class StorageMaintenanceWorker @AssistedInject constructor(
-    @Assisted appContext: Context,
-    @Assisted params: WorkerParameters,
-    private val storageManager: LargeFileStorageManager
-) : CoroutineWorker(appContext, params) {
+class StorageMaintenanceWorker
+    @AssistedInject
+    constructor(
+        @Assisted appContext: Context,
+        @Assisted params: WorkerParameters,
+        private val storageManager: LargeFileStorageManager,
+    ) : CoroutineWorker(appContext, params) {
+        override suspend fun doWork(): Result =
+            try {
+                storageManager.runMaintenance()
+                Result.success()
+            } catch (_: Exception) {
+                Result.retry()
+            }
 
-    override suspend fun doWork(): Result {
-        return try {
-            storageManager.runMaintenance()
-            Result.success()
-        } catch (_: Exception) {
-            Result.retry()
+        companion object {
+            private const val UNIQUE = "storage_maintenance"
+
+            fun enqueue(context: Context) {
+                val constraints =
+                    Constraints
+                        .Builder()
+                        .setRequiresBatteryNotLow(true)
+                        .build()
+                val request =
+                    PeriodicWorkRequestBuilder<StorageMaintenanceWorker>(12, TimeUnit.HOURS)
+                        .setConstraints(constraints)
+                        .build()
+                WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                    UNIQUE,
+                    ExistingPeriodicWorkPolicy.KEEP,
+                    request,
+                )
+            }
         }
     }
-
-    companion object {
-        private const val UNIQUE = "storage_maintenance"
-
-        fun enqueue(context: Context) {
-            val constraints = Constraints.Builder()
-                .setRequiresBatteryNotLow(true)
-                .build()
-            val request = PeriodicWorkRequestBuilder<StorageMaintenanceWorker>(12, TimeUnit.HOURS)
-                .setConstraints(constraints)
-                .build()
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                UNIQUE,
-                ExistingPeriodicWorkPolicy.KEEP,
-                request
-            )
-        }
-    }
-}

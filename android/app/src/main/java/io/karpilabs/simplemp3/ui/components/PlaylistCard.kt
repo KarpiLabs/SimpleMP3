@@ -40,21 +40,23 @@ import io.karpilabs.simplemp3.ui.util.formatTrackCount
 fun PlaylistCard(
     playlist: PlaylistWithMeta,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val palette = LocalSimpleMP3Palette.current
     Column(
-        modifier = modifier
-            .clickable(onClick = onClick)
-            .padding(4.dp)
+        modifier =
+            modifier
+                .clickable(onClick = onClick)
+                .padding(4.dp),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(14.dp))
-                .background(playlistGradient(playlist.systemType, palette.elevated)),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(playlistGradient(playlist.systemType, palette.elevated)),
+            contentAlignment = Alignment.Center,
         ) {
             val cover = playlist.displayCover
             if (!cover.isNullOrBlank()) {
@@ -62,18 +64,19 @@ fun PlaylistCard(
                     model = cover,
                     contentDescription = playlist.name,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
                 )
             } else {
                 Icon(
-                    imageVector = when (playlist.systemType) {
-                        PlaylistEntity.SYSTEM_FAVORITES -> Icons.Rounded.Favorite
-                        PlaylistEntity.SYSTEM_RECENTLY_PLAYED -> Icons.Rounded.History
-                        else -> Icons.Rounded.QueueMusic
-                    },
+                    imageVector =
+                        when (playlist.systemType) {
+                            PlaylistEntity.SYSTEM_FAVORITES -> Icons.Rounded.Favorite
+                            PlaylistEntity.SYSTEM_RECENTLY_PLAYED -> Icons.Rounded.History
+                            else -> Icons.Rounded.QueueMusic
+                        },
                     contentDescription = null,
                     tint = AccentTeal,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(48.dp),
                 )
             }
         }
@@ -83,13 +86,13 @@ fun PlaylistCard(
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
         Text(
             text = formatTrackCount(playlist.trackCount),
             style = MaterialTheme.typography.bodySmall,
             color = palette.textSecondary,
-            maxLines = 1
+            maxLines = 1,
         )
     }
 }
@@ -98,22 +101,24 @@ fun PlaylistCard(
 fun PlaylistListRow(
     playlist: PlaylistWithMeta,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val palette = LocalSimpleMP3Palette.current
     androidx.compose.foundation.layout.Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(playlistGradient(playlist.systemType, palette.elevated)),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(playlistGradient(playlist.systemType, palette.elevated)),
+            contentAlignment = Alignment.Center,
         ) {
             val cover = playlist.displayCover
             if (!cover.isNullOrBlank()) {
@@ -121,18 +126,19 @@ fun PlaylistListRow(
                     model = cover,
                     contentDescription = playlist.name,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
                 )
             } else {
                 Icon(
-                    imageVector = when (playlist.systemType) {
-                        PlaylistEntity.SYSTEM_FAVORITES -> Icons.Rounded.Favorite
-                        PlaylistEntity.SYSTEM_RECENTLY_PLAYED -> Icons.Rounded.History
-                        else -> Icons.Rounded.QueueMusic
-                    },
+                    imageVector =
+                        when (playlist.systemType) {
+                            PlaylistEntity.SYSTEM_FAVORITES -> Icons.Rounded.Favorite
+                            PlaylistEntity.SYSTEM_RECENTLY_PLAYED -> Icons.Rounded.History
+                            else -> Icons.Rounded.QueueMusic
+                        },
                     contentDescription = null,
                     tint = AccentTeal,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(28.dp),
                 )
             }
         }
@@ -143,36 +149,44 @@ fun PlaylistListRow(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = buildString {
-                    append(formatTrackCount(playlist.trackCount))
-                    if (playlist.description.isNotBlank()) {
-                        append(" · ")
-                        append(playlist.description)
-                    }
-                },
+                text =
+                    buildString {
+                        append(formatTrackCount(playlist.trackCount))
+                        if (playlist.description.isNotBlank()) {
+                            append(" · ")
+                            append(playlist.description)
+                        }
+                    },
                 style = MaterialTheme.typography.bodySmall,
                 color = palette.textSecondary,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
 }
 
-private fun playlistGradient(systemType: String?, elevated: androidx.compose.ui.graphics.Color) = when (systemType) {
-    PlaylistEntity.SYSTEM_FAVORITES -> Brush.linearGradient(
-        listOf(AccentCoral.copy(alpha = 0.55f), elevated)
-    )
-    PlaylistEntity.SYSTEM_RECENTLY_PLAYED -> Brush.linearGradient(
-        listOf(AccentViolet.copy(alpha = 0.5f), elevated)
-    )
-    PlaylistEntity.SYSTEM_JELLYFIN -> Brush.linearGradient(
-        listOf(AccentViolet.copy(alpha = 0.55f), AccentTeal.copy(alpha = 0.25f), elevated)
-    )
-    else -> Brush.linearGradient(
-        listOf(AccentTeal.copy(alpha = 0.35f), elevated)
-    )
+private fun playlistGradient(
+    systemType: String?,
+    elevated: androidx.compose.ui.graphics.Color,
+) = when (systemType) {
+    PlaylistEntity.SYSTEM_FAVORITES ->
+        Brush.linearGradient(
+            listOf(AccentCoral.copy(alpha = 0.55f), elevated),
+        )
+    PlaylistEntity.SYSTEM_RECENTLY_PLAYED ->
+        Brush.linearGradient(
+            listOf(AccentViolet.copy(alpha = 0.5f), elevated),
+        )
+    PlaylistEntity.SYSTEM_JELLYFIN ->
+        Brush.linearGradient(
+            listOf(AccentViolet.copy(alpha = 0.55f), AccentTeal.copy(alpha = 0.25f), elevated),
+        )
+    else ->
+        Brush.linearGradient(
+            listOf(AccentTeal.copy(alpha = 0.35f), elevated),
+        )
 }

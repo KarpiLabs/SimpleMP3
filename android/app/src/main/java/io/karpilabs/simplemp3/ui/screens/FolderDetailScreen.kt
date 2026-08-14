@@ -57,7 +57,7 @@ fun FolderDetailScreen(
     onShuffle: () -> Unit,
     onPlayTrack: (TrackEntity) -> Unit,
     onToggleFavorite: (Long) -> Unit,
-    onAddToPlaylist: (TrackEntity) -> Unit = {}
+    onAddToPlaylist: (TrackEntity) -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
     val title = FolderBrowser.displayName(folderPath).ifBlank { "Folders" }
@@ -74,7 +74,7 @@ fun FolderDetailScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = palette.textSecondary,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
@@ -84,21 +84,23 @@ fun FolderDetailScreen(
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background
-            )
+            colors =
+                TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
         )
 
         if (tracks.isNotEmpty()) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Button(
                     onClick = onPlayAll,
                     colors = ButtonDefaults.buttonColors(containerColor = AccentTeal),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(6.dp))
@@ -107,7 +109,7 @@ fun FolderDetailScreen(
                 Spacer(Modifier.width(10.dp))
                 OutlinedButton(
                     onClick = onShuffle,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Rounded.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
@@ -118,7 +120,7 @@ fun FolderDetailScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 120.dp)
+            contentPadding = PaddingValues(bottom = 120.dp),
         ) {
             if (subfolders.isNotEmpty()) {
                 item {
@@ -126,14 +128,14 @@ fun FolderDetailScreen(
                         text = "Folders",
                         style = MaterialTheme.typography.labelLarge,
                         color = AccentTeal,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
                 items(subfolders, key = { it.path }) { folder ->
                     FolderRow(
                         name = folder.name,
                         subtitle = buildFolderSubtitle(folder),
-                        onClick = { onOpenFolder(folder.path) }
+                        onClick = { onOpenFolder(folder.path) },
                     )
                 }
             }
@@ -144,7 +146,7 @@ fun FolderDetailScreen(
                         text = "Songs · ${formatTrackCount(tracks.size)}",
                         style = MaterialTheme.typography.labelLarge,
                         color = AccentTeal,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
                 items(tracks, key = { it.id }) { track ->
@@ -153,7 +155,7 @@ fun FolderDetailScreen(
                         isPlaying = playerState.currentMediaId == "track:${track.id}",
                         onClick = { onPlayTrack(track) },
                         onLongClick = { onAddToPlaylist(track) },
-                        onFavoriteClick = { onToggleFavorite(track.id) }
+                        onFavoriteClick = { onToggleFavorite(track.id) },
                     )
                 }
             }
@@ -164,7 +166,7 @@ fun FolderDetailScreen(
                         text = "No songs in this folder",
                         style = MaterialTheme.typography.bodyMedium,
                         color = palette.textMuted,
-                        modifier = Modifier.padding(24.dp)
+                        modifier = Modifier.padding(24.dp),
                     )
                 }
             }
@@ -176,28 +178,30 @@ fun FolderDetailScreen(
 fun FolderRow(
     name: String,
     subtitle: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(palette.elevated),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(palette.elevated),
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Rounded.Folder,
                 contentDescription = null,
                 tint = AccentTeal,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(28.dp),
             )
         }
         Spacer(Modifier.width(14.dp))
@@ -207,14 +211,14 @@ fun FolderRow(
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = palette.textSecondary,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

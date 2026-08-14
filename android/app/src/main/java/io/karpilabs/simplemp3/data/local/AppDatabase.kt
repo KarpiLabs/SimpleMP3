@@ -7,12 +7,13 @@ import androidx.room.RoomDatabase
     entities = [
         TrackEntity::class,
         PlaylistEntity::class,
-        PlaylistTrackCrossRef::class
+        PlaylistTrackCrossRef::class,
     ],
     version = 6,
-    exportSchema = false
+    exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun trackDao(): TrackDao
+
     abstract fun playlistDao(): PlaylistDao
 }

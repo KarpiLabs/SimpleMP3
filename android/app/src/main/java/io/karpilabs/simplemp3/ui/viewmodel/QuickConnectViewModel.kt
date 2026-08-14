@@ -8,22 +8,23 @@ import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 
 @HiltViewModel
-class QuickConnectViewModel @Inject constructor(
-    private val server: QuickConnectServer
-) : ViewModel() {
+class QuickConnectViewModel
+    @Inject
+    constructor(
+        private val server: QuickConnectServer,
+    ) : ViewModel() {
+        val session: StateFlow<QuickConnectSession> = server.session
 
-    val session: StateFlow<QuickConnectSession> = server.session
+        fun startPortal() {
+            server.start()
+        }
 
-    fun startPortal() {
-        server.start()
+        fun stopPortal() {
+            server.stop()
+        }
+
+        override fun onCleared() {
+            server.stop()
+            super.onCleared()
+        }
     }
-
-    fun stopPortal() {
-        server.stop()
-    }
-
-    override fun onCleared() {
-        server.stop()
-        super.onCleared()
-    }
-}

@@ -26,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.karpilabs.simplemp3.data.local.TrackEntity
-import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatDuration
 
@@ -41,25 +40,25 @@ fun TrackRow(
     onLongClick: (() -> Unit)? = null,
     onMoreClick: (() -> Unit)? = null,
     onFavoriteClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val palette = LocalSimpleMP3Palette.current
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                ).padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         if (showArtwork) {
             AlbumArt(
                 artworkUri = track.artworkUri,
                 contentDescription = track.album,
                 size = 52.dp,
-                cornerRadius = 8.dp
+                cornerRadius = 8.dp,
             )
             Spacer(Modifier.width(14.dp))
         }
@@ -68,40 +67,42 @@ fun TrackRow(
             Text(
                 text = track.title,
                 style = MaterialTheme.typography.titleSmall,
-                color = if (isPlaying) AccentTeal else MaterialTheme.colorScheme.onSurface,
+                color = if (isPlaying) palette.accent else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (track.neverCompress) {
                     Icon(
                         Icons.Rounded.Star,
                         contentDescription = "Never compress",
-                        tint = AccentTeal,
-                        modifier = Modifier.size(14.dp)
+                        tint = palette.accent,
+                        modifier = Modifier.size(14.dp),
                     )
                     Spacer(Modifier.width(4.dp))
                 }
                 Text(
-                    text = buildString {
-                        append(track.artist)
-                        append(" · ")
-                        append(formatDuration(track.duration))
-                        when {
-                            track.isYoutube -> append(" · YouTube")
-                            track.isJellyfin -> append(" · Offline")
-                        }
-                        if (track.neverCompress) append(" · Keep original")
-                    },
+                    text =
+                        buildString {
+                            append(track.artist)
+                            append(" · ")
+                            append(formatDuration(track.duration))
+                            when {
+                                track.isYoutube -> append(" · YouTube")
+                                track.isJellyfin -> append(" · Offline")
+                            }
+                            if (track.neverCompress) append(" · Keep original")
+                        },
                     style = MaterialTheme.typography.bodySmall,
-                    color = when {
-                        track.neverCompress -> AccentTeal
-                        track.isJellyfin || track.isYoutube ->
-                            io.karpilabs.simplemp3.ui.theme.AccentViolet
-                        else -> palette.textSecondary
-                    },
+                    color =
+                        when {
+                            track.neverCompress -> palette.accent
+                            track.isJellyfin || track.isYoutube ->
+                                io.karpilabs.simplemp3.ui.theme.AccentViolet
+                            else -> palette.textSecondary
+                        },
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -111,7 +112,7 @@ fun TrackRow(
                 Icon(
                     imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                     contentDescription = if (isFavorite) "Unlike" else "Like",
-                    tint = if (isFavorite) AccentTeal else palette.textMuted
+                    tint = if (isFavorite) palette.accent else palette.textMuted,
                 )
             }
         }
@@ -121,7 +122,7 @@ fun TrackRow(
                 Icon(
                     imageVector = Icons.Rounded.MoreVert,
                     contentDescription = "More",
-                    tint = palette.textMuted
+                    tint = palette.textMuted,
                 )
             }
         }
@@ -133,28 +134,31 @@ fun SectionHeader(
     title: String,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
+    val palette = LocalSimpleMP3Palette.current
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
         )
         if (actionLabel != null && onAction != null) {
             Text(
                 text = actionLabel,
                 style = MaterialTheme.typography.labelLarge,
-                color = AccentTeal,
-                modifier = Modifier
-                    .clickable(onClick = onAction)
-                    .padding(8.dp)
+                color = palette.accent,
+                modifier =
+                    Modifier
+                        .clickable(onClick = onAction)
+                        .padding(8.dp),
             )
         }
     }

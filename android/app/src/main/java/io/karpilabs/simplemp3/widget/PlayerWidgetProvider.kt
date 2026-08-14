@@ -19,11 +19,10 @@ import io.karpilabs.simplemp3.service.PlaybackService
  * State is pushed from [PlayerWidgetUpdater] when the Media3 session changes.
  */
 class PlayerWidgetProvider : AppWidgetProvider() {
-
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
-        appWidgetIds: IntArray
+        appWidgetIds: IntArray,
     ) {
         // Paint a shell immediately, then refresh from the live session if available.
         appWidgetIds.forEach { id ->
@@ -36,7 +35,10 @@ class PlayerWidgetProvider : AppWidgetProvider() {
         PlayerWidgetUpdater.requestRefresh(context.applicationContext)
     }
 
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         val action = intent.action
         when (action) {
             ACTION_PLAY_PAUSE, ACTION_SKIP_NEXT, ACTION_SKIP_PREVIOUS -> {
@@ -46,7 +48,10 @@ class PlayerWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    private fun dispatchPlayerAction(context: Context, action: String) {
+    private fun dispatchPlayerAction(
+        context: Context,
+        action: String,
+    ) {
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
         val future = MediaController.Builder(context, token).buildAsync()
         future.addListener(
@@ -71,7 +76,7 @@ class PlayerWidgetProvider : AppWidgetProvider() {
                 }
                 MediaController.releaseFuture(future)
             },
-            MoreExecutors.directExecutor()
+            MoreExecutors.directExecutor(),
         )
     }
 
@@ -80,25 +85,28 @@ class PlayerWidgetProvider : AppWidgetProvider() {
         const val ACTION_SKIP_NEXT = "io.karpilabs.simplemp3.widget.SKIP_NEXT"
         const val ACTION_SKIP_PREVIOUS = "io.karpilabs.simplemp3.widget.SKIP_PREVIOUS"
 
-        fun buildShellViews(context: Context): RemoteViews {
-            return RemoteViews(context.packageName, R.layout.widget_player).also { views ->
+        fun buildShellViews(context: Context): RemoteViews =
+            RemoteViews(context.packageName, R.layout.widget_player).also { views ->
                 bindClicks(context, views)
                 views.setTextViewText(R.id.widget_title, context.getString(R.string.widget_nothing_playing))
                 views.setTextViewText(R.id.widget_artist, context.getString(R.string.widget_tap_to_open))
                 views.setImageViewResource(R.id.widget_play_pause, R.drawable.ic_widget_play)
                 views.setImageViewResource(R.id.widget_art, R.drawable.ic_widget_art_placeholder)
             }
-        }
 
-        fun bindClicks(context: Context, views: RemoteViews) {
-            val openApp = PendingIntent.getActivity(
-                context,
-                0,
-                Intent(context, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                },
-                pendingFlags()
-            )
+        fun bindClicks(
+            context: Context,
+            views: RemoteViews,
+        ) {
+            val openApp =
+                PendingIntent.getActivity(
+                    context,
+                    0,
+                    Intent(context, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    },
+                    pendingFlags(),
+                )
             views.setOnClickPendingIntent(R.id.widget_root, openApp)
             views.setOnClickPendingIntent(R.id.widget_art, openApp)
             views.setOnClickPendingIntent(R.id.widget_title, openApp)
@@ -106,26 +114,28 @@ class PlayerWidgetProvider : AppWidgetProvider() {
 
             views.setOnClickPendingIntent(
                 R.id.widget_play_pause,
-                broadcastPi(context, ACTION_PLAY_PAUSE, 1)
+                broadcastPi(context, ACTION_PLAY_PAUSE, 1),
             )
             views.setOnClickPendingIntent(
                 R.id.widget_next,
-                broadcastPi(context, ACTION_SKIP_NEXT, 2)
+                broadcastPi(context, ACTION_SKIP_NEXT, 2),
             )
             views.setOnClickPendingIntent(
                 R.id.widget_prev,
-                broadcastPi(context, ACTION_SKIP_PREVIOUS, 3)
+                broadcastPi(context, ACTION_SKIP_PREVIOUS, 3),
             )
         }
 
-        private fun broadcastPi(context: Context, action: String, requestCode: Int): PendingIntent {
+        private fun broadcastPi(
+            context: Context,
+            action: String,
+            requestCode: Int,
+        ): PendingIntent {
             val intent = Intent(context, PlayerWidgetProvider::class.java).setAction(action)
             return PendingIntent.getBroadcast(context, requestCode, intent, pendingFlags())
         }
 
-        private fun pendingFlags(): Int {
-            return PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        }
+        private fun pendingFlags(): Int = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
 
         fun widgetIds(context: Context): IntArray {
             val manager = AppWidgetManager.getInstance(context)

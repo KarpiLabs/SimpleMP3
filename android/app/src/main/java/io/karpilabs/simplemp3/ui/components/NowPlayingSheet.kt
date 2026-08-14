@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.ExpandMore
@@ -73,7 +72,7 @@ fun NowPlayingSheet(
     onCycleRepeat: () -> Unit,
     onRefreshPosition: () -> Unit,
     onOpenQueue: () -> Unit = {},
-    onSleepTimer: (Int) -> Unit = {}
+    onSleepTimer: (Int) -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -89,40 +88,40 @@ fun NowPlayingSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.background,
-        dragHandle = null
+        dragHandle = null,
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color(0xFF0F2A26),
-                            Color(0xFF0C1418),
-                            MaterialTheme.colorScheme.background,
-                            DeepViolet
-                        )
-                    )
-                )
-                .statusBarsPadding()
-                .padding(horizontal = 24.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xFF0F2A26),
+                                Color(0xFF0C1418),
+                                MaterialTheme.colorScheme.background,
+                                DeepViolet,
+                            ),
+                        ),
+                    ).statusBarsPadding()
+                    .padding(horizontal = 24.dp),
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 var sleepMenu by remember { mutableStateOf(false) }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = onDismiss) {
                         Icon(
                             Icons.Rounded.ExpandMore,
                             contentDescription = "Close",
                             tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(32.dp),
                         )
                     }
                     Row {
@@ -130,7 +129,7 @@ fun NowPlayingSheet(
                             Icon(
                                 Icons.Rounded.QueueMusic,
                                 contentDescription = "Queue",
-                                tint = MaterialTheme.colorScheme.onSurface
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                         Box {
@@ -138,13 +137,17 @@ fun NowPlayingSheet(
                                 Icon(
                                     Icons.Rounded.Bedtime,
                                     contentDescription = "Sleep timer",
-                                    tint = if (state.sleepTimerRemainingMs > 0) AccentTeal
-                                    else MaterialTheme.colorScheme.onSurface
+                                    tint =
+                                        if (state.sleepTimerRemainingMs > 0) {
+                                            AccentTeal
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        },
                                 )
                             }
                             DropdownMenu(
                                 expanded = sleepMenu,
-                                onDismissRequest = { sleepMenu = false }
+                                onDismissRequest = { sleepMenu = false },
                             ) {
                                 listOf(0 to "Off", 15 to "15 min", 30 to "30 min", 45 to "45 min", 60 to "60 min")
                                     .forEach { (mins, label) ->
@@ -153,7 +156,7 @@ fun NowPlayingSheet(
                                             onClick = {
                                                 sleepMenu = false
                                                 onSleepTimer(mins)
-                                            }
+                                            },
                                         )
                                     }
                             }
@@ -166,7 +169,7 @@ fun NowPlayingSheet(
                         style = MaterialTheme.typography.labelMedium,
                         color = AccentTeal,
                         modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
                     )
                 }
 
@@ -175,10 +178,11 @@ fun NowPlayingSheet(
                 LargeAlbumArt(
                     artworkUri = state.artworkUri,
                     contentDescription = state.album,
-                    modifier = Modifier
-                        .fillMaxWidth(0.88f)
-                        .aspectRatio(1f),
-                    cornerRadius = 18.dp
+                    modifier =
+                        Modifier
+                            .fillMaxWidth(0.88f)
+                            .aspectRatio(1f),
+                    cornerRadius = 18.dp,
                 )
 
                 Spacer(Modifier.height(32.dp))
@@ -189,7 +193,7 @@ fun NowPlayingSheet(
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -197,7 +201,7 @@ fun NowPlayingSheet(
                     style = MaterialTheme.typography.bodyLarge,
                     color = palette.textSecondary,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 if (state.album.isNotBlank()) {
                     Text(
@@ -205,7 +209,7 @@ fun NowPlayingSheet(
                         style = MaterialTheme.typography.bodySmall,
                         color = palette.textMuted,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
 
@@ -213,16 +217,22 @@ fun NowPlayingSheet(
 
                 var sliderPos by remember(state.positionMs, state.durationMs) {
                     mutableFloatStateOf(
-                        if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs
-                        else 0f
+                        if (state.durationMs > 0) {
+                            state.positionMs.toFloat() / state.durationMs
+                        } else {
+                            0f
+                        },
                     )
                 }
                 var dragging by remember { androidx.compose.runtime.mutableStateOf(false) }
 
                 Slider(
-                    value = if (dragging) sliderPos else {
-                        if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else 0f
-                    },
+                    value =
+                        if (dragging) {
+                            sliderPos
+                        } else {
+                            if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else 0f
+                        },
                     onValueChange = {
                         dragging = true
                         sliderPos = it
@@ -232,29 +242,33 @@ fun NowPlayingSheet(
                         onSeek((sliderPos * state.durationMs).toLong())
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = SliderDefaults.colors(
-                        thumbColor = AccentTeal,
-                        activeTrackColor = AccentTeal,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.15f)
-                    )
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = AccentTeal,
+                            activeTrackColor = AccentTeal,
+                            inactiveTrackColor = Color.White.copy(alpha = 0.15f),
+                        ),
                 )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    val shownPos = if (dragging) {
-                        (sliderPos * state.durationMs).toLong()
-                    } else state.positionMs
+                    val shownPos =
+                        if (dragging) {
+                            (sliderPos * state.durationMs).toLong()
+                        } else {
+                            state.positionMs
+                        }
                     Text(
                         text = formatDuration(shownPos),
                         style = MaterialTheme.typography.labelMedium,
-                        color = palette.textMuted
+                        color = palette.textMuted,
                     )
                     Text(
                         text = formatDuration(state.durationMs),
                         style = MaterialTheme.typography.labelMedium,
-                        color = palette.textMuted
+                        color = palette.textMuted,
                     )
                 }
 
@@ -263,14 +277,14 @@ fun NowPlayingSheet(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = onToggleShuffle) {
                         Icon(
                             Icons.Rounded.Shuffle,
                             contentDescription = "Shuffle",
                             tint = if (state.shuffleModeEnabled) AccentTeal else palette.textSecondary,
-                            modifier = Modifier.size(26.dp)
+                            modifier = Modifier.size(26.dp),
                         )
                     }
                     IconButton(onClick = onSkipPrevious) {
@@ -278,25 +292,26 @@ fun NowPlayingSheet(
                             Icons.Rounded.SkipPrevious,
                             contentDescription = "Previous",
                             tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(40.dp),
                         )
                     }
                     Box(
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(CircleShape)
-                            .background(AccentTeal),
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(AccentTeal),
+                        contentAlignment = Alignment.Center,
                     ) {
                         IconButton(
                             onClick = onPlayPause,
-                            modifier = Modifier.size(72.dp)
+                            modifier = Modifier.size(72.dp),
                         ) {
                             Icon(
                                 imageVector = if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                                 contentDescription = if (state.isPlaying) "Pause" else "Play",
                                 tint = MaterialTheme.colorScheme.background,
-                                modifier = Modifier.size(40.dp)
+                                modifier = Modifier.size(40.dp),
                             )
                         }
                     }
@@ -305,20 +320,21 @@ fun NowPlayingSheet(
                             Icons.Rounded.SkipNext,
                             contentDescription = "Next",
                             tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(40.dp),
                         )
                     }
                     IconButton(onClick = onCycleRepeat) {
-                        val (icon, tint) = when (state.repeatMode) {
-                            Player.REPEAT_MODE_ONE -> Icons.Rounded.RepeatOne to AccentTeal
-                            Player.REPEAT_MODE_ALL -> Icons.Rounded.Repeat to AccentTeal
-                            else -> Icons.Rounded.Repeat to palette.textSecondary
-                        }
+                        val (icon, tint) =
+                            when (state.repeatMode) {
+                                Player.REPEAT_MODE_ONE -> Icons.Rounded.RepeatOne to AccentTeal
+                                Player.REPEAT_MODE_ALL -> Icons.Rounded.Repeat to AccentTeal
+                                else -> Icons.Rounded.Repeat to palette.textSecondary
+                            }
                         Icon(
                             icon,
                             contentDescription = "Repeat",
                             tint = tint,
-                            modifier = Modifier.size(26.dp)
+                            modifier = Modifier.size(26.dp),
                         )
                     }
                 }

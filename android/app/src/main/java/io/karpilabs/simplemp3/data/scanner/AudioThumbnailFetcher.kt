@@ -22,23 +22,29 @@ import coil.request.Options
  */
 class AudioThumbnailFetcher(
     private val context: Context,
-    private val uri: Uri
+    private val uri: Uri,
 ) : Fetcher {
-
     override suspend fun fetch(): FetchResult? {
-        val bitmap = runCatching {
-            context.contentResolver.loadThumbnail(uri, THUMBNAIL_SIZE, null)
-        }.getOrNull() ?: return null
+        val bitmap =
+            runCatching {
+                context.contentResolver.loadThumbnail(uri, THUMBNAIL_SIZE, null)
+            }.getOrNull() ?: return null
 
         return DrawableResult(
             drawable = BitmapDrawable(context.resources, bitmap),
             isSampled = true,
-            dataSource = DataSource.DISK
+            dataSource = DataSource.DISK,
         )
     }
 
-    class Factory(private val context: Context) : Fetcher.Factory<Uri> {
-        override fun create(data: Uri, options: Options, imageLoader: ImageLoader): Fetcher? {
+    class Factory(
+        private val context: Context,
+    ) : Fetcher.Factory<Uri> {
+        override fun create(
+            data: Uri,
+            options: Options,
+            imageLoader: ImageLoader,
+        ): Fetcher? {
             if (data.scheme != ContentResolver.SCHEME_CONTENT) return null
             if (data.authority != "media" || !data.pathSegments.contains("audio")) return null
             return AudioThumbnailFetcher(context, data)

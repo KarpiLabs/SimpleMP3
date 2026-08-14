@@ -71,41 +71,43 @@ fun YoutubeScreen(
     onPlayTrack: (TrackEntity, List<TrackEntity>) -> Unit,
     onRemove: (Long) -> Unit,
     onToggleNeverCompress: (Long) -> Unit = {},
-    onClearAll: () -> Unit
+    onClearAll: () -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
     val clipboard = LocalClipboardManager.current
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(bottom = 100.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(bottom = 100.dp),
     ) {
         item {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
                     Icon(
                         Icons.AutoMirrored.Rounded.ArrowBack,
                         contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onSurface
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "YouTube → MP3",
                         style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = "Paste a link · title + album art saved offline",
                         style = MaterialTheme.typography.bodySmall,
-                        color = palette.textSecondary
+                        color = palette.textSecondary,
                     )
                 }
             }
@@ -113,20 +115,20 @@ fun YoutubeScreen(
 
         item {
             Box(
-                modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                AccentCoral.copy(alpha = 0.28f),
-                                palette.elevated,
-                                AccentViolet.copy(alpha = 0.2f)
-                            )
-                        )
-                    )
-                    .padding(16.dp)
+                modifier =
+                    Modifier
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    AccentCoral.copy(alpha = 0.28f),
+                                    palette.elevated,
+                                    AccentViolet.copy(alpha = 0.2f),
+                                ),
+                            ),
+                        ).padding(16.dp),
             ) {
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -134,20 +136,20 @@ fun YoutubeScreen(
                             Icons.Rounded.VideoLibrary,
                             contentDescription = null,
                             tint = AccentCoral,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(28.dp),
                         )
                         Spacer(Modifier.width(10.dp))
                         Text(
                             text = "Like yt-dl on your phone",
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = "Downloads the best audio, converts to MP3 with FFmpeg (like yt-dl), embeds the thumbnail as cover art, and tags title/artist for Android Auto.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = palette.textSecondary
+                        color = palette.textSecondary,
                     )
                 }
             }
@@ -168,28 +170,30 @@ fun YoutubeScreen(
                         IconButton(
                             onClick = {
                                 clipboard.getText()?.text?.let { onPaste(it) }
-                            }
+                            },
                         ) {
                             Icon(
                                 Icons.Rounded.ContentPaste,
                                 contentDescription = "Paste",
-                                tint = AccentTeal
+                                tint = AccentTeal,
                             )
                         }
                     },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Uri,
-                        imeAction = ImeAction.Go
-                    ),
+                    keyboardOptions =
+                        KeyboardOptions(
+                            keyboardType = KeyboardType.Uri,
+                            imeAction = ImeAction.Go,
+                        ),
                     keyboardActions = KeyboardActions(onGo = { onDownload() }),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentTeal,
-                        unfocusedBorderColor = palette.card,
-                        focusedLabelColor = AccentTeal,
-                        cursorColor = AccentTeal
-                    ),
-                    enabled = !progress.isActive
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AccentTeal,
+                            unfocusedBorderColor = palette.card,
+                            focusedLabelColor = AccentTeal,
+                            cursorColor = AccentTeal,
+                        ),
+                    enabled = !progress.isActive,
                 )
 
                 Spacer(Modifier.height(12.dp))
@@ -198,18 +202,19 @@ fun YoutubeScreen(
                     onClick = onDownload,
                     enabled = !progress.isActive && ui.urlInput.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentCoral,
-                        contentColor = MaterialTheme.colorScheme.onTertiary,
-                        disabledContainerColor = palette.card,
-                        disabledContentColor = palette.textMuted
-                    )
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = AccentCoral,
+                            contentColor = MaterialTheme.colorScheme.onTertiary,
+                            disabledContainerColor = palette.card,
+                            disabledContentColor = palette.textMuted,
+                        ),
                 ) {
                     if (progress.isActive) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
                             strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onTertiary
+                            color = MaterialTheme.colorScheme.onTertiary,
                         )
                         Spacer(Modifier.width(10.dp))
                         Text(progress.phase.ifBlank { "Working…" })
@@ -225,32 +230,34 @@ fun YoutubeScreen(
                     if (progress.percent in 0..100) {
                         LinearProgressIndicator(
                             progress = { progress.percent / 100f },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(4.dp)),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(4.dp)),
                             color = AccentTeal,
-                            trackColor = palette.card
+                            trackColor = palette.card,
                         )
                         Text(
                             text = "${progress.percent}% · ${progress.title}",
                             style = MaterialTheme.typography.labelSmall,
                             color = palette.textMuted,
-                            modifier = Modifier.padding(top = 4.dp)
+                            modifier = Modifier.padding(top = 4.dp),
                         )
                     } else {
                         LinearProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(4.dp)),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(4.dp)),
                             color = AccentTeal,
-                            trackColor = palette.card
+                            trackColor = palette.card,
                         )
                         if (progress.title.isNotBlank()) {
                             Text(
                                 text = progress.title,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = palette.textMuted,
-                                modifier = Modifier.padding(top = 4.dp)
+                                modifier = Modifier.padding(top = 4.dp),
                             )
                         }
                     }
@@ -261,7 +268,7 @@ fun YoutubeScreen(
                     Text(
                         text = err,
                         style = MaterialTheme.typography.bodySmall,
-                        color = AccentCoral
+                        color = AccentCoral,
                     )
                 }
             }
@@ -269,17 +276,22 @@ fun YoutubeScreen(
 
         item {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = if (downloads.isEmpty()) "No downloads yet"
-                    else "${downloads.size} saved",
+                    text =
+                        if (downloads.isEmpty()) {
+                            "No downloads yet"
+                        } else {
+                            "${downloads.size} saved"
+                        },
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 if (downloads.isNotEmpty()) {
                     TextButton(onClick = onClearAll) {
@@ -292,22 +304,23 @@ fun YoutubeScreen(
         if (downloads.isEmpty()) {
             item {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Icon(
                         Icons.Rounded.VideoLibrary,
                         contentDescription = null,
                         tint = palette.textMuted,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(48.dp),
                     )
                     Spacer(Modifier.height(12.dp))
                     Text(
                         text = "Paste any YouTube video or Shorts link above.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = palette.textSecondary
+                        color = palette.textSecondary,
                     )
                 }
             }
@@ -318,7 +331,7 @@ fun YoutubeScreen(
                 track = track,
                 onPlay = { onPlayTrack(track, downloads) },
                 onToggleNeverCompress = { onToggleNeverCompress(track.id) },
-                onRemove = { onRemove(track.id) }
+                onRemove = { onRemove(track.id) },
             )
         }
     }
@@ -329,23 +342,24 @@ private fun YoutubeDownloadRow(
     track: TrackEntity,
     onPlay: () -> Unit,
     onToggleNeverCompress: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(palette.card)
-            .padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(palette.card)
+                .padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         AlbumArt(
             artworkUri = track.artworkUri,
             contentDescription = track.title,
             size = 52.dp,
-            cornerRadius = 8.dp
+            cornerRadius = 8.dp,
         )
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -354,34 +368,40 @@ private fun YoutubeDownloadRow(
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = buildString {
-                    append(track.artist)
-                    if (track.duration > 0) {
-                        append(" · ")
-                        append(formatDuration(track.duration))
-                    }
-                    if (track.neverCompress) append(" · Keep original")
-                    else if (track.isSizeOptimized) append(" · Optimized")
-                    else if (track.isCold) append(" · Cold")
-                },
+                text =
+                    buildString {
+                        append(track.artist)
+                        if (track.duration > 0) {
+                            append(" · ")
+                            append(formatDuration(track.duration))
+                        }
+                        if (track.neverCompress) {
+                            append(" · Keep original")
+                        } else if (track.isSizeOptimized) {
+                            append(" · Optimized")
+                        } else if (track.isCold) {
+                            append(" · Cold")
+                        }
+                    },
                 style = MaterialTheme.typography.bodySmall,
                 color = if (track.neverCompress) AccentTeal else palette.textSecondary,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
         IconButton(onClick = onToggleNeverCompress) {
             Icon(
                 imageVector = if (track.neverCompress) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                contentDescription = if (track.neverCompress) {
-                    "Allow compression"
-                } else {
-                    "Never compress"
-                },
-                tint = if (track.neverCompress) AccentTeal else palette.textMuted
+                contentDescription =
+                    if (track.neverCompress) {
+                        "Allow compression"
+                    } else {
+                        "Never compress"
+                    },
+                tint = if (track.neverCompress) AccentTeal else palette.textMuted,
             )
         }
         IconButton(onClick = onPlay) {

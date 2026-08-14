@@ -45,9 +45,8 @@ class LibrarySessionCallback(
     private val repository: MusicRepository,
     private val player: Player,
     private val appPreferences: AppPreferences,
-    private val storageManager: LargeFileStorageManager
+    private val storageManager: LargeFileStorageManager,
 ) : MediaLibraryService.MediaLibrarySession.Callback {
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -85,32 +84,37 @@ class LibrarySessionCallback(
         private const val CAR_DISCONNECT_PAUSE_DELAY_MS = 2_000L
 
         /** Packages that mean “the car is connected”. */
-        private val CAR_PACKAGES = setOf(
-            "com.google.android.projection.gearhead", // Android Auto
-            "com.google.android.autosimulator",
-            "com.google.android.car.templates.places",
-            "com.android.car.media",
-            "com.android.bluetooth" // some stacks browse via BT AVRCP media
-        )
+        private val CAR_PACKAGES =
+            setOf(
+                "com.google.android.projection.gearhead", // Android Auto
+                "com.google.android.autosimulator",
+                "com.google.android.car.templates.places",
+                "com.android.car.media",
+                "com.android.bluetooth", // some stacks browse via BT AVRCP media
+            )
     }
 
     override fun onConnect(
         session: MediaSession,
-        controller: MediaSession.ControllerInfo
+        controller: MediaSession.ControllerInfo,
     ): MediaSession.ConnectionResult {
         maybeEnableDriveModeForCar(controller)
 
-        val sessionCommands = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS
-            .buildUpon()
-            .add(CUSTOM_SHUFFLE)
-            .add(CUSTOM_REPEAT)
-            .build()
+        val sessionCommands =
+            MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS
+                .buildUpon()
+                .add(CUSTOM_SHUFFLE)
+                .add(CUSTOM_REPEAT)
+                .build()
 
-        val playerCommands = Player.Commands.Builder()
-            .addAllCommands()
-            .build()
+        val playerCommands =
+            Player.Commands
+                .Builder()
+                .addAllCommands()
+                .build()
 
-        return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+        return MediaSession.ConnectionResult
+            .AcceptedResultBuilder(session)
             .setAvailableSessionCommands(sessionCommands)
             .setAvailablePlayerCommands(playerCommands)
             .build()
@@ -123,17 +127,18 @@ class LibrarySessionCallback(
      */
     override fun onDisconnected(
         session: MediaSession,
-        controller: MediaSession.ControllerInfo
+        controller: MediaSession.ControllerInfo,
     ) {
         super.onDisconnected(session, controller)
         if (!isCarController(controller)) return
 
         carDisconnectPauseJob?.cancel()
-        carDisconnectPauseJob = scope.launch {
-            delay(CAR_DISCONNECT_PAUSE_DELAY_MS)
-            if (hasConnectedCarController(session)) return@launch
-            handleCarDisconnect()
-        }
+        carDisconnectPauseJob =
+            scope.launch {
+                delay(CAR_DISCONNECT_PAUSE_DELAY_MS)
+                if (hasConnectedCarController(session)) return@launch
+                handleCarDisconnect()
+            }
     }
 
     private fun isCarController(controller: MediaSession.ControllerInfo): Boolean {
@@ -144,20 +149,21 @@ class LibrarySessionCallback(
             pkg.contains("projection", ignoreCase = true)
     }
 
-    private fun hasConnectedCarController(session: MediaSession): Boolean =
-        session.connectedControllers.any { isCarController(it) }
+    private fun hasConnectedCarController(session: MediaSession): Boolean = session.connectedControllers.any { isCarController(it) }
 
     private suspend fun handleCarDisconnect() {
-        val shouldPause = withContext(Dispatchers.IO) {
-            appPreferences.isPauseOnCarDisconnect()
-        }
+        val shouldPause =
+            withContext(Dispatchers.IO) {
+                appPreferences.isPauseOnCarDisconnect()
+            }
         if (shouldPause && (player.playWhenReady || player.isPlaying)) {
             player.pause()
         }
         // Clear Drive Mode if we auto-enabled it for the car session.
-        val autoDrive = withContext(Dispatchers.IO) {
-            appPreferences.isAutoDriveModeOnCar()
-        }
+        val autoDrive =
+            withContext(Dispatchers.IO) {
+                appPreferences.isAutoDriveModeOnCar()
+            }
         if (autoDrive) {
             withContext(Dispatchers.IO) { appPreferences.setDriveMode(false) }
         }
@@ -169,15 +175,17 @@ class LibrarySessionCallback(
         carDisconnectPauseJob?.cancel()
         carDisconnectPauseJob = null
         scope.launch {
-            val enableDrive = withContext(Dispatchers.IO) {
-                appPreferences.isAutoDriveModeOnCar()
-            }
+            val enableDrive =
+                withContext(Dispatchers.IO) {
+                    appPreferences.isAutoDriveModeOnCar()
+                }
             if (enableDrive) {
                 withContext(Dispatchers.IO) { appPreferences.setDriveMode(true) }
             }
-            val shouldResume = withContext(Dispatchers.IO) {
-                appPreferences.isAutoResumeOnDrive()
-            }
+            val shouldResume =
+                withContext(Dispatchers.IO) {
+                    appPreferences.isAutoResumeOnDrive()
+                }
             if (shouldResume) {
                 autoResumeForDriving(fromCarConnect = true)
             }
@@ -205,20 +213,23 @@ class LibrarySessionCallback(
 
         val snap = withContext(Dispatchers.IO) { appPreferences.getResume() } ?: return
         if (!snap.hasSession) return
-        val tracks = withContext(Dispatchers.IO) {
-            repository.getTracksByIdsOrdered(snap.trackIds)
-        }
+        val tracks =
+            withContext(Dispatchers.IO) {
+                repository.getTracksByIdsOrdered(snap.trackIds)
+            }
         if (tracks.isEmpty()) return
-        val ready = withContext(Dispatchers.IO) {
-            storageManager.ensurePlayable(tracks)
-        }
+        val ready =
+            withContext(Dispatchers.IO) {
+                storageManager.ensurePlayable(tracks)
+            }
         if (ready.isEmpty()) return
 
         lastAutoResumeAtMs = now
         val idx = snap.index.coerceIn(0, ready.lastIndex)
-        val items = withContext(Dispatchers.Default) {
-            MediaItemFactory.fromTracks(ready)
-        }
+        val items =
+            withContext(Dispatchers.Default) {
+                MediaItemFactory.fromTracks(ready)
+            }
         player.setMediaItems(items, idx, snap.positionMs.coerceAtLeast(0L))
         player.prepare()
         player.play()
@@ -228,7 +239,7 @@ class LibrarySessionCallback(
         session: MediaSession,
         controller: MediaSession.ControllerInfo,
         customCommand: SessionCommand,
-        args: android.os.Bundle
+        args: android.os.Bundle,
     ): ListenableFuture<SessionResult> {
         when (customCommand.customAction) {
             ACTION_TOGGLE_SHUFFLE -> {
@@ -236,11 +247,12 @@ class LibrarySessionCallback(
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
             ACTION_CYCLE_REPEAT -> {
-                player.repeatMode = when (player.repeatMode) {
-                    Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
-                    Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
-                    else -> Player.REPEAT_MODE_OFF
-                }
+                player.repeatMode =
+                    when (player.repeatMode) {
+                        Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                        Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                        else -> Player.REPEAT_MODE_OFF
+                    }
                 return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
             }
         }
@@ -250,7 +262,7 @@ class LibrarySessionCallback(
     override fun onGetLibraryRoot(
         session: MediaLibraryService.MediaLibrarySession,
         browser: MediaSession.ControllerInfo,
-        params: MediaLibraryService.LibraryParams?
+        params: MediaLibraryService.LibraryParams?,
     ): ListenableFuture<LibraryResult<MediaItem>> {
         // Auto's media resumption card asks for the "recent" root — point it straight
         // at Continue so the launcher tile can resume playback without a full browse.
@@ -260,14 +272,14 @@ class LibrarySessionCallback(
                     MediaItemFactory.category(
                         MediaIds.CONTINUE,
                         "Continue",
-                        isPlayable = true
+                        isPlayable = true,
                     ),
-                    params
-                )
+                    params,
+                ),
             )
         }
         return Futures.immediateFuture(
-            LibraryResult.ofItem(MediaItemFactory.root(), params)
+            LibraryResult.ofItem(MediaItemFactory.root(), params),
         )
     }
 
@@ -277,7 +289,7 @@ class LibrarySessionCallback(
         parentId: String,
         page: Int,
         pageSize: Int,
-        params: MediaLibraryService.LibraryParams?
+        params: MediaLibraryService.LibraryParams?,
     ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
         lastBrowseParentId = parentId
         val future = SettableFuture.create<LibraryResult<ImmutableList<MediaItem>>>()
@@ -297,14 +309,17 @@ class LibrarySessionCallback(
     override fun onGetItem(
         session: MediaLibraryService.MediaLibrarySession,
         browser: MediaSession.ControllerInfo,
-        mediaId: String
+        mediaId: String,
     ): ListenableFuture<LibraryResult<MediaItem>> {
         val future = SettableFuture.create<LibraryResult<MediaItem>>()
         ioScope.launch {
             val item = resolveItem(mediaId)
             future.set(
-                if (item != null) LibraryResult.ofItem(item, null)
-                else LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+                if (item != null) {
+                    LibraryResult.ofItem(item, null)
+                } else {
+                    LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+                },
             )
         }
         return future
@@ -314,10 +329,8 @@ class LibrarySessionCallback(
         session: MediaLibraryService.MediaLibrarySession,
         browser: MediaSession.ControllerInfo,
         parentId: String,
-        params: MediaLibraryService.LibraryParams?
-    ): ListenableFuture<LibraryResult<Void>> {
-        return Futures.immediateFuture(LibraryResult.ofVoid())
-    }
+        params: MediaLibraryService.LibraryParams?,
+    ): ListenableFuture<LibraryResult<Void>> = Futures.immediateFuture(LibraryResult.ofVoid())
 
     /**
      * Android Auto search: run query, cache results, notify the browser of the count.
@@ -327,7 +340,7 @@ class LibrarySessionCallback(
         session: MediaLibraryService.MediaLibrarySession,
         browser: MediaSession.ControllerInfo,
         query: String,
-        params: MediaLibraryService.LibraryParams?
+        params: MediaLibraryService.LibraryParams?,
     ): ListenableFuture<LibraryResult<Void>> {
         val future = SettableFuture.create<LibraryResult<Void>>()
         ioScope.launch {
@@ -354,18 +367,23 @@ class LibrarySessionCallback(
         query: String,
         page: Int,
         pageSize: Int,
-        params: MediaLibraryService.LibraryParams?
+        params: MediaLibraryService.LibraryParams?,
     ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
         val future = SettableFuture.create<LibraryResult<ImmutableList<MediaItem>>>()
         ioScope.launch {
             try {
                 val q = query.trim()
-                val items = searchCache[q]
-                    ?: searchCache[q.lowercase()]
-                    ?: if (q.isBlank()) emptyList() else buildSearchResults(q).also {
-                        searchCache[q] = it
-                        searchCache[q.lowercase()] = it
-                    }
+                val items =
+                    searchCache[q]
+                        ?: searchCache[q.lowercase()]
+                        ?: if (q.isBlank()) {
+                            emptyList()
+                        } else {
+                            buildSearchResults(q).also {
+                                searchCache[q] = it
+                                searchCache[q.lowercase()] = it
+                            }
+                        }
                 val from = (page * pageSize).coerceAtMost(items.size)
                 val to = (from + pageSize).coerceAtMost(items.size)
                 future.set(LibraryResult.ofItemList(items.subList(from, to), params))
@@ -379,7 +397,7 @@ class LibrarySessionCallback(
     override fun onAddMediaItems(
         mediaSession: MediaSession,
         controller: MediaSession.ControllerInfo,
-        mediaItems: List<MediaItem>
+        mediaItems: List<MediaItem>,
     ): ListenableFuture<List<MediaItem>> {
         val future = SettableFuture.create<List<MediaItem>>()
         ioScope.launch {
@@ -399,18 +417,23 @@ class LibrarySessionCallback(
         controller: MediaSession.ControllerInfo,
         mediaItems: List<MediaItem>,
         startIndex: Int,
-        startPositionMs: Long
+        startPositionMs: Long,
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
         val future = SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
         ioScope.launch {
             try {
-                val queue = resolvePlaybackQueue(
-                    mediaItems,
-                    preferredStartMediaId = mediaItems.getOrNull(startIndex)?.mediaId
-                )
+                val queue =
+                    resolvePlaybackQueue(
+                        mediaItems,
+                        preferredStartMediaId = mediaItems.getOrNull(startIndex)?.mediaId,
+                    )
                 applyShuffleFlag(queue)
-                val safeIndex = if (queue.items.isEmpty()) 0
-                else queue.startIndex.coerceIn(0, queue.items.lastIndex)
+                val safeIndex =
+                    if (queue.items.isEmpty()) {
+                        0
+                    } else {
+                        queue.startIndex.coerceIn(0, queue.items.lastIndex)
+                    }
 
                 // Continue / resume: restore saved position when playing CONTINUE
                 var position = startPositionMs
@@ -427,8 +450,8 @@ class LibrarySessionCallback(
                     MediaSession.MediaItemsWithStartPosition(
                         queue.items,
                         safeIndex,
-                        position
-                    )
+                        position,
+                    ),
                 )
             } catch (e: Exception) {
                 future.setException(e)
@@ -439,7 +462,7 @@ class LibrarySessionCallback(
 
     override fun onPlaybackResumption(
         mediaSession: MediaSession,
-        controller: MediaSession.ControllerInfo
+        controller: MediaSession.ControllerInfo,
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
         val future = SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
         ioScope.launch {
@@ -460,8 +483,8 @@ class LibrarySessionCallback(
                     MediaSession.MediaItemsWithStartPosition(
                         items,
                         idx,
-                        snap.positionMs.coerceAtLeast(0L)
-                    )
+                        snap.positionMs.coerceAtLeast(0L),
+                    ),
                 )
             } catch (e: Exception) {
                 future.setException(e)
@@ -484,15 +507,17 @@ class LibrarySessionCallback(
      */
     private suspend fun resolvePlaybackQueue(
         mediaItems: List<MediaItem>,
-        preferredStartMediaId: String? = null
+        preferredStartMediaId: String? = null,
     ): ResolvedQueue {
         if (mediaItems.isEmpty()) return ResolvedQueue(emptyList(), 0)
 
         if (mediaItems.size > 1) {
-            val resolved = mediaItems.flatMap { item ->
-                resolvePlayable(item.mediaId)
-                    ?: listOfNotNull(item.takeIf { it.localConfiguration != null })
-            }.distinctBy { it.mediaId }
+            val resolved =
+                mediaItems
+                    .flatMap { item ->
+                        resolvePlayable(item.mediaId)
+                            ?: listOfNotNull(item.takeIf { it.localConfiguration != null })
+                    }.distinctBy { it.mediaId }
             val startId = preferredStartMediaId ?: mediaItems.first().mediaId
             val start = resolved.indexOfFirst { it.mediaId == startId }.coerceAtLeast(0)
             return ResolvedQueue(resolved, start)
@@ -519,12 +544,16 @@ class LibrarySessionCallback(
 
         // Folder / collection play
         if (!mediaId.startsWith(MediaIds.TRACK_PREFIX)) {
-            val list = resolvePlayable(mediaId)
-                ?: listOfNotNull(only.takeIf { it.localConfiguration != null })
-            val start = if (mediaId == MediaIds.CONTINUE) {
-                val snap = appPreferences.getResume()
-                snap?.index?.coerceIn(0, (list.size - 1).coerceAtLeast(0)) ?: 0
-            } else 0
+            val list =
+                resolvePlayable(mediaId)
+                    ?: listOfNotNull(only.takeIf { it.localConfiguration != null })
+            val start =
+                if (mediaId == MediaIds.CONTINUE) {
+                    val snap = appPreferences.getResume()
+                    snap?.index?.coerceIn(0, (list.size - 1).coerceAtLeast(0)) ?: 0
+                } else {
+                    0
+                }
             return ResolvedQueue(list, start)
         }
 
@@ -545,23 +574,29 @@ class LibrarySessionCallback(
         val artistHint = extras?.getString(MediaStore.EXTRA_MEDIA_ARTIST)?.trim()?.takeIf { it.isNotBlank() }
         val albumHint = extras?.getString(MediaStore.EXTRA_MEDIA_ALBUM)?.trim()?.takeIf { it.isNotBlank() }
         val titleHint = extras?.getString(MediaStore.EXTRA_MEDIA_TITLE)?.trim()?.takeIf { it.isNotBlank() }
-        val query = item.requestMetadata?.searchQuery?.trim().orEmpty()
+        val query =
+            item.requestMetadata
+                ?.searchQuery
+                ?.trim()
+                .orEmpty()
 
         titleHint?.let { name ->
             val tracks = repository.searchOnce(name)
             if (tracks.isNotEmpty()) return readyTracks(tracks)
         }
         albumHint?.let { name ->
-            val album = repository.getAlbumsOnce().firstOrNull { it.name.equals(name, ignoreCase = true) }
-                ?: repository.getAlbumsOnce().firstOrNull { it.name.contains(name, ignoreCase = true) }
+            val album =
+                repository.getAlbumsOnce().firstOrNull { it.name.equals(name, ignoreCase = true) }
+                    ?: repository.getAlbumsOnce().firstOrNull { it.name.contains(name, ignoreCase = true) }
             if (album != null) {
                 val tracks = repository.getTracksByAlbumOnce(album.name)
                 if (tracks.isNotEmpty()) return readyTracks(tracks)
             }
         }
         artistHint?.let { name ->
-            val artist = repository.getArtistsOnce().firstOrNull { it.name.equals(name, ignoreCase = true) }
-                ?: repository.getArtistsOnce().firstOrNull { it.name.contains(name, ignoreCase = true) }
+            val artist =
+                repository.getArtistsOnce().firstOrNull { it.name.equals(name, ignoreCase = true) }
+                    ?: repository.getArtistsOnce().firstOrNull { it.name.contains(name, ignoreCase = true) }
             if (artist != null) {
                 val tracks = repository.getTracksByArtistOnce(artist.name)
                 if (tracks.isNotEmpty()) return readyTracks(tracks)
@@ -596,9 +631,10 @@ class LibrarySessionCallback(
     private suspend fun expandSingleTrack(trackMediaId: String): List<MediaItem> {
         val trackId = MediaIds.parseTrackId(trackMediaId) ?: return emptyList()
         val track = repository.getTrack(trackId) ?: return emptyList()
-        val single = MediaItemFactory.fromTracks(
-            storageManager.ensurePlayable(listOf(track))
-        )
+        val single =
+            MediaItemFactory.fromTracks(
+                storageManager.ensurePlayable(listOf(track)),
+            )
 
         val parent = lastBrowseParentId
         if (parent != null) {
@@ -610,9 +646,11 @@ class LibrarySessionCallback(
 
         // Prefer the search result list as the queue when the track came from search
         run {
-            val fromSearch = searchCache.values.firstOrNull { list ->
-                list.any { it.mediaId == trackMediaId }
-            }?.filter { it.mediaId.startsWith(MediaIds.TRACK_PREFIX) }
+            val fromSearch =
+                searchCache.values
+                    .firstOrNull { list ->
+                        list.any { it.mediaId == trackMediaId }
+                    }?.filter { it.mediaId.startsWith(MediaIds.TRACK_PREFIX) }
             if (fromSearch != null && fromSearch.size > 1) {
                 // Re-resolve via track ids so cold files thaw
                 val ids = fromSearch.mapNotNull { MediaIds.parseTrackId(it.mediaId) }
@@ -645,13 +683,14 @@ class LibrarySessionCallback(
             // for full-library queue, thaw in batches is expensive; resolve hot URIs as-is
             // and thaw individually when needed via ensurePlayable on the full list only
             // if it's reasonably small.
-            val ready = if (allTracks.size <= 200) {
-                storageManager.ensurePlayable(allTracks)
-            } else {
-                allTracks.map { t ->
-                    if (t.id == track.id || t.isCold) storageManager.ensurePlayable(t) else t
+            val ready =
+                if (allTracks.size <= 200) {
+                    storageManager.ensurePlayable(allTracks)
+                } else {
+                    allTracks.map { t ->
+                        if (t.id == track.id || t.isCold) storageManager.ensurePlayable(t) else t
+                    }
                 }
-            }
             return MediaItemFactory.fromTracks(ready)
         }
 
@@ -659,46 +698,48 @@ class LibrarySessionCallback(
     }
 
     private suspend fun playableTracksFromParent(parentId: String): List<MediaItem> {
-        val tracks = when {
-            parentId == MediaIds.SONGS -> repository.getAllTracksOnce()
+        val tracks =
+            when {
+                parentId == MediaIds.SONGS -> repository.getAllTracksOnce()
 
-            parentId == MediaIds.RECENT || parentId == MediaIds.CONTINUE ->
-                repository.getContinueTracksOnce()
+                parentId == MediaIds.RECENT || parentId == MediaIds.CONTINUE ->
+                    repository.getContinueTracksOnce()
 
-            parentId == MediaIds.LIKED -> repository.getLikedTracksOnce()
+                parentId == MediaIds.LIKED -> repository.getLikedTracksOnce()
 
-            parentId == MediaIds.YOUTUBE -> repository.getYoutubeTracksOnce()
+                parentId == MediaIds.YOUTUBE -> repository.getYoutubeTracksOnce()
 
-            parentId == MediaIds.QUEUE -> return currentQueueItems()
+                parentId == MediaIds.QUEUE -> return currentQueueItems()
 
-            parentId == MediaIds.OFFLINE ->
-                repository.getAllTracksOnce().filter { it.isJellyfin || it.isYoutube }
+                parentId == MediaIds.OFFLINE ->
+                    repository.getAllTracksOnce().filter { it.isJellyfin || it.isYoutube }
 
-            parentId.startsWith(MediaIds.PLAYLIST_PREFIX) -> {
-                val playlistId = MediaIds.parsePlaylistId(parentId) ?: return emptyList()
-                repository.getPlaylistTracksOnce(playlistId)
+                parentId.startsWith(MediaIds.PLAYLIST_PREFIX) -> {
+                    val playlistId = MediaIds.parsePlaylistId(parentId) ?: return emptyList()
+                    repository.getPlaylistTracksOnce(playlistId)
+                }
+
+                parentId.startsWith(MediaIds.ALBUM_PREFIX) -> {
+                    val album = MediaIds.parseAlbum(parentId) ?: return emptyList()
+                    repository.getTracksByAlbumOnce(album)
+                }
+
+                parentId.startsWith(MediaIds.ARTIST_PREFIX) -> {
+                    val artist = MediaIds.parseArtist(parentId) ?: return emptyList()
+                    repository.getTracksByArtistOnce(artist)
+                }
+
+                else -> emptyList()
             }
-
-            parentId.startsWith(MediaIds.ALBUM_PREFIX) -> {
-                val album = MediaIds.parseAlbum(parentId) ?: return emptyList()
-                repository.getTracksByAlbumOnce(album)
-            }
-
-            parentId.startsWith(MediaIds.ARTIST_PREFIX) -> {
-                val artist = MediaIds.parseArtist(parentId) ?: return emptyList()
-                repository.getTracksByArtistOnce(artist)
-            }
-
-            else -> emptyList()
-        }
         return MediaItemFactory.fromTracks(storageManager.ensurePlayable(tracks))
     }
 
-    private suspend fun currentQueueItems(): List<MediaItem> = withContext(Dispatchers.Main) {
-        val count = player.mediaItemCount
-        if (count == 0) return@withContext emptyList()
-        (0 until count).map { player.getMediaItemAt(it) }
-    }
+    private suspend fun currentQueueItems(): List<MediaItem> =
+        withContext(Dispatchers.Main) {
+            val count = player.mediaItemCount
+            if (count == 0) return@withContext emptyList()
+            (0 until count).map { player.getMediaItemAt(it) }
+        }
 
     private suspend fun loadChildren(parentId: String): List<MediaItem> {
         return when {
@@ -717,14 +758,19 @@ class LibrarySessionCallback(
                 val tracks = MediaItemFactory.fromTracks(repository.getAllTracksOnce())
                 if (tracks.size > 1) {
                     listOf(MediaItemFactory.shufflePlayAction(MediaIds.SONGS)) + tracks
-                } else tracks
+                } else {
+                    tracks
+                }
             }
 
             parentId == MediaIds.RECENT -> {
                 val id = repository.getRecentlyPlayedPlaylistId()
-                val tracks = if (id != null) {
-                    MediaItemFactory.fromTracks(repository.getPlaylistTracksOnce(id))
-                } else emptyList()
+                val tracks =
+                    if (id != null) {
+                        MediaItemFactory.fromTracks(repository.getPlaylistTracksOnce(id))
+                    } else {
+                        emptyList()
+                    }
                 withShuffleHeader(MediaIds.RECENT, tracks)
             }
 
@@ -751,16 +797,19 @@ class LibrarySessionCallback(
                             mediaId = "queue_empty",
                             title = "Nothing in queue",
                             subtitle = "Play something to fill Up Next",
-                            isPlayable = false
-                        )
+                            isPlayable = false,
+                        ),
                     )
-                } else items
+                } else {
+                    items
+                }
             }
 
             parentId == MediaIds.OFFLINE -> {
-                val tracks = MediaItemFactory.fromTracks(
-                    repository.getAllTracksOnce().filter { it.isJellyfin || it.isYoutube }
-                )
+                val tracks =
+                    MediaItemFactory.fromTracks(
+                        repository.getAllTracksOnce().filter { it.isJellyfin || it.isYoutube },
+                    )
                 withShuffleHeader(MediaIds.OFFLINE, tracks)
             }
 
@@ -797,51 +846,55 @@ class LibrarySessionCallback(
                 MediaItemFactory.category(
                     mediaId = MediaIds.CONTINUE,
                     title = "Continue",
-                    subtitle = when {
-                        continueTracks.isEmpty() -> "No recent session"
-                        else -> "Resume · ${continueTracks.size} in queue"
-                    },
+                    subtitle =
+                        when {
+                            continueTracks.isEmpty() -> "No recent session"
+                            else -> "Resume · ${continueTracks.size} in queue"
+                        },
                     isPlayable = continueTracks.isNotEmpty(),
-                    artworkUri = continueTracks.firstOrNull()?.artworkUri
-                )
+                    artworkUri = continueTracks.firstOrNull()?.artworkUri,
+                ),
             )
             add(
                 MediaItemFactory.category(
                     mediaId = MediaIds.LIKED,
                     title = "Liked Songs",
-                    subtitle = when (liked.size) {
-                        0 -> "Heart tracks on your phone"
-                        1 -> "1 song"
-                        else -> "${liked.size} songs"
-                    },
+                    subtitle =
+                        when (liked.size) {
+                            0 -> "Heart tracks on your phone"
+                            1 -> "1 song"
+                            else -> "${liked.size} songs"
+                        },
                     isPlayable = liked.isNotEmpty(),
-                    artworkUri = liked.firstOrNull()?.artworkUri
-                )
+                    artworkUri = liked.firstOrNull()?.artworkUri,
+                ),
             )
             add(
                 MediaItemFactory.category(
                     mediaId = MediaIds.YOUTUBE,
                     title = "YouTube Downloads",
-                    subtitle = when (youtube.size) {
-                        0 -> "Import links on your phone"
-                        1 -> "1 track"
-                        else -> "${youtube.size} tracks"
-                    },
+                    subtitle =
+                        when (youtube.size) {
+                            0 -> "Import links on your phone"
+                            1 -> "1 track"
+                            else -> "${youtube.size} tracks"
+                        },
                     isPlayable = youtube.isNotEmpty(),
-                    artworkUri = youtube.firstOrNull()?.artworkUri
-                )
+                    artworkUri = youtube.firstOrNull()?.artworkUri,
+                ),
             )
             add(
                 MediaItemFactory.category(
                     mediaId = MediaIds.QUEUE,
                     title = "Up Next",
-                    subtitle = when (queueCount) {
-                        0 -> "Queue is empty"
-                        1 -> "1 in queue"
-                        else -> "$queueCount in queue"
-                    },
-                    isPlayable = queueCount > 0
-                )
+                    subtitle =
+                        when (queueCount) {
+                            0 -> "Queue is empty"
+                            1 -> "1 in queue"
+                            else -> "$queueCount in queue"
+                        },
+                    isPlayable = queueCount > 0,
+                ),
             )
             add(MediaItemFactory.category(MediaIds.PLAYLISTS, "Playlists", "Your collections"))
             add(
@@ -852,8 +905,8 @@ class LibrarySessionCallback(
                         "Jellyfin & YouTube downloads"
                     } else {
                         "YouTube & offline downloads"
-                    }
-                )
+                    },
+                ),
             )
             add(MediaItemFactory.category(MediaIds.ALBUMS, "Albums", "Browse by album"))
             add(MediaItemFactory.category(MediaIds.ARTISTS, "Artists", "Browse by artist"))
@@ -863,13 +916,16 @@ class LibrarySessionCallback(
                     MediaIds.RECENT,
                     "Recently Played",
                     "Jump back in",
-                    isPlayable = true
-                )
+                    isPlayable = true,
+                ),
             )
         }
     }
 
-    private fun withShuffleHeader(targetId: String, tracks: List<MediaItem>): List<MediaItem> {
+    private fun withShuffleHeader(
+        targetId: String,
+        tracks: List<MediaItem>,
+    ): List<MediaItem> {
         if (tracks.size <= 1) return tracks
         return listOf(MediaItemFactory.shufflePlayAction(targetId)) + tracks
     }
@@ -888,23 +944,27 @@ class LibrarySessionCallback(
         val tracks = repository.searchOnce(q)
         val trackItems = MediaItemFactory.fromTracks(tracks)
 
-        val albumItems = repository.getAlbumsOnce()
-            .filter {
-                it.name.contains(q, ignoreCase = true) ||
-                    it.subtitle.contains(q, ignoreCase = true)
-            }
-            .take(10)
-            .map { MediaItemFactory.fromAlbum(it) }
+        val albumItems =
+            repository
+                .getAlbumsOnce()
+                .filter {
+                    it.name.contains(q, ignoreCase = true) ||
+                        it.subtitle.contains(q, ignoreCase = true)
+                }.take(10)
+                .map { MediaItemFactory.fromAlbum(it) }
 
-        val artistItems = repository.getArtistsOnce()
-            .filter { it.name.contains(q, ignoreCase = true) }
-            .take(10)
-            .map { MediaItemFactory.fromArtist(it) }
+        val artistItems =
+            repository
+                .getArtistsOnce()
+                .filter { it.name.contains(q, ignoreCase = true) }
+                .take(10)
+                .map { MediaItemFactory.fromArtist(it) }
 
-        val playlistItems = visiblePlaylists()
-            .filter { it.name.contains(q, ignoreCase = true) }
-            .take(10)
-            .map { MediaItemFactory.fromPlaylist(it) }
+        val playlistItems =
+            visiblePlaylists()
+                .filter { it.name.contains(q, ignoreCase = true) }
+                .take(10)
+                .map { MediaItemFactory.fromPlaylist(it) }
 
         // Folders first (albums/artists/playlists), then tracks — better for voice/Auto.
         return (playlistItems + albumItems + artistItems + trackItems).distinctBy { it.mediaId }
@@ -923,35 +983,53 @@ class LibrarySessionCallback(
             mediaId == MediaIds.SONGS -> MediaItemFactory.category(MediaIds.SONGS, "Songs", isPlayable = true)
             mediaId == MediaIds.RECENT -> MediaItemFactory.category(MediaIds.RECENT, "Recently Played", isPlayable = true)
             mediaId == MediaIds.OFFLINE -> MediaItemFactory.category(MediaIds.OFFLINE, "Offline")
-            mediaId == MediaIds.CONTINUE -> MediaItemFactory.category(
-                MediaIds.CONTINUE, "Continue", isPlayable = true
-            )
-            mediaId == MediaIds.LIKED -> MediaItemFactory.category(
-                MediaIds.LIKED, "Liked Songs", isPlayable = true
-            )
-            mediaId == MediaIds.YOUTUBE -> MediaItemFactory.category(
-                MediaIds.YOUTUBE, "YouTube Downloads", isPlayable = true
-            )
-            mediaId == MediaIds.QUEUE -> MediaItemFactory.category(
-                MediaIds.QUEUE, "Up Next", isPlayable = true
-            )
+            mediaId == MediaIds.CONTINUE ->
+                MediaItemFactory.category(
+                    MediaIds.CONTINUE,
+                    "Continue",
+                    isPlayable = true,
+                )
+            mediaId == MediaIds.LIKED ->
+                MediaItemFactory.category(
+                    MediaIds.LIKED,
+                    "Liked Songs",
+                    isPlayable = true,
+                )
+            mediaId == MediaIds.YOUTUBE ->
+                MediaItemFactory.category(
+                    MediaIds.YOUTUBE,
+                    "YouTube Downloads",
+                    isPlayable = true,
+                )
+            mediaId == MediaIds.QUEUE ->
+                MediaItemFactory.category(
+                    MediaIds.QUEUE,
+                    "Up Next",
+                    isPlayable = true,
+                )
             mediaId.startsWith(MediaIds.TRACK_PREFIX) -> {
                 val id = MediaIds.parseTrackId(mediaId) ?: return null
                 repository.getTrack(id)?.let { MediaItemFactory.fromTrack(it) }
             }
             mediaId.startsWith(MediaIds.PLAYLIST_PREFIX) -> {
                 val id = MediaIds.parsePlaylistId(mediaId) ?: return null
-                repository.getPlaylistsOnce().firstOrNull { it.id == id }
+                repository
+                    .getPlaylistsOnce()
+                    .firstOrNull { it.id == id }
                     ?.let { MediaItemFactory.fromPlaylist(it) }
             }
             mediaId.startsWith(MediaIds.ALBUM_PREFIX) -> {
                 val name = MediaIds.parseAlbum(mediaId) ?: return null
-                repository.getAlbumsOnce().firstOrNull { it.name == name }
+                repository
+                    .getAlbumsOnce()
+                    .firstOrNull { it.name == name }
                     ?.let { MediaItemFactory.fromAlbum(it) }
             }
             mediaId.startsWith(MediaIds.ARTIST_PREFIX) -> {
                 val name = MediaIds.parseArtist(mediaId) ?: return null
-                repository.getArtistsOnce().firstOrNull { it.name == name }
+                repository
+                    .getArtistsOnce()
+                    .firstOrNull { it.name == name }
                     ?.let { MediaItemFactory.fromArtist(it) }
             }
             else -> null
@@ -963,41 +1041,42 @@ class LibrarySessionCallback(
             val target = MediaIds.unwrapShuffle(mediaId) ?: return null
             return resolvePlayable(target)?.shuffled()
         }
-        val tracks = when {
-            mediaId.startsWith(MediaIds.TRACK_PREFIX) -> {
-                val id = MediaIds.parseTrackId(mediaId) ?: return null
-                repository.getTrack(id)?.let { listOf(it) }
-            }
-            mediaId.startsWith(MediaIds.PLAYLIST_PREFIX) -> {
-                val id = MediaIds.parsePlaylistId(mediaId) ?: return null
-                repository.getPlaylistTracksOnce(id)
-            }
-            mediaId.startsWith(MediaIds.ALBUM_PREFIX) -> {
-                val album = MediaIds.parseAlbum(mediaId) ?: return null
-                repository.getTracksByAlbumOnce(album)
-            }
-            mediaId.startsWith(MediaIds.ARTIST_PREFIX) -> {
-                val artist = MediaIds.parseArtist(mediaId) ?: return null
-                repository.getTracksByArtistOnce(artist)
-            }
-            mediaId == MediaIds.SONGS -> repository.getAllTracksOnce()
-            mediaId == MediaIds.RECENT -> {
-                val id = repository.getRecentlyPlayedPlaylistId() ?: return emptyList()
-                repository.getPlaylistTracksOnce(id)
-            }
-            mediaId == MediaIds.CONTINUE -> repository.getContinueTracksOnce()
-            mediaId == MediaIds.LIKED -> repository.getLikedTracksOnce()
-            mediaId == MediaIds.YOUTUBE -> repository.getYoutubeTracksOnce()
-            mediaId == MediaIds.QUEUE -> return currentQueueItems()
-            mediaId == MediaIds.OFFLINE -> {
-                repository.getAllTracksOnce().filter { it.isJellyfin || it.isYoutube }
-            }
-            mediaId == MediaIds.PLAYLISTS -> {
-                val favId = repository.getFavoritesPlaylistId() ?: return emptyList()
-                repository.getPlaylistTracksOnce(favId)
-            }
-            else -> null
-        } ?: return null
+        val tracks =
+            when {
+                mediaId.startsWith(MediaIds.TRACK_PREFIX) -> {
+                    val id = MediaIds.parseTrackId(mediaId) ?: return null
+                    repository.getTrack(id)?.let { listOf(it) }
+                }
+                mediaId.startsWith(MediaIds.PLAYLIST_PREFIX) -> {
+                    val id = MediaIds.parsePlaylistId(mediaId) ?: return null
+                    repository.getPlaylistTracksOnce(id)
+                }
+                mediaId.startsWith(MediaIds.ALBUM_PREFIX) -> {
+                    val album = MediaIds.parseAlbum(mediaId) ?: return null
+                    repository.getTracksByAlbumOnce(album)
+                }
+                mediaId.startsWith(MediaIds.ARTIST_PREFIX) -> {
+                    val artist = MediaIds.parseArtist(mediaId) ?: return null
+                    repository.getTracksByArtistOnce(artist)
+                }
+                mediaId == MediaIds.SONGS -> repository.getAllTracksOnce()
+                mediaId == MediaIds.RECENT -> {
+                    val id = repository.getRecentlyPlayedPlaylistId() ?: return emptyList()
+                    repository.getPlaylistTracksOnce(id)
+                }
+                mediaId == MediaIds.CONTINUE -> repository.getContinueTracksOnce()
+                mediaId == MediaIds.LIKED -> repository.getLikedTracksOnce()
+                mediaId == MediaIds.YOUTUBE -> repository.getYoutubeTracksOnce()
+                mediaId == MediaIds.QUEUE -> return currentQueueItems()
+                mediaId == MediaIds.OFFLINE -> {
+                    repository.getAllTracksOnce().filter { it.isJellyfin || it.isYoutube }
+                }
+                mediaId == MediaIds.PLAYLISTS -> {
+                    val favId = repository.getFavoritesPlaylistId() ?: return emptyList()
+                    repository.getPlaylistTracksOnce(favId)
+                }
+                else -> null
+            } ?: return null
 
         // Thaw cold archives so Auto/ExoPlayer get real file URIs
         val ready = storageManager.ensurePlayable(tracks)
@@ -1015,6 +1094,6 @@ class LibrarySessionCallback(
     private data class ResolvedQueue(
         val items: List<MediaItem>,
         val startIndex: Int,
-        val shuffle: Boolean = false
+        val shuffle: Boolean = false,
     )
 }

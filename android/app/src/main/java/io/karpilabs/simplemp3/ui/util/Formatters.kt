@@ -13,5 +13,4 @@ fun formatDuration(ms: Long): String {
     }
 }
 
-fun formatTrackCount(count: Int): String =
-    if (count == 1) "1 song" else "$count songs"
+fun formatTrackCount(count: Int): String = if (count == 1) "1 song" else "$count songs"

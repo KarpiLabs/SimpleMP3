@@ -13,6 +13,9 @@ val DeepViolet = Color(0xFF2A1848)
 
 val AccentTeal = Color(0xFF00E5C0)
 val AccentTealDim = Color(0xFF00B89A)
+
+/** Darker teal for text/tints on light surfaces (electric teal fails contrast on white). */
+val DayAccent = Color(0xFF007A68)
 val AccentCoral = Color(0xFFFF6B6B)
 val AccentGold = Color(0xFFFFD166)
 val AccentViolet = Color(0xFFA78BFA)

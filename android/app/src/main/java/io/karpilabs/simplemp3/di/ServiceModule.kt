@@ -15,28 +15,37 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object ServiceModule {
-
     @Provides
     @Singleton
-    fun provideExoPlayer(@ApplicationContext context: Context): ExoPlayer {
-        val audioAttributes = AudioAttributes.Builder()
-            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-            .setUsage(C.USAGE_MEDIA)
-            .build()
+    fun provideExoPlayer(
+        @ApplicationContext context: Context,
+    ): ExoPlayer {
+        val audioAttributes =
+            AudioAttributes
+                .Builder()
+                .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                .setUsage(C.USAGE_MEDIA)
+                .build()
 
         // Larger buffers help movie-length MP3s (seek / rebuffer less often on slow storage).
-        val loadControl = DefaultLoadControl.Builder()
-            .setBufferDurationsMs(
-                /* minBufferMs */ 30_000,
-                /* maxBufferMs */ 180_000,
-                /* bufferForPlaybackMs */ 2_000,
-                /* bufferForPlaybackAfterRebufferMs */ 5_000
-            )
-            .setPrioritizeTimeOverSizeThresholds(true)
-            .setBackBuffer(/* backBufferDurationMs */ 60_000, /* retainBackBufferFromKeyframe */ true)
-            .build()
+        val loadControl =
+            DefaultLoadControl
+                .Builder()
+                .setBufferDurationsMs(
+                    // minBufferMs
+                    30_000,
+                    // maxBufferMs
+                    180_000,
+                    // bufferForPlaybackMs
+                    2_000,
+                    // bufferForPlaybackAfterRebufferMs
+                    5_000,
+                ).setPrioritizeTimeOverSizeThresholds(true)
+                .setBackBuffer(/* backBufferDurationMs */ 60_000, /* retainBackBufferFromKeyframe */ true)
+                .build()
 
-        return ExoPlayer.Builder(context)
+        return ExoPlayer
+            .Builder(context)
             .setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
             .setHandleAudioBecomingNoisy(true)
             .setLoadControl(loadControl)

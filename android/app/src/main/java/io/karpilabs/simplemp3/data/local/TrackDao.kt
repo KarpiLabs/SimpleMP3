@@ -39,7 +39,7 @@ interface TrackDao {
            OR artist LIKE '%' || :query || '%'
            OR album LIKE '%' || :query || '%'
         ORDER BY title COLLATE NOCASE ASC
-        """
+        """,
     )
     fun searchTracks(query: String): Flow<List<TrackEntity>>
 
@@ -50,7 +50,7 @@ interface TrackDao {
            OR artist LIKE '%' || :query || '%'
            OR album LIKE '%' || :query || '%'
         ORDER BY title COLLATE NOCASE ASC
-        """
+        """,
     )
     suspend fun searchTracksOnce(query: String): List<TrackEntity>
 
@@ -80,7 +80,7 @@ interface TrackDao {
         FROM tracks
         GROUP BY album, artist
         ORDER BY album COLLATE NOCASE ASC
-        """
+        """,
     )
     fun getAlbums(): Flow<List<AlbumRow>>
 
@@ -95,7 +95,7 @@ interface TrackDao {
         FROM tracks
         GROUP BY album, artist
         ORDER BY album COLLATE NOCASE ASC
-        """
+        """,
     )
     suspend fun getAlbumsOnce(): List<AlbumRow>
 
@@ -110,7 +110,7 @@ interface TrackDao {
         FROM tracks
         GROUP BY artist
         ORDER BY artist COLLATE NOCASE ASC
-        """
+        """,
     )
     fun getArtists(): Flow<List<AlbumRow>>
 
@@ -125,7 +125,7 @@ interface TrackDao {
         FROM tracks
         GROUP BY artist
         ORDER BY artist COLLATE NOCASE ASC
-        """
+        """,
     )
     suspend fun getArtistsOnce(): List<AlbumRow>
 
@@ -167,7 +167,7 @@ interface TrackDao {
         SELECT DISTINCT folderPath FROM tracks
         WHERE folderPath IS NOT NULL AND folderPath != ''
         ORDER BY folderPath COLLATE NOCASE ASC
-        """
+        """,
     )
     fun getDistinctFolderPaths(): Flow<List<String>>
 
@@ -176,7 +176,7 @@ interface TrackDao {
         SELECT DISTINCT folderPath FROM tracks
         WHERE folderPath IS NOT NULL AND folderPath != ''
         ORDER BY folderPath COLLATE NOCASE ASC
-        """
+        """,
     )
     suspend fun getDistinctFolderPathsOnce(): List<String>
 
@@ -185,7 +185,7 @@ interface TrackDao {
         SELECT * FROM tracks
         WHERE folderPath = :folderPath
         ORDER BY title COLLATE NOCASE ASC
-        """
+        """,
     )
     fun getTracksByFolder(folderPath: String): Flow<List<TrackEntity>>
 
@@ -194,14 +194,14 @@ interface TrackDao {
         SELECT * FROM tracks
         WHERE folderPath = :folderPath
         ORDER BY title COLLATE NOCASE ASC
-        """
+        """,
     )
     suspend fun getTracksByFolderOnce(folderPath: String): List<TrackEntity>
 
     @Query(
         """
         SELECT COUNT(*) FROM tracks WHERE folderPath = :folderPath
-        """
+        """,
     )
     suspend fun countTracksInFolder(folderPath: String): Int
 
@@ -211,7 +211,7 @@ interface TrackDao {
         WHERE source IN ('jellyfin', 'youtube', 'lan')
           AND size >= :minSize
         ORDER BY size DESC
-        """
+        """,
     )
     suspend fun getLargeAppOwnedTracks(minSize: Long): List<TrackEntity>
 
@@ -225,12 +225,12 @@ interface TrackDao {
           AND lastPlayedAt < :idleBeforeMs
         ORDER BY size DESC
         LIMIT :limit
-        """
+        """,
     )
     suspend fun getHotIdleLargeTracks(
         minSize: Long,
         idleBeforeMs: Long,
-        limit: Int = 20
+        limit: Int = 20,
     ): List<TrackEntity>
 
     @Query(
@@ -243,12 +243,12 @@ interface TrackDao {
           AND duration >= :minDurationMs
         ORDER BY size DESC
         LIMIT :limit
-        """
+        """,
     )
     suspend fun getUnoptimizedLargeTracks(
         minSize: Long,
         minDurationMs: Long,
-        limit: Int = 10
+        limit: Int = 10,
     ): List<TrackEntity>
 }
 
@@ -258,5 +258,5 @@ data class AlbumRow(
     val trackCount: Int,
     val totalDuration: Long,
     val artworkUri: String?,
-    val albumId: Long
+    val albumId: Long,
 )

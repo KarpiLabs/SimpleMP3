@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.MoreVert
@@ -60,6 +61,7 @@ import coil.compose.AsyncImage
 import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.player.PlayerUiState
+import io.karpilabs.simplemp3.ui.components.AddSongsToPlaylistSheet
 import io.karpilabs.simplemp3.ui.components.TrackActionsMenu
 import io.karpilabs.simplemp3.ui.components.TrackRow
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
@@ -85,242 +87,317 @@ fun PlaylistDetailScreen(
     onReorder: (from: Int, to: Int) -> Unit,
     onPlayNext: (TrackEntity) -> Unit = {},
     onAddToQueue: (TrackEntity) -> Unit = {},
-    onAddToPlaylist: (TrackEntity) -> Unit = {}
+    onAddToPlaylist: (TrackEntity) -> Unit = {},
+    libraryTracks: List<TrackEntity> = emptyList(),
+    onAddTracks: (List<Long>) -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
     var menuOpen by remember { mutableStateOf(false) }
     var actionTrack by remember { mutableStateOf<TrackEntity?>(null) }
+    var showAddSongs by remember { mutableStateOf(false) }
     var localTracks by remember { mutableStateOf(tracks) }
     LaunchedEffect(tracks) { localTracks = tracks }
+    val canAddSongs = playlist.canAddSongs()
 
     var dragIndex by remember { mutableIntStateOf(-1) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val listState = rememberLazyListState()
     val itemHeightPx = 72f // approximate row height for reordering thresholds
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
-                }
-            },
-            actions = {
-                if (playlist != null && !playlist.isSystem) {
-                    Box {
-                        IconButton(onClick = { menuOpen = true }) {
-                            Icon(Icons.Rounded.MoreVert, contentDescription = "More")
-                        }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            DropdownMenuItem(
-                                text = { Text("Delete playlist") },
-                                onClick = {
-                                    menuOpen = false
-                                    onDeletePlaylist()
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Rounded.Delete, contentDescription = null)
-                                }
-                            )
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            TopAppBar(
+                title = { },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (canAddSongs) {
+                        IconButton(onClick = { showAddSongs = true }) {
+                            Icon(Icons.Rounded.Add, contentDescription = "Add songs")
                         }
                     }
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background
+                    if (playlist != null && !playlist.isSystem) {
+                        Box {
+                            IconButton(onClick = { menuOpen = true }) {
+                                Icon(Icons.Rounded.MoreVert, contentDescription = "More")
+                            }
+                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Delete playlist") },
+                                    onClick = {
+                                        menuOpen = false
+                                        onDeletePlaylist()
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Rounded.Delete, contentDescription = null)
+                                    },
+                                )
+                            }
+                        }
+                    }
+                },
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
             )
-        )
 
-        LazyColumn(
-            state = listState,
-            contentPadding = PaddingValues(bottom = 120.dp)
-        ) {
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    val cover = localTracks.firstOrNull()?.artworkUri
-                    Box(
-                        modifier = Modifier
-                            .size(200.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(AccentTeal.copy(alpha = 0.4f), palette.elevated)
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
+            LazyColumn(
+                state = listState,
+                contentPadding = PaddingValues(bottom = 120.dp),
+            ) {
+                item {
+                    Column(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        if (!cover.isNullOrBlank()) {
-                            AsyncImage(
-                                model = cover,
-                                contentDescription = playlist?.name,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
+                        val cover = localTracks.firstOrNull()?.artworkUri
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(200.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(AccentTeal.copy(alpha = 0.4f), palette.elevated),
+                                        ),
+                                    ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (!cover.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = cover,
+                                    contentDescription = playlist?.name,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(20.dp))
+                        Text(
+                            text = playlist?.name ?: "Playlist",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text =
+                                buildString {
+                                    append(formatTrackCount(localTracks.size))
+                                    val total = localTracks.sumOf { it.duration }
+                                    if (total > 0) {
+                                        append(" · ")
+                                        append(formatDuration(total))
+                                    }
+                                },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = palette.textSecondary,
+                        )
+                        if (!playlist?.description.isNullOrBlank()) {
+                            Text(
+                                text = playlist!!.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = palette.textSecondary,
                             )
                         }
-                    }
-                    Spacer(Modifier.height(20.dp))
-                    Text(
-                        text = playlist?.name ?: "Playlist",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = buildString {
-                            append(formatTrackCount(localTracks.size))
-                            val total = localTracks.sumOf { it.duration }
-                            if (total > 0) {
-                                append(" · ")
-                                append(formatDuration(total))
-                            }
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = palette.textSecondary
-                    )
-                    if (!playlist?.description.isNullOrBlank()) {
+                        Spacer(Modifier.height(8.dp))
                         Text(
-                            text = playlist!!.description,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = palette.textSecondary
+                            text = "Long-press ☰ to drag-reorder",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = palette.textMuted,
                         )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "Long-press ☰ to drag-reorder",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = palette.textMuted
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(
-                            onClick = onPlayAll,
-                            enabled = localTracks.isNotEmpty(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AccentTeal,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            ),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Rounded.PlayArrow, contentDescription = null)
-                            Spacer(Modifier.width(6.dp))
-                            Text("Play")
-                        }
-                        OutlinedButton(
-                            onClick = onShuffle,
-                            enabled = localTracks.isNotEmpty(),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Rounded.Shuffle, contentDescription = null, tint = AccentTeal)
-                            Spacer(Modifier.width(6.dp))
-                            Text("Shuffle", color = AccentTeal)
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                }
-            }
-
-            itemsIndexed(localTracks, key = { _, t -> t.id }) { index, track ->
-                val isDragging = dragIndex == index
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .zIndex(if (isDragging) 1f else 0f)
-                        .offset {
-                            IntOffset(0, if (isDragging) dragOffset.roundToInt() else 0)
-                        }
-                        .then(
-                            if (isDragging) Modifier.shadow(8.dp) else Modifier
-                        )
-                        .background(
-                            if (isDragging) palette.elevated
-                            else MaterialTheme.colorScheme.background
-                        ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Rounded.DragHandle,
-                        contentDescription = "Drag to reorder",
-                        tint = palette.textMuted,
-                        modifier = Modifier
-                            .padding(start = 8.dp)
-                            .size(28.dp)
-                            .pointerInput(localTracks, index) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = {
-                                        dragIndex = index
-                                        dragOffset = 0f
-                                    },
-                                    onDragCancel = {
-                                        dragIndex = -1
-                                        dragOffset = 0f
-                                    },
-                                    onDragEnd = {
-                                        dragIndex = -1
-                                        dragOffset = 0f
-                                    },
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        dragOffset += dragAmount.y
-                                        val from = dragIndex
-                                        if (from < 0) return@detectDragGesturesAfterLongPress
-                                        val shift = (dragOffset / itemHeightPx).toInt()
-                                        if (shift != 0) {
-                                            val to = (from + shift).coerceIn(0, localTracks.lastIndex)
-                                            if (to != from) {
-                                                val mutable = localTracks.toMutableList()
-                                                val item = mutable.removeAt(from)
-                                                mutable.add(to, item)
-                                                localTracks = mutable
-                                                onReorder(from, to)
-                                                dragIndex = to
-                                                dragOffset -= shift * itemHeightPx
-                                            }
-                                        }
-                                    }
-                                )
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Button(
+                                onClick = onPlayAll,
+                                enabled = localTracks.isNotEmpty(),
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = AccentTeal,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    ),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Icon(Icons.Rounded.PlayArrow, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Play")
                             }
-                    )
-                    Box(modifier = Modifier.weight(1f)) {
-                        TrackRow(
-                            track = track,
-                            isPlaying = playerState.currentMediaId == "track:${track.id}",
-                            onClick = { onPlayTrack(track) },
-                            onFavoriteClick = { onToggleFavorite(track.id) },
-                            onMoreClick = { actionTrack = track },
-                            onLongClick = { actionTrack = track }
-                        )
-                        TrackActionsMenu(
-                            expanded = actionTrack?.id == track.id,
-                            track = actionTrack,
-                            onDismiss = { actionTrack = null },
-                            onPlayNext = onPlayNext,
-                            onAddToQueue = onAddToQueue,
-                            onAddToPlaylist = onAddToPlaylist,
-                            onToggleFavorite = { onToggleFavorite(it.id) },
-                            onToggleNeverCompress = { onToggleNeverCompress(it.id) }
-                        )
-                    }
-                    IconButton(onClick = { onRemoveTrack(track.id) }) {
-                        Icon(Icons.Rounded.Delete, contentDescription = "Remove", tint = palette.textMuted)
+                            OutlinedButton(
+                                onClick = onShuffle,
+                                enabled = localTracks.isNotEmpty(),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Icon(Icons.Rounded.Shuffle, contentDescription = null, tint = AccentTeal)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Shuffle", color = AccentTeal)
+                            }
+                        }
+                        if (canAddSongs) {
+                            Spacer(Modifier.height(10.dp))
+                            OutlinedButton(
+                                onClick = { showAddSongs = true },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(Icons.Rounded.Add, contentDescription = null, tint = palette.accent)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Add songs", color = palette.accent)
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
                     }
                 }
-            }
 
-            if (localTracks.isEmpty()) {
-                item {
-                    Text(
-                        text = "This playlist is empty. Long-press a song → Add to playlist. Tracks also show on Android Auto.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = palette.textSecondary,
-                        modifier = Modifier.padding(24.dp)
-                    )
+                itemsIndexed(localTracks, key = { _, t -> t.id }) { index, track ->
+                    val isDragging = dragIndex == index
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .zIndex(if (isDragging) 1f else 0f)
+                                .offset {
+                                    IntOffset(0, if (isDragging) dragOffset.roundToInt() else 0)
+                                }.then(
+                                    if (isDragging) Modifier.shadow(8.dp) else Modifier,
+                                ).background(
+                                    if (isDragging) {
+                                        palette.elevated
+                                    } else {
+                                        MaterialTheme.colorScheme.background
+                                    },
+                                ),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Rounded.DragHandle,
+                            contentDescription = "Drag to reorder",
+                            tint = palette.textMuted,
+                            modifier =
+                                Modifier
+                                    .padding(start = 8.dp)
+                                    .size(28.dp)
+                                    .pointerInput(localTracks, index) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = {
+                                                dragIndex = index
+                                                dragOffset = 0f
+                                            },
+                                            onDragCancel = {
+                                                dragIndex = -1
+                                                dragOffset = 0f
+                                            },
+                                            onDragEnd = {
+                                                dragIndex = -1
+                                                dragOffset = 0f
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                dragOffset += dragAmount.y
+                                                val from = dragIndex
+                                                if (from < 0) return@detectDragGesturesAfterLongPress
+                                                val shift = (dragOffset / itemHeightPx).toInt()
+                                                if (shift != 0) {
+                                                    val to = (from + shift).coerceIn(0, localTracks.lastIndex)
+                                                    if (to != from) {
+                                                        val mutable = localTracks.toMutableList()
+                                                        val item = mutable.removeAt(from)
+                                                        mutable.add(to, item)
+                                                        localTracks = mutable
+                                                        onReorder(from, to)
+                                                        dragIndex = to
+                                                        dragOffset -= shift * itemHeightPx
+                                                    }
+                                                }
+                                            },
+                                        )
+                                    },
+                        )
+                        Box(modifier = Modifier.weight(1f)) {
+                            TrackRow(
+                                track = track,
+                                isPlaying = playerState.currentMediaId == "track:${track.id}",
+                                onClick = { onPlayTrack(track) },
+                                onFavoriteClick = { onToggleFavorite(track.id) },
+                                onMoreClick = { actionTrack = track },
+                                onLongClick = { actionTrack = track },
+                            )
+                            TrackActionsMenu(
+                                expanded = actionTrack?.id == track.id,
+                                track = actionTrack,
+                                onDismiss = { actionTrack = null },
+                                onPlayNext = onPlayNext,
+                                onAddToQueue = onAddToQueue,
+                                onAddToPlaylist = onAddToPlaylist,
+                                onToggleFavorite = { onToggleFavorite(it.id) },
+                                onToggleNeverCompress = { onToggleNeverCompress(it.id) },
+                            )
+                        }
+                        IconButton(onClick = { onRemoveTrack(track.id) }) {
+                            Icon(Icons.Rounded.Delete, contentDescription = "Remove", tint = palette.textMuted)
+                        }
+                    }
+                }
+
+                if (localTracks.isEmpty()) {
+                    item {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                text =
+                                    if (canAddSongs) {
+                                        "This playlist is empty. Add songs from your library."
+                                    } else {
+                                        "This playlist fills automatically."
+                                    },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = palette.textSecondary,
+                            )
+                            if (canAddSongs) {
+                                Spacer(Modifier.height(16.dp))
+                                Button(
+                                    onClick = { showAddSongs = true },
+                                    colors =
+                                        ButtonDefaults.buttonColors(
+                                            containerColor = palette.accent,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        ),
+                                ) {
+                                    Icon(Icons.Rounded.Add, contentDescription = null)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Add songs")
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
+
+        if (showAddSongs) {
+            AddSongsToPlaylistSheet(
+                tracks = libraryTracks,
+                alreadyInPlaylist = localTracks.map { it.id }.toSet(),
+                onDismiss = { showAddSongs = false },
+                onAdd = { ids ->
+                    onAddTracks(ids)
+                    showAddSongs = false
+                },
+            )
+        }
     }
+}
+
+private fun PlaylistEntity?.canAddSongs(): Boolean {
+    if (this == null) return false
+    if (!isSystem) return true
+    return systemType == PlaylistEntity.SYSTEM_FAVORITES
 }

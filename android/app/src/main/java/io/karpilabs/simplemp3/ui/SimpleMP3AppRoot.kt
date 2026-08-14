@@ -60,7 +60,6 @@ import io.karpilabs.simplemp3.ui.screens.SearchScreen
 import io.karpilabs.simplemp3.ui.screens.SettingsScreen
 import io.karpilabs.simplemp3.ui.screens.ToolsScreen
 import io.karpilabs.simplemp3.ui.screens.YoutubeScreen
-import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.DeepViolet
 import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.viewmodel.JellyfinViewModel
@@ -68,13 +67,15 @@ import io.karpilabs.simplemp3.ui.viewmodel.MusicViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.QuickConnectViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.YoutubeViewModel
 
-private data class TabItem(val route: String, val label: String, val icon: ImageVector)
+private data class TabItem(
+    val route: String,
+    val label: String,
+    val icon: ImageVector,
+)
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun SimpleMP3AppRoot(
-    viewModel: MusicViewModel = hiltViewModel()
-) {
+fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
     val navController = rememberNavController()
 
     // Only collect what Home + chrome need — keeps first frame light.
@@ -98,21 +99,26 @@ fun SimpleMP3AppRoot(
 
     val palette = LocalSimpleMP3Palette.current
 
-    val visiblePlaylists = remember(playlists, jellyfinEnabled) {
-        if (jellyfinEnabled) playlists
-        else playlists.filter { it.systemType != PlaylistEntity.SYSTEM_JELLYFIN }
-    }
+    val visiblePlaylists =
+        remember(playlists, jellyfinEnabled) {
+            if (jellyfinEnabled) {
+                playlists
+            } else {
+                playlists.filter { it.systemType != PlaylistEntity.SYSTEM_JELLYFIN }
+            }
+        }
 
     var showNowPlaying by remember { mutableStateOf(false) }
     var showQueue by remember { mutableStateOf(false) }
     var addToPlaylistTrack by remember { mutableStateOf<TrackEntity?>(null) }
     var showCreateFromAdd by remember { mutableStateOf(false) }
 
-    val audioPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        Manifest.permission.READ_MEDIA_AUDIO
-    } else {
-        Manifest.permission.READ_EXTERNAL_STORAGE
-    }
+    val audioPermission =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_AUDIO
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
     val permissionState = rememberPermissionState(audioPermission)
 
     LaunchedEffect(permissionState.status.isGranted) {
@@ -128,13 +134,14 @@ fun SimpleMP3AppRoot(
         }
     }
 
-    val tabs = listOf(
-        TabItem(Routes.HOME, "Home", Icons.Rounded.Home),
-        TabItem(Routes.SEARCH, "Search", Icons.Rounded.Search),
-        TabItem(Routes.LIBRARY, "Library", Icons.Rounded.LibraryMusic),
-        TabItem(Routes.PLAYLISTS, "Playlists", Icons.Rounded.QueueMusic),
-        TabItem(Routes.TOOLS, "Tools", Icons.Rounded.Build)
-    )
+    val tabs =
+        listOf(
+            TabItem(Routes.HOME, "Home", Icons.Rounded.Home),
+            TabItem(Routes.SEARCH, "Search", Icons.Rounded.Search),
+            TabItem(Routes.LIBRARY, "Library", Icons.Rounded.LibraryMusic),
+            TabItem(Routes.PLAYLISTS, "Playlists", Icons.Rounded.QueueMusic),
+            TabItem(Routes.TOOLS, "Tools", Icons.Rounded.Build),
+        )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -153,7 +160,7 @@ fun SimpleMP3AppRoot(
             if (showBottomBar) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.background,
-                    tonalElevation = 0.dp
+                    tonalElevation = 0.dp,
                 ) {
                     tabs.forEach { tab ->
                         val selected = currentRoute == tab.route
@@ -168,28 +175,30 @@ fun SimpleMP3AppRoot(
                             },
                             icon = { Icon(tab.icon, contentDescription = tab.label) },
                             label = { Text(tab.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = AccentTeal,
-                                selectedTextColor = AccentTeal,
-                                unselectedIconColor = palette.textMuted,
-                                unselectedTextColor = palette.textMuted,
-                                indicatorColor = DeepViolet.copy(alpha = 0.55f)
-                            )
+                            colors =
+                                NavigationBarItemDefaults.colors(
+                                    selectedIconColor = palette.accent,
+                                    selectedTextColor = palette.accent,
+                                    unselectedIconColor = palette.textMuted,
+                                    unselectedTextColor = palette.textMuted,
+                                    indicatorColor = DeepViolet.copy(alpha = 0.55f),
+                                ),
                         )
                     }
                 }
             }
-        }
+        },
     ) { padding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
         ) {
             NavHost(
                 navController = navController,
                 startDestination = Routes.HOME,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             ) {
                 composable(Routes.HOME) {
                     HomeScreen(
@@ -204,8 +213,11 @@ fun SimpleMP3AppRoot(
                         driveMode = driveMode,
                         resume = if (resumeEnabled) resume else null,
                         onScan = {
-                            if (permissionState.status.isGranted) viewModel.scanLibrary(force = true)
-                            else permissionState.launchPermissionRequest()
+                            if (permissionState.status.isGranted) {
+                                viewModel.scanLibrary(force = true)
+                            } else {
+                                permissionState.launchPermissionRequest()
+                            }
                         },
                         onPlayTrack = { track, queue -> viewModel.playTrack(track, queue) },
                         onPlayAll = { viewModel.playAll(it) },
@@ -221,13 +233,13 @@ fun SimpleMP3AppRoot(
                         onResume = { viewModel.resumeLastSession(autoPlay = true) },
                         onPlayPause = viewModel::togglePlayPause,
                         onSkipNext = viewModel::skipNext,
-                        onSkipPrevious = viewModel::skipPrevious
+                        onSkipPrevious = viewModel::skipPrevious,
                     )
                 }
                 composable(Routes.TOOLS) {
                     ToolsScreen(
                         onOpenYoutube = { navController.navigate(Routes.YOUTUBE) },
-                        onOpenQuickConnect = { navController.navigate(Routes.QUICK_CONNECT) }
+                        onOpenQuickConnect = { navController.navigate(Routes.QUICK_CONNECT) },
                     )
                 }
                 composable(Routes.SETTINGS) {
@@ -253,7 +265,7 @@ fun SimpleMP3AppRoot(
                         onLargeFileColdPackChange = viewModel::setLargeFileColdPack,
                         onThemeModeChange = viewModel::setThemeMode,
                         onOpenQuickConnect = { navController.navigate(Routes.QUICK_CONNECT) },
-                        onOpenLibraryFolders = { navController.navigate(Routes.LIBRARY_FOLDERS) }
+                        onOpenLibraryFolders = { navController.navigate(Routes.LIBRARY_FOLDERS) },
                     )
                 }
                 composable(Routes.LIBRARY_FOLDERS) {
@@ -262,9 +274,10 @@ fun SimpleMP3AppRoot(
                     val deviceFoldersLoading by viewModel.deviceFoldersLoading.collectAsStateWithLifecycle()
                     LaunchedEffect(Unit) { viewModel.refreshDeviceFolders() }
                     // Picker “select all” uses the same top/second-level paths shown in the UI.
-                    val pickerPaths = remember(deviceFolders) {
-                        buildLibraryFolderPickerPaths(deviceFolders)
-                    }
+                    val pickerPaths =
+                        remember(deviceFolders) {
+                            buildLibraryFolderPickerPaths(deviceFolders)
+                        }
                     LibraryFoldersScreen(
                         selectedRoots = selectedRoots,
                         deviceFolders = deviceFolders,
@@ -277,7 +290,7 @@ fun SimpleMP3AppRoot(
                         onSelectAllVisible = {
                             viewModel.selectAllVisibleLibraryFolderRoots(pickerPaths)
                         },
-                        onClearSelection = viewModel::clearLibraryFolderRoots
+                        onClearSelection = viewModel::clearLibraryFolderRoots,
                     )
                 }
                 composable(Routes.JELLYFIN) {
@@ -323,7 +336,7 @@ fun SimpleMP3AppRoot(
                         onClearOffline = jfVm::clearOffline,
                         onPlayOfflineTrack = { track ->
                             viewModel.playTrack(track, offlineTracks)
-                        }
+                        },
                     )
                 }
                 composable(Routes.YOUTUBE) {
@@ -343,14 +356,14 @@ fun SimpleMP3AppRoot(
                         onPlayTrack = { track, queue -> viewModel.playTrack(track, queue) },
                         onRemove = ytVm::remove,
                         onToggleNeverCompress = ytVm::toggleNeverCompress,
-                        onClearAll = ytVm::clearAll
+                        onClearAll = ytVm::clearAll,
                     )
                 }
                 composable(Routes.QUICK_CONNECT) {
                     val qcVm: QuickConnectViewModel = hiltViewModel()
                     QuickConnectScreen(
                         viewModel = qcVm,
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
                     )
                 }
                 composable(Routes.SEARCH) {
@@ -363,7 +376,7 @@ fun SimpleMP3AppRoot(
                         onQueryChange = viewModel::setSearchQuery,
                         onPlayTrack = { track, queue -> viewModel.playTrack(track, queue) },
                         onToggleFavorite = viewModel::toggleFavorite,
-                        onAddToPlaylist = { addToPlaylistTrack = it }
+                        onAddToPlaylist = { addToPlaylistTrack = it },
                     )
                 }
                 composable(Routes.LIBRARY) {
@@ -385,25 +398,26 @@ fun SimpleMP3AppRoot(
                         onOpenArtist = { navController.navigate(Routes.artistDetail(it)) },
                         onOpenFolder = { navController.navigate(Routes.folderDetail(it)) },
                         onToggleFavorite = viewModel::toggleFavorite,
-                        onAddToPlaylist = { addToPlaylistTrack = it }
+                        onAddToPlaylist = { addToPlaylistTrack = it },
                     )
                 }
                 composable(Routes.PLAYLISTS) {
                     PlaylistsScreen(
                         playlists = visiblePlaylists,
                         onOpenPlaylist = { navController.navigate(Routes.playlistDetail(it)) },
-                        onCreatePlaylist = { viewModel.createPlaylist(it) }
+                        onCreatePlaylist = { viewModel.createPlaylist(it) },
                     )
                 }
                 composable(
                     route = Routes.PLAYLIST_DETAIL,
-                    arguments = listOf(navArgument("playlistId") { type = NavType.LongType })
+                    arguments = listOf(navArgument("playlistId") { type = NavType.LongType }),
                 ) { entry ->
                     val playlistId = entry.arguments?.getLong("playlistId") ?: return@composable
                     val playlist by remember(playlistId) { viewModel.playlist(playlistId) }
                         .collectAsStateWithLifecycle()
                     val playlistTracks by remember(playlistId) { viewModel.playlistTracks(playlistId) }
                         .collectAsStateWithLifecycle()
+                    val libraryTracks by viewModel.tracks.collectAsStateWithLifecycle()
                     PlaylistDetailScreen(
                         playlist = playlist,
                         tracks = playlistTracks,
@@ -422,16 +436,19 @@ fun SimpleMP3AppRoot(
                         onReorder = { from, to -> viewModel.reorderPlaylist(playlistId, from, to) },
                         onPlayNext = viewModel::playNext,
                         onAddToQueue = viewModel::addToQueue,
-                        onAddToPlaylist = { addToPlaylistTrack = it }
+                        onAddToPlaylist = { addToPlaylistTrack = it },
+                        libraryTracks = libraryTracks,
+                        onAddTracks = { viewModel.addToPlaylist(playlistId, it) },
                     )
                 }
                 composable(
                     route = Routes.ALBUM_DETAIL,
-                    arguments = listOf(navArgument("albumName") { type = NavType.StringType })
+                    arguments = listOf(navArgument("albumName") { type = NavType.StringType }),
                 ) { entry ->
-                    val albumName = android.net.Uri.decode(
-                        entry.arguments?.getString("albumName").orEmpty()
-                    )
+                    val albumName =
+                        android.net.Uri.decode(
+                            entry.arguments?.getString("albumName").orEmpty(),
+                        )
                     val albumTracks by remember(albumName) { viewModel.albumTracks(albumName) }
                         .collectAsStateWithLifecycle()
                     CollectionDetailScreen(
@@ -443,16 +460,17 @@ fun SimpleMP3AppRoot(
                         onPlayAll = { viewModel.playAll(albumTracks) },
                         onShuffle = { viewModel.playAll(albumTracks.shuffled()) },
                         onPlayTrack = { viewModel.playTrack(it, albumTracks) },
-                        onToggleFavorite = viewModel::toggleFavorite
+                        onToggleFavorite = viewModel::toggleFavorite,
                     )
                 }
                 composable(
                     route = Routes.ARTIST_DETAIL,
-                    arguments = listOf(navArgument("artistName") { type = NavType.StringType })
+                    arguments = listOf(navArgument("artistName") { type = NavType.StringType }),
                 ) { entry ->
-                    val artistName = android.net.Uri.decode(
-                        entry.arguments?.getString("artistName").orEmpty()
-                    )
+                    val artistName =
+                        android.net.Uri.decode(
+                            entry.arguments?.getString("artistName").orEmpty(),
+                        )
                     val artistTracks by remember(artistName) { viewModel.artistTracks(artistName) }
                         .collectAsStateWithLifecycle()
                     CollectionDetailScreen(
@@ -464,16 +482,17 @@ fun SimpleMP3AppRoot(
                         onPlayAll = { viewModel.playAll(artistTracks) },
                         onShuffle = { viewModel.playAll(artistTracks.shuffled()) },
                         onPlayTrack = { viewModel.playTrack(it, artistTracks) },
-                        onToggleFavorite = viewModel::toggleFavorite
+                        onToggleFavorite = viewModel::toggleFavorite,
                     )
                 }
                 composable(
                     route = Routes.FOLDER_DETAIL,
-                    arguments = listOf(navArgument("folderPath") { type = NavType.StringType })
+                    arguments = listOf(navArgument("folderPath") { type = NavType.StringType }),
                 ) { entry ->
-                    val folderPath = android.net.Uri.decode(
-                        entry.arguments?.getString("folderPath").orEmpty()
-                    )
+                    val folderPath =
+                        android.net.Uri.decode(
+                            entry.arguments?.getString("folderPath").orEmpty(),
+                        )
                     val subfolders by remember(folderPath) { viewModel.childFolders(folderPath) }
                         .collectAsStateWithLifecycle()
                     val folderTracks by remember(folderPath) { viewModel.folderTracks(folderPath) }
@@ -489,7 +508,7 @@ fun SimpleMP3AppRoot(
                         onShuffle = { viewModel.playAll(folderTracks.shuffled()) },
                         onPlayTrack = { viewModel.playTrack(it, folderTracks) },
                         onToggleFavorite = viewModel::toggleFavorite,
-                        onAddToPlaylist = { addToPlaylistTrack = it }
+                        onAddToPlaylist = { addToPlaylistTrack = it },
                     )
                 }
             }
@@ -499,9 +518,10 @@ fun SimpleMP3AppRoot(
                 onExpand = { showNowPlaying = true },
                 onPlayPause = viewModel::togglePlayPause,
                 onSkipNext = viewModel::skipNext,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = if (showBottomBar) 0.dp else 8.dp)
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = if (showBottomBar) 0.dp else 8.dp),
             )
         }
     }
@@ -521,7 +541,7 @@ fun SimpleMP3AppRoot(
                 showNowPlaying = false
                 showQueue = true
             },
-            onSleepTimer = viewModel::setSleepTimer
+            onSleepTimer = viewModel::setSleepTimer,
         )
     }
 
@@ -532,7 +552,7 @@ fun SimpleMP3AppRoot(
             onPlayIndex = { index ->
                 viewModel.seekToQueueIndex(index)
                 showQueue = false
-            }
+            },
         )
     }
 
@@ -547,7 +567,7 @@ fun SimpleMP3AppRoot(
             },
             onCreateNew = {
                 showCreateFromAdd = true
-            }
+            },
         )
     }
 
@@ -560,16 +580,17 @@ fun SimpleMP3AppRoot(
                     addToPlaylistTrack = null
                 }
                 showCreateFromAdd = false
-            }
+            },
         )
     }
 }
 
 /** Mirrors LibraryFoldersScreen picker entries so “Select all” matches the UI. */
 private fun buildLibraryFolderPickerPaths(allFolders: List<String>): List<String> {
-    val normalized = allFolders
-        .map { it.trim().trim('/').replace('\\', '/') }
-        .filter { it.isNotEmpty() }
+    val normalized =
+        allFolders
+            .map { it.trim().trim('/').replace('\\', '/') }
+            .filter { it.isNotEmpty() }
     val entries = linkedSetOf<String>()
     for (path in normalized) {
         entries += path.substringBefore('/')

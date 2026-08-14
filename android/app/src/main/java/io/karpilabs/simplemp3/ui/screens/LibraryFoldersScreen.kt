@@ -59,19 +59,21 @@ fun LibraryFoldersScreen(
     onLimitEnabledChange: (Boolean) -> Unit,
     onToggleRoot: (String) -> Unit,
     onSelectAllVisible: () -> Unit,
-    onClearSelection: () -> Unit
+    onClearSelection: () -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
     val limitEnabled = selectedRoots.isNotEmpty()
     // Prefer top-level roots for a clean picker; still include deeper unique roots if needed.
-    val pickerEntries = remember(deviceFolders) {
-        buildPickerEntries(deviceFolders)
-    }
+    val pickerEntries =
+        remember(deviceFolders) {
+            buildPickerEntries(deviceFolders)
+        }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
     ) {
         TopAppBar(
             title = { Text("Library folders") },
@@ -85,67 +87,71 @@ fun LibraryFoldersScreen(
                     Icon(Icons.Rounded.Refresh, contentDescription = "Refresh folder list")
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background
-            )
+            colors =
+                TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
         )
 
         LazyColumn(
             contentPadding = PaddingValues(bottom = 120.dp),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         ) {
             item {
                 Text(
                     text = "Choose which folders appear in your local library. Jellyfin, YouTube, and LAN imports are never filtered out.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = palette.textSecondary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
 
             item {
                 Row(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(palette.card)
-                        .clickable { onLimitEnabledChange(!limitEnabled) }
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(palette.card)
+                            .clickable { onLimitEnabledChange(!limitEnabled) }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         imageVector = if (limitEnabled) Icons.Rounded.Folder else Icons.Rounded.FolderOff,
                         contentDescription = null,
                         tint = AccentTeal,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(28.dp),
                     )
                     Spacer(Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Limit to selected folders",
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = if (limitEnabled) {
-                                "${selectedRoots.size} folder${if (selectedRoots.size == 1) "" else "s"} selected · rescan on change"
-                            } else {
-                                "Off · all music on this device is scanned"
-                            },
+                            text =
+                                if (limitEnabled) {
+                                    "${selectedRoots.size} folder${if (selectedRoots.size == 1) "" else "s"} selected · rescan on change"
+                                } else {
+                                    "Off · all music on this device is scanned"
+                                },
                             style = MaterialTheme.typography.bodySmall,
-                            color = palette.textSecondary
+                            color = palette.textSecondary,
                         )
                     }
                     Switch(
                         checked = limitEnabled,
                         onCheckedChange = onLimitEnabledChange,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = palette.card,
-                            checkedTrackColor = AccentTeal,
-                            uncheckedThumbColor = palette.textMuted,
-                            uncheckedTrackColor = palette.textMuted.copy(alpha = 0.3f)
-                        )
+                        colors =
+                            SwitchDefaults.colors(
+                                checkedThumbColor = palette.card,
+                                checkedTrackColor = AccentTeal,
+                                uncheckedThumbColor = palette.textMuted,
+                                uncheckedTrackColor = palette.textMuted.copy(alpha = 0.3f),
+                            ),
                     )
                 }
             }
@@ -154,29 +160,31 @@ fun LibraryFoldersScreen(
                 item {
                     Row(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = "Folders on device",
                             style = MaterialTheme.typography.labelLarge,
                             color = AccentTeal,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         )
                         Text(
                             text = "Select all",
                             style = MaterialTheme.typography.labelLarge,
                             color = AccentTeal,
-                            modifier = Modifier
-                                .clickable(onClick = onSelectAllVisible)
-                                .padding(horizontal = 8.dp)
+                            modifier =
+                                Modifier
+                                    .clickable(onClick = onSelectAllVisible)
+                                    .padding(horizontal = 8.dp),
                         )
                         Text(
                             text = "Clear",
                             style = MaterialTheme.typography.labelLarge,
                             color = palette.textMuted,
-                            modifier = Modifier
-                                .clickable(onClick = onClearSelection)
-                                .padding(horizontal = 8.dp)
+                            modifier =
+                                Modifier
+                                    .clickable(onClick = onClearSelection)
+                                    .padding(horizontal = 8.dp),
                         )
                     }
                 }
@@ -184,15 +192,16 @@ fun LibraryFoldersScreen(
                 if (isLoading && pickerEntries.isEmpty()) {
                     item {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             CircularProgressIndicator(
                                 color = AccentTeal,
                                 modifier = Modifier.size(28.dp),
-                                strokeWidth = 3.dp
+                                strokeWidth = 3.dp,
                             )
                             Spacer(Modifier.width(16.dp))
                             Text("Scanning folders…", color = palette.textSecondary)
@@ -201,14 +210,15 @@ fun LibraryFoldersScreen(
                 }
 
                 items(pickerEntries, key = { it.path }) { entry ->
-                    val checked = selectedRoots.any { root ->
-                        FolderBrowser.normalize(root) == entry.path
-                    }
+                    val checked =
+                        selectedRoots.any { root ->
+                            FolderBrowser.normalize(root) == entry.path
+                        }
                     FolderCheckRow(
                         path = entry.path,
                         label = entry.label,
                         checked = checked,
-                        onToggle = { onToggleRoot(entry.path) }
+                        onToggle = { onToggleRoot(entry.path) },
                     )
                 }
 
@@ -218,7 +228,7 @@ fun LibraryFoldersScreen(
                             text = "No music folders found. Grant audio permission and pull to rescan the library first.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = palette.textMuted,
-                            modifier = Modifier.padding(24.dp)
+                            modifier = Modifier.padding(24.dp),
                         )
                     }
                 }
@@ -231,7 +241,7 @@ fun LibraryFoldersScreen(
                         text = "Updating library…",
                         style = MaterialTheme.typography.bodySmall,
                         color = AccentTeal,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                     )
                 }
             }
@@ -244,26 +254,28 @@ private fun FolderCheckRow(
     path: String,
     label: String,
     checked: Boolean,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
     Row(
-        modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 3.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(palette.card)
-            .clickable(onClick = onToggle)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .padding(horizontal = 16.dp, vertical = 3.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(palette.card)
+                .clickable(onClick = onToggle)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Checkbox(
             checked = checked,
             onCheckedChange = { onToggle() },
-            colors = CheckboxDefaults.colors(
-                checkedColor = AccentTeal,
-                uncheckedColor = palette.textMuted
-            )
+            colors =
+                CheckboxDefaults.colors(
+                    checkedColor = AccentTeal,
+                    uncheckedColor = palette.textMuted,
+                ),
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -271,7 +283,7 @@ private fun FolderCheckRow(
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             if (label != path) {
                 Text(
@@ -279,14 +291,17 @@ private fun FolderCheckRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = palette.textMuted,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
     }
 }
 
-private data class PickerEntry(val path: String, val label: String)
+private data class PickerEntry(
+    val path: String,
+    val label: String,
+)
 
 /**
  * Build a picker list: all top-level segments (Music, Download, …) plus any
@@ -305,8 +320,9 @@ private fun buildPickerEntries(allFolders: List<String>): List<PickerEntry> {
     for (path in normalized) {
         val slash = path.indexOf('/')
         if (slash > 0) {
-            val second = path.substringBeforeLast('/').takeIf { it.count { c -> c == '/' } == 0 }
-                ?: path.split('/').take(2).joinToString("/")
+            val second =
+                path.substringBeforeLast('/').takeIf { it.count { c -> c == '/' } == 0 }
+                    ?: path.split('/').take(2).joinToString("/")
             if (second.contains('/')) {
                 entries.putIfAbsent(second, PickerEntry(second, second))
             }

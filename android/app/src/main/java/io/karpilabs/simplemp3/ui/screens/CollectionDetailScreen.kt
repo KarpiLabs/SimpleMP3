@@ -45,7 +45,7 @@ fun CollectionDetailScreen(
     onPlayAll: () -> Unit,
     onShuffle: () -> Unit,
     onPlayTrack: (TrackEntity) -> Unit,
-    onToggleFavorite: (Long) -> Unit
+    onToggleFavorite: (Long) -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
     Column(modifier = Modifier.fillMaxSize()) {
@@ -56,7 +56,7 @@ fun CollectionDetailScreen(
                     Text(
                         text = subtitle.ifBlank { formatTrackCount(tracks.size) },
                         style = MaterialTheme.typography.bodySmall,
-                        color = palette.textSecondary
+                        color = palette.textSecondary,
                     )
                 }
             },
@@ -65,24 +65,27 @@ fun CollectionDetailScreen(
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background
-            )
+            colors =
+                TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
         )
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             Button(
                 onClick = onPlayAll,
                 enabled = tracks.isNotEmpty(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AccentTeal,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                modifier = Modifier.weight(1f)
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = AccentTeal,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                modifier = Modifier.weight(1f),
             ) {
                 Icon(Icons.Rounded.PlayArrow, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
@@ -92,7 +95,7 @@ fun CollectionDetailScreen(
             OutlinedButton(
                 onClick = onShuffle,
                 enabled = tracks.isNotEmpty(),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 Icon(Icons.Rounded.Shuffle, contentDescription = null, tint = AccentTeal)
                 Spacer(Modifier.width(6.dp))
@@ -106,7 +109,7 @@ fun CollectionDetailScreen(
                     track = track,
                     isPlaying = playerState.currentMediaId == "track:${track.id}",
                     onClick = { onPlayTrack(track) },
-                    onFavoriteClick = { onToggleFavorite(track.id) }
+                    onFavoriteClick = { onToggleFavorite(track.id) },
                 )
             }
         }

@@ -13,6 +13,7 @@ android/local.properties
 .externalNativeBuild
 .cxx
 local.properties
+*.hpof
 
 # Release / build artifacts (do not publish signed binaries)
 *.apk

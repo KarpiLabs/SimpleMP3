@@ -37,24 +37,24 @@ import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 @Composable
 fun ToolsScreen(
     onOpenYoutube: () -> Unit,
-    onOpenQuickConnect: () -> Unit
+    onOpenQuickConnect: () -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 120.dp)
+        contentPadding = PaddingValues(bottom = 120.dp),
     ) {
         item {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Text(
                     text = "Tools",
                     style = MaterialTheme.typography.displayLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = "Import and transfer music",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = palette.textSecondary
+                    color = palette.textSecondary,
                 )
             }
         }
@@ -64,14 +64,15 @@ fun ToolsScreen(
                 icon = Icons.Rounded.VideoLibrary,
                 title = "YouTube → MP3",
                 subtitle = "Paste a link · title, art, and offline audio",
-                brush = Brush.horizontalGradient(
-                    listOf(
-                        AccentCoral.copy(alpha = 0.32f),
-                        palette.elevated,
-                        AccentViolet.copy(alpha = 0.18f)
-                    )
-                ),
-                onClick = onOpenYoutube
+                brush =
+                    Brush.horizontalGradient(
+                        listOf(
+                            AccentCoral.copy(alpha = 0.32f),
+                            palette.elevated,
+                            AccentViolet.copy(alpha = 0.18f),
+                        ),
+                    ),
+                onClick = onOpenYoutube,
             )
         }
 
@@ -80,14 +81,15 @@ fun ToolsScreen(
                 icon = Icons.Rounded.WifiTethering,
                 title = "Quick Connect",
                 subtitle = "LAN portal · drag MP3s from your computer",
-                brush = Brush.horizontalGradient(
-                    listOf(
-                        AccentTeal.copy(alpha = 0.3f),
-                        palette.elevated,
-                        AccentGold.copy(alpha = 0.18f)
-                    )
-                ),
-                onClick = onOpenQuickConnect
+                brush =
+                    Brush.horizontalGradient(
+                        listOf(
+                            AccentTeal.copy(alpha = 0.3f),
+                            palette.elevated,
+                            AccentGold.copy(alpha = 0.18f),
+                        ),
+                    ),
+                onClick = onOpenQuickConnect,
             )
         }
     }
@@ -99,27 +101,28 @@ private fun ToolsFeatureCard(
     title: String,
     subtitle: String,
     brush: Brush,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
     Box(
-        modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(brush)
-            .clickable(onClick = onClick)
-            .padding(16.dp)
+        modifier =
+            Modifier
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(brush)
+                .clickable(onClick = onClick)
+                .padding(16.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
+            horizontalArrangement = Arrangement.Start,
         ) {
             Icon(
                 icon,
                 contentDescription = null,
                 tint = AccentTeal,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(36.dp),
             )
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {

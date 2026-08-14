@@ -17,7 +17,7 @@ fun TrackActionsMenu(
     onToggleFavorite: (TrackEntity) -> Unit = {},
     onToggleNeverCompress: (TrackEntity) -> Unit = {},
     showFavorite: Boolean = true,
-    showNeverCompress: Boolean = true
+    showNeverCompress: Boolean = true,
 ) {
     DropdownMenu(expanded = expanded && track != null, onDismissRequest = onDismiss) {
         val t = track ?: return@DropdownMenu
@@ -26,21 +26,21 @@ fun TrackActionsMenu(
             onClick = {
                 onDismiss()
                 onPlayNext(t)
-            }
+            },
         )
         DropdownMenuItem(
             text = { Text("Add to queue") },
             onClick = {
                 onDismiss()
                 onAddToQueue(t)
-            }
+            },
         )
         DropdownMenuItem(
             text = { Text("Add to playlist") },
             onClick = {
                 onDismiss()
                 onAddToPlaylist(t)
-            }
+            },
         )
         if (showFavorite) {
             DropdownMenuItem(
@@ -48,21 +48,24 @@ fun TrackActionsMenu(
                 onClick = {
                     onDismiss()
                     onToggleFavorite(t)
-                }
+                },
             )
         }
         if (showNeverCompress && t.isAppOwned) {
             DropdownMenuItem(
                 text = {
                     Text(
-                        if (t.neverCompress) "Allow compression"
-                        else "★ Never compress"
+                        if (t.neverCompress) {
+                            "Allow compression"
+                        } else {
+                            "★ Never compress"
+                        },
                     )
                 },
                 onClick = {
                     onDismiss()
                     onToggleNeverCompress(t)
-                }
+                },
             )
         }
     }
