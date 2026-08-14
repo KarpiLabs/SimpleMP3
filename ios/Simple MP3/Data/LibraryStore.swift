@@ -29,8 +29,8 @@ actor LibraryStore {
 
     func load() async {
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
-            await ensureSystemPlaylists()
-            await persist()
+            ensureSystemPlaylists()
+            persist()
             return
         }
         do {
@@ -42,7 +42,7 @@ actor LibraryStore {
             tracks = [:]
             playlists = [:]
         }
-        await ensureSystemPlaylists()
+        ensureSystemPlaylists()
     }
 
     private func persist() {

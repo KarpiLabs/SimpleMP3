@@ -40,9 +40,10 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         connect(interfaceController: interfaceController, window: window)
     }
 
+    @objc(templateApplicationScene:didDisconnectInterfaceController:)
     func templateApplicationScene(
         _ templateApplicationScene: CPTemplateApplicationScene,
-        didDisconnect interfaceController: CPInterfaceController
+        didDisconnectInterfaceController interfaceController: CPInterfaceController
     ) {
         disconnect()
     }
@@ -104,15 +105,15 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             forName: .libraryDidChange,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.reloadRootIfNeeded() }
+        ) { _ in
+            Task { @MainActor [weak self] in self?.reloadRootIfNeeded() }
         }
         playbackObserver = NotificationCenter.default.addObserver(
             forName: .playbackDidChange,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.reloadRootIfNeeded() }
+        ) { _ in
+            Task { @MainActor [weak self] in self?.reloadRootIfNeeded() }
         }
     }
 

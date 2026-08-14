@@ -125,7 +125,7 @@ struct AlbumGroup: Identifiable, Hashable, Sendable {
     let artworkUri: String?
 }
 
-struct PlaylistMeta: Identifiable, Hashable, Sendable {
+nonisolated struct PlaylistMeta: Identifiable, Hashable, Sendable {
     let id: String
     let name: String
     let description: String
@@ -145,7 +145,7 @@ struct PlaylistMeta: Identifiable, Hashable, Sendable {
     }
 }
 
-enum SystemPlaylist: String, CaseIterable, Sendable {
+nonisolated enum SystemPlaylist: String, CaseIterable, Sendable {
     case favorites
     case recentlyPlayed = "recently_played"
     case jellyfinOffline = "jellyfin_offline"

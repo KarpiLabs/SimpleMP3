@@ -5,29 +5,29 @@
 
 import Foundation
 
-struct AuthenticateByNameRequest: Encodable {
+nonisolated struct AuthenticateByNameRequest: Encodable {
     let Username: String
     let Pw: String
 }
 
-struct AuthenticationResult: Decodable {
+nonisolated struct AuthenticationResult: Decodable {
     let AccessToken: String?
     let User: JellyfinUser?
     let ServerId: String?
 }
 
-struct JellyfinUser: Decodable {
+nonisolated struct JellyfinUser: Decodable {
     let Id: String
     let Name: String?
 }
 
-struct QueryResult: Decodable {
+nonisolated struct QueryResult: Decodable {
     let Items: [JellyfinItem]?
     let TotalRecordCount: Int?
     let StartIndex: Int?
 }
 
-struct JellyfinItem: Decodable, Identifiable, Hashable {
+nonisolated struct JellyfinItem: Decodable, Identifiable, Hashable {
     let Id: String
     let Name: String?
     let itemType: String?

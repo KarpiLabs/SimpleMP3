@@ -84,8 +84,8 @@ final class QuickConnectServer {
             let params = NWParameters.tcp
             params.allowLocalEndpointReuse = true
             let listener = try NWListener(using: params, on: NWEndpoint.Port(rawValue: port)!)
-            listener.stateUpdateHandler = { [weak self] state in
-                Task { @MainActor in
+            listener.stateUpdateHandler = { state in
+                Task { @MainActor [weak self] in
                     guard let self else { return }
                     switch state {
                     case .ready:
@@ -101,8 +101,8 @@ final class QuickConnectServer {
                     }
                 }
             }
-            listener.newConnectionHandler = { [weak self] conn in
-                Task { @MainActor in
+            listener.newConnectionHandler = { conn in
+                Task { @MainActor [weak self] in
                     self?.accept(conn)
                 }
             }
@@ -134,8 +134,8 @@ final class QuickConnectServer {
     }
 
     private func receive(on connection: NWConnection, buffer: Data) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 1024 * 256) { [weak self] data, _, isComplete, error in
-            Task { @MainActor in
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 1024 * 256) { data, _, isComplete, error in
+            Task { @MainActor [weak self] in
                 guard let self else { return }
                 var buf = buffer
                 if let data { buf.append(data) }
