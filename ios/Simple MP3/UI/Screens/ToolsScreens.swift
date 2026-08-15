@@ -247,6 +247,16 @@ struct YoutubeScreen: View {
                         onMore: { app.addToPlaylistTrack = track }
                     )
                     .listRowBackground(Color.clear)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            Task {
+                                await app.repository.deleteTrack(id: track.id)
+                                await reload()
+                            }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
                 }
             }
         }
@@ -281,6 +291,7 @@ struct YoutubeScreen: View {
 struct QuickConnectScreen: View {
     @Environment(AppModel.self) private var app
     @Environment(\.appPalette) private var palette
+    @State private var imports: [Track] = []
 
     var body: some View {
         List {
@@ -288,6 +299,9 @@ struct QuickConnectScreen: View {
                 Text("Start a local web portal. On another device on the same Wi‑Fi, open the URL and enter the access code. Files appear in LAN Imports and play offline / on CarPlay.")
                     .font(.caption)
                     .foregroundStyle(palette.textSecondary)
+                Text("Leaving this screen stops the portal.")
+                    .font(.caption)
+                    .foregroundStyle(palette.textMuted)
                 if app.quickConnect.isLockedOut {
                     Text("Portal locked after too many wrong codes. Stop and start again for a new code.")
                         .foregroundStyle(AppColors.accentCoral)
@@ -337,13 +351,44 @@ struct QuickConnectScreen: View {
                     }
                 }
             }
+
+            Section("LAN Imports") {
+                ForEach(imports) { track in
+                    TrackRowView(
+                        track: track,
+                        isPlaying: app.player.state.current?.id == track.id,
+                        onTap: { app.playTrack(track, queue: imports) },
+                        onMore: { app.addToPlaylistTrack = track }
+                    )
+                    .listRowBackground(Color.clear)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            Task {
+                                await app.repository.deleteTrack(id: track.id)
+                                await reload()
+                            }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                }
+            }
         }
         .scrollContentBackground(.hidden)
         .navigationTitle("Quick Connect")
         .onAppear { app.quickConnect.refreshAddresses() }
         .onDisappear {
-            // Leave running if user wants continuous portal — don't auto-stop.
+            // Navigating away stops the portal — see the note in the header section.
+            app.quickConnect.stop()
         }
+        .task { await reload() }
+        .onChange(of: app.quickConnect.lastUploadName) { _, _ in
+            Task { await reload() }
+        }
+    }
+
+    private func reload() async {
+        imports = await app.repository.tracks(source: .lan)
     }
 }
 
