@@ -3,8 +3,8 @@
 //  Simple MP3
 //
 //  Apple CarPlay templates — tab bar root (Home / Recently Played / Browse /
-//  Your Library) styled after the familiar Spotify CarPlay layout: a greeting
-//  header, a horizontal "continue listening" image row, and playlist shelves.
+//  Your Library): a greeting header, a horizontal "continue listening" image
+//  row, and playlist shelves.
 //
 //  Requires entitlement: com.apple.developer.carplay-audio
 //
@@ -163,7 +163,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         return CPTabBarTemplate(templates: [home, recent, browse, library])
     }
 
-    /// Greeting header + horizontal "continue listening" shelf + playlist shelf, Spotify-style.
+    /// Greeting header + horizontal "continue listening" shelf + playlist shelf.
     @MainActor
     private func buildHomeTemplate() async -> CPListTemplate {
         var sections: [CPListSection] = []
