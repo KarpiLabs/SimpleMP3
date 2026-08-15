@@ -9,9 +9,9 @@ struct LibraryScreen: View {
     @Environment(AppModel.self) private var app
     @Environment(\.appPalette) private var palette
     @State private var segment = 0
-    @State private var filter = ""
 
     var body: some View {
+        @Bindable var app = app
         VStack(spacing: 0) {
             Picker("Library", selection: $segment) {
                 Text("Songs").tag(0)
@@ -22,20 +22,16 @@ struct LibraryScreen: View {
             .pickerStyle(.segmented)
             .padding()
 
-            if segment == 0 {
-                TextField("Filter songs", text: $filter)
-                    .padding(10)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(palette.card))
-                    .padding(.horizontal)
-                    .foregroundStyle(palette.textPrimary)
-            }
-
             switch segment {
             case 0: songsList
             case 1: albumsList
             case 2: artistsList
             default: foldersList
             }
+        }
+        .searchable(text: $app.searchQuery, prompt: "Songs, artists, albums")
+        .onChange(of: app.searchQuery) { _, _ in
+            Task { await app.updateSearch() }
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -54,13 +50,9 @@ struct LibraryScreen: View {
     }
 
     private var filteredSongs: [Track] {
-        let all = app.repository.tracks
-        let q = filter.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return all }
-        return all.filter {
-            $0.title.localizedCaseInsensitiveContains(q)
-                || $0.artist.localizedCaseInsensitiveContains(q)
-        }
+        let q = app.searchQuery.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return app.repository.tracks }
+        return app.searchResults
     }
 
     private var songsList: some View {

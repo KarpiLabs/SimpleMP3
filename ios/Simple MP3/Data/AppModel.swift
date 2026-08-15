@@ -160,14 +160,13 @@ enum BootstrapEvent: Sendable {
 }
 
 enum AppTab: String, CaseIterable, Identifiable {
-    case home, search, library, playlists, tools
+    case home, library, playlists, tools
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .home: return "Home"
-        case .search: return "Search"
         case .library: return "Library"
         case .playlists: return "Playlists"
         case .tools: return "Tools"
@@ -177,7 +176,6 @@ enum AppTab: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .home: return "house.fill"
-        case .search: return "magnifyingglass"
         case .library: return "music.note.list"
         case .playlists: return "list.bullet.rectangle"
         case .tools: return "wrench.and.screwdriver.fill"

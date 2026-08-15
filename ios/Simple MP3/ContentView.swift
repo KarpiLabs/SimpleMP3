@@ -23,13 +23,6 @@ struct ContentView: View {
                 .tag(AppTab.home)
 
                 NavigationStack {
-                    SearchScreen()
-                        .navigationTitle("Search")
-                }
-                .tabItem { Label(AppTab.search.title, systemImage: AppTab.search.systemImage) }
-                .tag(AppTab.search)
-
-                NavigationStack {
                     LibraryScreen()
                         .navigationTitle("Library")
                 }

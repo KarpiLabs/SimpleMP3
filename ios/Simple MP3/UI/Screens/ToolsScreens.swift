@@ -383,9 +383,8 @@ struct SettingsScreen: View {
             }
 
             Section("About") {
-                LabeledContent("App", value: "Simple MP3 for iOS")
-                LabeledContent("CarPlay", value: "Audio app")
-                Text("Port of the Android Simple MP3 player by KarpiLabs. Local library, playlists, Jellyfin offline, Quick Connect, and Apple CarPlay.")
+                LabeledContent("App", value: "Simple MP3")
+                Text("©2026 KarpiLabs LLC. All rights reserved.")
                     .font(.caption)
                     .foregroundStyle(palette.textMuted)
             }
