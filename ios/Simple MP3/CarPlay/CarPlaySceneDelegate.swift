@@ -194,7 +194,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         if !playlists.isEmpty {
             sections.append(CPListSection(
                 items: playlists.map(playlistItem),
-                header: "Playlists made for you",
+                header: nil,
                 sectionIndexTitle: nil
             ))
         }
