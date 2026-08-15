@@ -171,8 +171,14 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         let continueTracks = await app.repository.getContinueTracks()
         if !continueTracks.isEmpty {
             let shelf = Array(continueTracks.prefix(8))
-            let images = shelf.map { artworkImage(for: $0, side: 240) }
-            let row = CPListImageRowItem(text: "Jump back in", images: images)
+            let elements = shelf.map { track in
+                CPListImageRowItemRowElement(
+                    image: artworkImage(for: track, side: 240),
+                    title: track.title,
+                    subtitle: track.artist
+                )
+            }
+            let row = CPListImageRowItem(text: "Jump back in", elements: elements, allowsMultipleLines: false)
             row.listImageRowHandler = { [weak self] _, index, completion in
                 guard let self else { completion(); return }
                 Task { @MainActor in
