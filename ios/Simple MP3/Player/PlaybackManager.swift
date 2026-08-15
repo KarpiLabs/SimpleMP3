@@ -69,8 +69,8 @@ final class PlaybackManager {
         timeObserver = player.addPeriodicTimeObserver(
             forInterval: CMTime(seconds: 0.5, preferredTimescale: 600),
             queue: .main
-        ) { [weak self] time in
-            Task { @MainActor in
+        ) { time in
+            Task { @MainActor [weak self] in
                 self?.handleTime(time)
             }
         }
@@ -320,10 +320,11 @@ final class PlaybackManager {
             forName: .AVPlayerItemDidPlayToEndTime,
             object: nil,
             queue: .main
-        ) { [weak self] note in
-            Task { @MainActor in
+        ) { note in
+            let endedItem = note.object as? AVPlayerItem
+            Task { @MainActor [weak self] in
                 guard let self else { return }
-                if note.object as? AVPlayerItem === self.player.currentItem {
+                if endedItem === self.player.currentItem {
                     self.skipNext()
                 }
             }

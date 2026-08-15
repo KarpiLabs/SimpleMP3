@@ -2,8 +2,9 @@
 //  CarPlaySceneDelegate.swift
 //  Simple MP3
 //
-//  Apple CarPlay audio template — browse tree mirrors Android Auto:
-//  Continue · Liked · Playlists · Offline · Albums · Artists · Songs · Recent
+//  Apple CarPlay templates — tab bar root (Home / Recently Played / Browse /
+//  Your Library): a greeting header, a horizontal "continue listening" image
+//  row, and playlist shelves.
 //
 //  Requires entitlement: com.apple.developer.carplay-audio
 //
@@ -40,9 +41,10 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         connect(interfaceController: interfaceController, window: window)
     }
 
+    @objc(templateApplicationScene:didDisconnectInterfaceController:)
     func templateApplicationScene(
         _ templateApplicationScene: CPTemplateApplicationScene,
-        didDisconnect interfaceController: CPInterfaceController
+        didDisconnectInterfaceController interfaceController: CPInterfaceController
     ) {
         disconnect()
     }
@@ -104,15 +106,15 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             forName: .libraryDidChange,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.reloadRootIfNeeded() }
+        ) { _ in
+            Task { @MainActor [weak self] in self?.reloadRootIfNeeded() }
         }
         playbackObserver = NotificationCenter.default.addObserver(
             forName: .playbackDidChange,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.reloadRootIfNeeded() }
+        ) { _ in
+            Task { @MainActor [weak self] in self?.reloadRootIfNeeded() }
         }
     }
 
@@ -138,27 +140,110 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         }
     }
 
-    // MARK: - Root
+    // MARK: - Root (tab bar: Home · Recently Played · Browse · Your Library)
 
     @MainActor
-    private func buildRootTemplate() async -> CPListTemplate {
-        var items: [CPListItem] = []
+    private func buildRootTemplate() async -> CPTabBarTemplate {
+        let home = await buildHomeTemplate()
+        home.tabTitle = "Home"
+        home.tabImage = UIImage(systemName: "house.fill")
 
-        items.append(folderItem(title: "Continue", detail: "Pick up where you left off", id: "continue"))
-        items.append(folderItem(title: "Liked Songs", detail: "Favorites", id: "liked"))
-        items.append(folderItem(title: "Playlists", detail: "\(app.visiblePlaylists.count)", id: "playlists"))
+        let recent = await buildRecentlyPlayedTemplate()
+        recent.tabTitle = "Recently Played"
+        recent.tabImage = UIImage(systemName: "clock.fill")
+
+        let browse = buildBrowseTemplate()
+        browse.tabTitle = "Browse"
+        browse.tabImage = UIImage(systemName: "square.grid.2x2.fill")
+
+        let library = buildLibraryTemplate()
+        library.tabTitle = "Your Library"
+        library.tabImage = UIImage(systemName: "books.vertical.fill")
+
+        return CPTabBarTemplate(templates: [home, recent, browse, library])
+    }
+
+    /// Greeting header + horizontal "continue listening" shelf + playlist shelf.
+    @MainActor
+    private func buildHomeTemplate() async -> CPListTemplate {
+        var sections: [CPListSection] = []
+
+        let continueTracks = await app.repository.getContinueTracks()
+        if !continueTracks.isEmpty {
+            let shelf = Array(continueTracks.prefix(8))
+            let elements = shelf.map { track in
+                CPListImageRowItemRowElement(
+                    image: artworkImage(for: track, side: 240),
+                    title: track.title,
+                    subtitle: track.artist
+                )
+            }
+            let row = CPListImageRowItem(text: "Jump back in", elements: elements, allowsMultipleLines: false)
+            row.listImageRowHandler = { [weak self] _, index, completion in
+                guard let self else { completion(); return }
+                Task { @MainActor in
+                    self.app.player.play(tracks: shelf, startIndex: index)
+                    self.presentSystemNowPlaying()
+                    completion()
+                }
+            }
+            sections.append(CPListSection(items: [row], header: Formatters.greeting(), sectionIndexTitle: nil))
+        }
+
+        let playlists = Array(app.visiblePlaylists.prefix(10))
+        if !playlists.isEmpty {
+            sections.append(CPListSection(
+                items: playlists.map(playlistItem),
+                header: nil,
+                sectionIndexTitle: nil
+            ))
+        }
+
+        if sections.isEmpty {
+            sections = [CPListSection(items: [CPListItem(text: "No music yet", detailText: "Add music on your iPhone")])]
+        }
+
+        return CPListTemplate(title: "Home", sections: sections)
+    }
+
+    @MainActor
+    private func buildRecentlyPlayedTemplate() async -> CPListTemplate {
+        let tracks = await app.repository.getRecentlyPlayed()
+        return trackListTemplate(title: "Recently Played", tracks: tracks)
+    }
+
+    @MainActor
+    private func buildBrowseTemplate() -> CPListTemplate {
+        var items: [CPListItem] = []
         if app.preferences.jellyfinEnabled {
             items.append(folderItem(title: "Jellyfin Offline", detail: "\(app.repository.jellyfinCount)", id: "jellyfin"))
         }
-        items.append(folderItem(title: "YouTube Downloads", detail: "\(app.repository.youtubeCount)", id: "youtube"))
         items.append(folderItem(title: "Albums", detail: "\(app.repository.albums.count)", id: "albums"))
         items.append(folderItem(title: "Artists", detail: "\(app.repository.artists.count)", id: "artists"))
         items.append(folderItem(title: "Songs", detail: Formatters.trackCount(app.repository.trackCount), id: "songs"))
-        items.append(folderItem(title: "Recently Played", detail: "History", id: "recent"))
+        attachSectionHandlers(items)
+        return CPListTemplate(title: "Browse", sections: [CPListSection(items: items)])
+    }
 
+    @MainActor
+    private func buildLibraryTemplate() -> CPListTemplate {
+        var items: [CPListItem] = []
+        items.append(folderItem(title: "Liked Songs", detail: "Favorites", id: "liked"))
+        items.append(folderItem(title: "Playlists", detail: "\(app.visiblePlaylists.count)", id: "playlists"))
         let nowDetail = app.player.state.current?.title ?? "Nothing playing"
         items.append(folderItem(title: "Now Playing", detail: nowDetail, id: "now"))
+        attachSectionHandlers(items)
+        return CPListTemplate(title: "Your Library", sections: [CPListSection(items: items)])
+    }
 
+    private func folderItem(title: String, detail: String, id: String) -> CPListItem {
+        let item = CPListItem(text: title, detailText: detail)
+        item.accessoryType = .disclosureIndicator
+        item.userInfo = id
+        return item
+    }
+
+    private func attachSectionHandlers(_ items: [CPListItem]) {
         for item in items {
             item.handler = { [weak self] _, completion in
                 guard let self, let id = item.userInfo as? String else {
@@ -171,25 +256,11 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
                 }
             }
         }
-
-        let section = CPListSection(items: items)
-        let template = CPListTemplate(title: "Simple MP3", sections: [section])
-        return template
-    }
-
-    private func folderItem(title: String, detail: String, id: String) -> CPListItem {
-        let item = CPListItem(text: title, detailText: detail)
-        item.accessoryType = .disclosureIndicator
-        item.userInfo = id
-        return item
     }
 
     @MainActor
     private func openSection(_ id: String) async {
         switch id {
-        case "continue":
-            let tracks = await app.repository.getContinueTracks()
-            pushTrackList(title: "Continue", tracks: tracks)
         case "liked":
             let tracks = await app.repository.getLikedTracks()
             pushTrackList(title: "Liked Songs", tracks: tracks)
@@ -198,18 +269,12 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         case "jellyfin":
             let tracks = await app.repository.tracks(source: .jellyfin)
             pushTrackList(title: "Jellyfin Offline", tracks: tracks)
-        case "youtube":
-            let tracks = await app.repository.tracks(source: .youtube)
-            pushTrackList(title: "YouTube", tracks: tracks)
         case "albums":
             pushAlbums()
         case "artists":
             pushArtists()
         case "songs":
             pushTrackList(title: "Songs", tracks: app.repository.tracks)
-        case "recent":
-            let tracks = await app.repository.getRecentlyPlayed()
-            pushTrackList(title: "Recently Played", tracks: tracks)
         case "now":
             pushNowPlaying()
         default:
@@ -217,24 +282,50 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         }
     }
 
+    // MARK: - Artwork
+
+    private func artworkImage(for track: Track, side: CGFloat) -> UIImage {
+        MediaArtwork.image(artworkUri: track.artworkUri, trackId: track.id, side: side) ?? placeholderArtwork(side: side)
+    }
+
+    private func artworkImage(for playlist: PlaylistMeta, side: CGFloat) -> UIImage {
+        MediaArtwork.image(artworkUri: playlist.displayCover, side: side) ?? placeholderArtwork(side: side)
+    }
+
+    private func placeholderArtwork(side: CGFloat) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: side, height: side))
+        return renderer.image { _ in
+            UIColor(white: 0.18, alpha: 1).setFill()
+            UIRectFill(CGRect(x: 0, y: 0, width: side, height: side))
+            let config = UIImage.SymbolConfiguration(pointSize: side * 0.4, weight: .semibold)
+            if let note = UIImage(systemName: "music.note", withConfiguration: config)?
+                .withTintColor(UIColor(white: 0.55, alpha: 1), renderingMode: .alwaysOriginal) {
+                let origin = CGPoint(x: (side - note.size.width) / 2, y: (side - note.size.height) / 2)
+                note.draw(at: origin)
+            }
+        }
+    }
+
     // MARK: - Sections
 
     @MainActor
-    private func pushPlaylists() {
-        let items: [CPListItem] = app.visiblePlaylists.map { pl in
-            let item = CPListItem(text: pl.name, detailText: Formatters.trackCount(pl.trackCount))
-            item.accessoryType = .disclosureIndicator
-            item.userInfo = pl.id
-            item.handler = { [weak self] _, completion in
-                guard let self else { completion(); return }
-                Task { @MainActor in
-                    let tracks = await self.app.repository.tracksForPlaylist(id: pl.id)
-                    self.pushTrackList(title: pl.name, tracks: tracks)
-                    completion()
-                }
+    private func playlistItem(_ pl: PlaylistMeta) -> CPListItem {
+        let item = CPListItem(text: pl.name, detailText: Formatters.trackCount(pl.trackCount), image: artworkImage(for: pl, side: 120))
+        item.accessoryType = .disclosureIndicator
+        item.handler = { [weak self] _, completion in
+            guard let self else { completion(); return }
+            Task { @MainActor in
+                let tracks = await self.app.repository.tracksForPlaylist(id: pl.id)
+                self.pushTrackList(title: pl.name, tracks: tracks)
+                completion()
             }
-            return item
         }
+        return item
+    }
+
+    @MainActor
+    private func pushPlaylists() {
+        let items = app.visiblePlaylists.map(playlistItem)
         let safe = items.isEmpty
             ? [CPListItem(text: "No playlists", detailText: "Create one on your iPhone")]
             : items
@@ -288,6 +379,12 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
 
     @MainActor
     private func pushTrackList(title: String, tracks: [Track]) {
+        let template = trackListTemplate(title: title, tracks: tracks)
+        interfaceController?.pushTemplate(template, animated: true) { _, _ in }
+    }
+
+    @MainActor
+    private func trackListTemplate(title: String, tracks: [Track]) -> CPListTemplate {
         var items: [CPListItem] = []
 
         if !tracks.isEmpty {
@@ -332,8 +429,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             items.append(CPListItem(text: "No tracks", detailText: "Add music on your iPhone"))
         }
 
-        let template = CPListTemplate(title: title, sections: [CPListSection(items: items)])
-        interfaceController?.pushTemplate(template, animated: true) { _, _ in }
+        return CPListTemplate(title: title, sections: [CPListSection(items: items)])
     }
 
     @MainActor

@@ -16,11 +16,26 @@ enum MediaLibraryScanner {
     ]
 
     /// Request Apple Music / media library authorization.
+    ///
+    /// Bounded with a timeout: if the system permission alert never resolves (e.g. no
+    /// UI automation to dismiss it in a CI/test environment), bootstrap must still
+    /// proceed rather than hang forever.
     static func requestAuthorization() async -> MPMediaLibraryAuthorizationStatus {
-        await withCheckedContinuation { cont in
-            MPMediaLibrary.requestAuthorization { status in
-                cont.resume(returning: status)
+        await withTaskGroup(of: MPMediaLibraryAuthorizationStatus.self) { group in
+            group.addTask {
+                await withCheckedContinuation { cont in
+                    MPMediaLibrary.requestAuthorization { status in
+                        cont.resume(returning: status)
+                    }
+                }
             }
+            group.addTask {
+                try? await Task.sleep(for: .seconds(10))
+                return MPMediaLibrary.authorizationStatus()
+            }
+            let result = await group.next() ?? .notDetermined
+            group.cancelAll()
+            return result
         }
     }
 
@@ -60,7 +75,7 @@ enum MediaLibraryScanner {
             let album = item.albumTitle ?? "Unknown Album"
             let durationMs = Int64((item.playbackDuration) * 1000)
             let artworkUri: String? = "mpmedia://\(pid)"
-            let dateAdded = Int64((item.dateAdded ?? Date()).timeIntervalSince1970 * 1000)
+            let dateAdded = Int64(item.dateAdded.timeIntervalSince1970 * 1000)
             let folder = item.albumTitle.map { "Music/\($0)" } ?? "Music"
             return Track(
                 id: id,
@@ -83,12 +98,8 @@ enum MediaLibraryScanner {
         }
     }
 
-    private static func scanDocumentsMedia() async -> [Track] {
+    private static func collectAudioFiles(in media: URL) -> [URL] {
         let fm = FileManager.default
-        let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let media = docs.appendingPathComponent("Media", isDirectory: true)
-        try? fm.createDirectory(at: media, withIntermediateDirectories: true)
-
         var files: [URL] = []
         if let enumerator = fm.enumerator(
             at: media,
@@ -101,6 +112,19 @@ enum MediaLibraryScanner {
                 }
             }
         }
+        return files
+    }
+
+    private static func scanDocumentsMedia() async -> [Track] {
+        let fm = FileManager.default
+        let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let media = docs.appendingPathComponent("Media", isDirectory: true)
+        try? fm.createDirectory(at: media, withIntermediateDirectories: true)
+
+        // Scan all of Documents, not just Media/, so files dropped at the top level via
+        // Finder/USB file sharing (UIFileSharingEnabled) are picked up without the user
+        // needing to know about the Media subfolder convention.
+        let files = collectAudioFiles(in: docs)
 
         var tracks: [Track] = []
         for url in files {
@@ -119,7 +143,7 @@ enum MediaLibraryScanner {
         let durationMs: Int64
         var artworkUri: String?
         var trackNumber = 0
-        var year = 0
+        let year = 0
         var genre: String?
 
         do {
@@ -131,19 +155,22 @@ enum MediaLibraryScanner {
 
         do {
             let meta = try await asset.load(.commonMetadata)
-            func value(for key: AVMetadataKey) -> String? {
-                meta.first { $0.commonKey == key }?.stringValue
+            func value(for key: AVMetadataKey) async -> String? {
+                guard let item = meta.first(where: { $0.commonKey == key }) else { return nil }
+                return try? await item.load(.stringValue)
             }
-            title = value(for: .commonKeyTitle)
+            title = await value(for: .commonKeyTitle)
                 ?? url.deletingPathExtension().lastPathComponent
-            artist = value(for: .commonKeyArtist) ?? "Unknown Artist"
-            album = value(for: .commonKeyAlbumName) ?? "Unknown Album"
-            if let num = meta.first(where: { $0.commonKey == .commonKeyType })?.numberValue {
+            artist = await value(for: .commonKeyArtist) ?? "Unknown Artist"
+            album = await value(for: .commonKeyAlbumName) ?? "Unknown Album"
+            if let numItem = meta.first(where: { $0.commonKey == .commonKeyType }),
+               let num = try? await numItem.load(.numberValue) {
                 trackNumber = num.intValue
             }
-            genre = value(for: .commonKeyType)
+            genre = await value(for: .commonKeyType)
 
-            if let artData = meta.first(where: { $0.commonKey == .commonKeyArtwork })?.dataValue {
+            if let artItem = meta.first(where: { $0.commonKey == .commonKeyArtwork }),
+               let artData = try? await artItem.load(.dataValue) {
                 let artDir = url.deletingLastPathComponent().appendingPathComponent(".art", isDirectory: true)
                 try? FileManager.default.createDirectory(at: artDir, withIntermediateDirectories: true)
                 let artURL = artDir.appendingPathComponent(url.deletingPathExtension().lastPathComponent + ".jpg")

@@ -23,13 +23,6 @@ struct ContentView: View {
                 .tag(AppTab.home)
 
                 NavigationStack {
-                    SearchScreen()
-                        .navigationTitle("Search")
-                }
-                .tabItem { Label(AppTab.search.title, systemImage: AppTab.search.systemImage) }
-                .tag(AppTab.search)
-
-                NavigationStack {
                     LibraryScreen()
                         .navigationTitle("Library")
                 }
@@ -107,7 +100,7 @@ struct CarPlayScreenshotMock: View {
                     .font(.title2.bold())
                     .foregroundStyle(AppColors.accentTeal)
                 Spacer()
-                Text("Simple MP3")
+                Text("Jerry's Simple MP3")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(palette.textSecondary)
             }

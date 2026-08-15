@@ -142,7 +142,7 @@ enum ScreenshotDemo {
         case .library:
             app.selectedTab = .library
         case .search:
-            app.selectedTab = .search
+            app.selectedTab = .library
             app.searchQuery = "Nova"
             Task { await app.updateSearch() }
         case .tools:

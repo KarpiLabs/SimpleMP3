@@ -21,9 +21,6 @@ struct HomeScreen: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 header
-                if let resume = app.preferences.resumeSnapshot, resume.hasSession {
-                    resumeCard
-                }
                 if !app.continueListening.isEmpty {
                     sectionContinue
                 }
@@ -48,13 +45,16 @@ struct HomeScreen: View {
 
     private var header: some View {
         HStack(alignment: .top) {
+            Image("SplashMascot")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 44, height: 44)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(palette.card, lineWidth: 2))
             VStack(alignment: .leading, spacing: 4) {
                 Text(Formatters.greeting())
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(palette.textSecondary)
-                Text("Simple MP3")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(palette.textPrimary)
                 Text(librarySubtitle)
                     .font(.system(size: 13))
                     .foregroundStyle(palette.textMuted)
@@ -91,33 +91,6 @@ struct HomeScreen: View {
             parts.append("Scanning…")
         }
         return parts.joined(separator: " · ")
-    }
-
-    private var resumeCard: some View {
-        Button {
-            Task { await app.player.resumeLastSession(autoPlay: true) }
-        } label: {
-            HStack {
-                Image(systemName: "play.circle.fill")
-                    .font(.system(size: 36))
-                    .foregroundStyle(palette.accent)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Continue listening")
-                        .font(.headline)
-                        .foregroundStyle(palette.textPrimary)
-                    Text("Pick up where you left off")
-                        .font(.caption)
-                        .foregroundStyle(palette.textSecondary)
-                }
-                Spacer()
-            }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(palette.card)
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     private var sectionContinue: some View {
@@ -177,7 +150,7 @@ struct HomeScreen: View {
             Text("No music yet")
                 .font(.title3.bold())
                 .foregroundStyle(palette.textPrimary)
-            Text("Grant Media Library access or import files via Tools → Quick Connect / YouTube.")
+            Text("Grant Media Library access or import files via Tools → Quick Connect.")
                 .font(.subheadline)
                 .foregroundStyle(palette.textSecondary)
                 .multilineTextAlignment(.center)

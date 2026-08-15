@@ -5,7 +5,7 @@
 
 import Foundation
 
-struct Playlist: Identifiable, Codable, Hashable, Sendable {
+nonisolated struct Playlist: Identifiable, Codable, Hashable, Sendable {
     var id: String
     var name: String
     var description: String
