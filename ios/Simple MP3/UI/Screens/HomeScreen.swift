@@ -45,13 +45,16 @@ struct HomeScreen: View {
 
     private var header: some View {
         HStack(alignment: .top) {
+            Image("SplashMascot")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 44, height: 44)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(palette.card, lineWidth: 2))
             VStack(alignment: .leading, spacing: 4) {
                 Text(Formatters.greeting())
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(palette.textSecondary)
-                Text("Simple MP3")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(palette.textPrimary)
                 Text(librarySubtitle)
                     .font(.system(size: 13))
                     .foregroundStyle(palette.textMuted)
@@ -147,7 +150,7 @@ struct HomeScreen: View {
             Text("No music yet")
                 .font(.title3.bold())
                 .foregroundStyle(palette.textPrimary)
-            Text("Grant Media Library access or import files via Tools → Quick Connect / YouTube.")
+            Text("Grant Media Library access or import files via Tools → Quick Connect.")
                 .font(.subheadline)
                 .foregroundStyle(palette.textSecondary)
                 .multilineTextAlignment(.center)

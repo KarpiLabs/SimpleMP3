@@ -121,7 +121,10 @@ enum MediaLibraryScanner {
         let media = docs.appendingPathComponent("Media", isDirectory: true)
         try? fm.createDirectory(at: media, withIntermediateDirectories: true)
 
-        let files = collectAudioFiles(in: media)
+        // Scan all of Documents, not just Media/, so files dropped at the top level via
+        // Finder/USB file sharing (UIFileSharingEnabled) are picked up without the user
+        // needing to know about the Media subfolder convention.
+        let files = collectAudioFiles(in: docs)
 
         var tracks: [Track] = []
         for url in files {

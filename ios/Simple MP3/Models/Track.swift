@@ -157,7 +157,7 @@ nonisolated enum SystemPlaylist: String, CaseIterable, Sendable {
         case .favorites: return "Liked Songs"
         case .recentlyPlayed: return "Recently Played"
         case .jellyfinOffline: return "Jellyfin Offline"
-        case .youtubeDownloads: return "YouTube Downloads"
+        case .youtubeDownloads: return "Imported Audio"
         case .lanImports: return "LAN Imports"
         }
     }
@@ -167,7 +167,7 @@ nonisolated enum SystemPlaylist: String, CaseIterable, Sendable {
         case .favorites: return "Your favorite tracks"
         case .recentlyPlayed: return "Jump back in"
         case .jellyfinOffline: return "Synced from your Jellyfin server"
-        case .youtubeDownloads: return "Imported from YouTube links"
+        case .youtubeDownloads: return "Imported audio files"
         case .lanImports: return "Uploaded via Quick Connect"
         }
     }

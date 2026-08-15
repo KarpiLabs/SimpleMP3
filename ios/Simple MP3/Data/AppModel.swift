@@ -19,7 +19,6 @@ final class AppModel {
     let repository: MusicRepository
     let player: PlaybackManager
     let jellyfin: JellyfinService
-    let youtube: YouTubeService
     let quickConnect: QuickConnectServer
 
     var searchQuery: String = ""
@@ -45,7 +44,6 @@ final class AppModel {
         repository = repo
         player = playback
         jellyfin = JellyfinService(preferences: prefs, repository: repo)
-        youtube = YouTubeService(repository: repo)
         quickConnect = QuickConnectServer(repository: repo)
     }
 

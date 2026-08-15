@@ -26,15 +26,6 @@ struct ToolsScreen: View {
                     )
                 }
                 NavigationLink {
-                    YoutubeScreen()
-                } label: {
-                    toolRow(
-                        icon: "play.rectangle.fill",
-                        title: "YouTube → Audio",
-                        subtitle: "\(app.repository.youtubeCount) downloads"
-                    )
-                }
-                NavigationLink {
                     QuickConnectScreen()
                 } label: {
                     toolRow(
@@ -201,93 +192,6 @@ struct JellyfinScreen: View {
     }
 }
 
-struct YoutubeScreen: View {
-    @Environment(AppModel.self) private var app
-    @Environment(\.appPalette) private var palette
-    @State private var link = ""
-    @State private var showImporter = false
-    @State private var pendingTitle: String?
-    @State private var pendingVideoId: String?
-    @State private var downloads: [Track] = []
-
-    var body: some View {
-        List {
-            Section {
-                Text("App Store builds cannot extract YouTube streams in-process. Paste a link for metadata, then import the audio file (Files / Share) into YouTube Downloads.")
-                    .font(.caption)
-                    .foregroundStyle(palette.textSecondary)
-                TextField("YouTube URL or video id", text: $link)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                Button("Look up title") {
-                    Task {
-                        pendingVideoId = YouTubeService.videoId(from: link)
-                        pendingTitle = await app.youtube.fetchTitle(for: link)
-                        await app.youtube.prepareImportHint(for: link)
-                    }
-                }
-                Button("Import audio file…") {
-                    showImporter = true
-                }
-                .foregroundStyle(palette.accent)
-            }
-
-            if let msg = app.youtube.statusMessage {
-                Section {
-                    Text(msg).font(.caption).foregroundStyle(palette.textSecondary)
-                }
-            }
-
-            Section("Downloads") {
-                ForEach(downloads) { track in
-                    TrackRowView(
-                        track: track,
-                        isPlaying: app.player.state.current?.id == track.id,
-                        onTap: { app.playTrack(track, queue: downloads) },
-                        onMore: { app.addToPlaylistTrack = track }
-                    )
-                    .listRowBackground(Color.clear)
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            Task {
-                                await app.repository.deleteTrack(id: track.id)
-                                await reload()
-                            }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
-                }
-            }
-        }
-        .scrollContentBackground(.hidden)
-        .navigationTitle("YouTube")
-        .fileImporter(
-            isPresented: $showImporter,
-            allowedContentTypes: [.audio, .mpeg4Audio, .aiff, .wav],
-            allowsMultipleSelection: true
-        ) { result in
-            if case .success(let urls) = result {
-                Task {
-                    for url in urls {
-                        await app.youtube.importAudioFile(
-                            from: url,
-                            videoId: pendingVideoId,
-                            titleOverride: pendingTitle
-                        )
-                    }
-                    await reload()
-                }
-            }
-        }
-        .task { await reload() }
-    }
-
-    private func reload() async {
-        downloads = await app.repository.tracks(source: .youtube)
-    }
-}
-
 struct QuickConnectScreen: View {
     @Environment(AppModel.self) private var app
     @Environment(\.appPalette) private var palette
@@ -428,7 +332,10 @@ struct SettingsScreen: View {
             }
 
             Section("About") {
-                LabeledContent("App", value: "Simple MP3")
+                LabeledContent("App", value: "Jerry's Simple MP3")
+                LabeledContent("Version", value: appVersion)
+                Link("Privacy Policy", destination: URL(string: "https://karpilabs.io/privacy")!)
+                Link("Terms of Use", destination: URL(string: "https://karpilabs.io/terms")!)
                 Text("©2026 KarpiLabs LLC. All rights reserved.")
                     .font(.caption)
                     .foregroundStyle(palette.textMuted)
@@ -436,5 +343,12 @@ struct SettingsScreen: View {
         }
         .scrollContentBackground(.hidden)
         .navigationTitle("Settings")
+    }
+
+    private var appVersion: String {
+        let bundle = Bundle.main
+        let shortVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
+        let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
+        return "\(shortVersion) (\(build))"
     }
 }

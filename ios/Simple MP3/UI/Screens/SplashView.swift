@@ -190,7 +190,7 @@ struct SplashView: View {
 
     private var titleBlock: some View {
         VStack(spacing: 10) {
-            Text("Simple MP3")
+            Text("Jerry's Simple MP3")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
                 .foregroundStyle(
                     LinearGradient(
