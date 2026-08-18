@@ -673,53 +673,17 @@ body.icon-page { width: 512px; height: 512px; }
 .icon-canvas {
   width: 512px;
   height: 512px;
-  background: #0A0A0C;
+  background: #2A1848; /* brand deep violet — matches android/.../colors.xml ic_launcher_background */
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.icon-canvas .wave {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 40%;
-  background: linear-gradient(180deg, transparent, rgba(0,229,192,0.18));
-}
-.icon-canvas .note {
-  width: 280px;
-  height: 280px;
-  position: relative;
-  z-index: 2;
-}
-.icon-canvas .note-stem {
-  position: absolute;
-  right: 72px;
-  top: 20px;
-  width: 28px;
-  height: 180px;
-  background: var(--teal);
-  border-radius: 8px;
-}
-.icon-canvas .note-head {
-  position: absolute;
-  left: 48px;
-  bottom: 40px;
-  width: 140px;
-  height: 100px;
-  background: var(--teal);
-  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  transform: rotate(-20deg);
-}
-.icon-canvas .note-flag {
-  position: absolute;
-  right: 72px;
-  top: 20px;
-  width: 90px;
-  height: 70px;
-  background: linear-gradient(135deg, var(--teal), rgba(0,229,192,0.4));
-  border-radius: 0 40px 40px 0;
-  opacity: 0.9;
+.icon-canvas .icon-dog {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* Round icon variant */
