@@ -49,6 +49,7 @@ import io.karpilabs.simplemp3.ui.navigation.Routes
 import io.karpilabs.simplemp3.ui.screens.CollectionDetailScreen
 import io.karpilabs.simplemp3.ui.screens.CreatePlaylistDialog
 import io.karpilabs.simplemp3.ui.screens.FolderDetailScreen
+import io.karpilabs.simplemp3.ui.screens.HiddenSongsScreen
 import io.karpilabs.simplemp3.ui.screens.HomeScreen
 import io.karpilabs.simplemp3.ui.screens.JellyfinScreen
 import io.karpilabs.simplemp3.ui.screens.LibraryFoldersScreen
@@ -224,6 +225,9 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onOpenPlaylist = { navController.navigate(Routes.playlistDetail(it)) },
                         onToggleFavorite = viewModel::toggleFavorite,
                         onAddToPlaylist = { addToPlaylistTrack = it },
+                        onPlayNext = viewModel::playNext,
+                        onAddToQueue = viewModel::addToQueue,
+                        onHide = { viewModel.hideTrack(it.id) },
                         onOpenJellyfin = {
                             if (jellyfinEnabled) navController.navigate(Routes.JELLYFIN)
                         },
@@ -266,6 +270,15 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onThemeModeChange = viewModel::setThemeMode,
                         onOpenQuickConnect = { navController.navigate(Routes.QUICK_CONNECT) },
                         onOpenLibraryFolders = { navController.navigate(Routes.LIBRARY_FOLDERS) },
+                        onOpenHiddenSongs = { navController.navigate(Routes.HIDDEN_SONGS) },
+                    )
+                }
+                composable(Routes.HIDDEN_SONGS) {
+                    val hiddenTracks by viewModel.hiddenTracks.collectAsStateWithLifecycle()
+                    HiddenSongsScreen(
+                        tracks = hiddenTracks,
+                        onBack = { navController.popBackStack() },
+                        onUnhide = { viewModel.unhideTrack(it.id) },
                     )
                 }
                 composable(Routes.LIBRARY_FOLDERS) {
@@ -377,6 +390,9 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onPlayTrack = { track, queue -> viewModel.playTrack(track, queue) },
                         onToggleFavorite = viewModel::toggleFavorite,
                         onAddToPlaylist = { addToPlaylistTrack = it },
+                        onPlayNext = viewModel::playNext,
+                        onAddToQueue = viewModel::addToQueue,
+                        onHide = { viewModel.hideTrack(it.id) },
                     )
                 }
                 composable(Routes.LIBRARY) {
@@ -399,6 +415,9 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onOpenFolder = { navController.navigate(Routes.folderDetail(it)) },
                         onToggleFavorite = viewModel::toggleFavorite,
                         onAddToPlaylist = { addToPlaylistTrack = it },
+                        onPlayNext = viewModel::playNext,
+                        onAddToQueue = viewModel::addToQueue,
+                        onHide = { viewModel.hideTrack(it.id) },
                     )
                 }
                 composable(Routes.PLAYLISTS) {
@@ -437,6 +456,7 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onPlayNext = viewModel::playNext,
                         onAddToQueue = viewModel::addToQueue,
                         onAddToPlaylist = { addToPlaylistTrack = it },
+                        onHide = { viewModel.hideTrack(it.id) },
                         libraryTracks = libraryTracks,
                         onAddTracks = { viewModel.addToPlaylist(playlistId, it) },
                     )
@@ -509,6 +529,9 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onPlayTrack = { viewModel.playTrack(it, folderTracks) },
                         onToggleFavorite = viewModel::toggleFavorite,
                         onAddToPlaylist = { addToPlaylistTrack = it },
+                        onPlayNext = viewModel::playNext,
+                        onAddToQueue = viewModel::addToQueue,
+                        onHide = { viewModel.hideTrack(it.id) },
                     )
                 }
             }

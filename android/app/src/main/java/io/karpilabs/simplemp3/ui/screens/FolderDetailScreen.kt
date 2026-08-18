@@ -31,6 +31,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import io.karpilabs.simplemp3.data.local.FolderBrowser
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.player.PlayerUiState
+import io.karpilabs.simplemp3.ui.components.TrackActionsMenu
 import io.karpilabs.simplemp3.ui.components.TrackRow
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
@@ -58,8 +63,12 @@ fun FolderDetailScreen(
     onPlayTrack: (TrackEntity) -> Unit,
     onToggleFavorite: (Long) -> Unit,
     onAddToPlaylist: (TrackEntity) -> Unit = {},
+    onPlayNext: (TrackEntity) -> Unit = {},
+    onAddToQueue: (TrackEntity) -> Unit = {},
+    onHide: (TrackEntity) -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
+    var actionTrack by remember { mutableStateOf<TrackEntity?>(null) }
     val title = FolderBrowser.displayName(folderPath).ifBlank { "Folders" }
     val subtitle = folderPath.ifBlank { "Browse by path" }
 
@@ -150,13 +159,26 @@ fun FolderDetailScreen(
                     )
                 }
                 items(tracks, key = { it.id }) { track ->
-                    TrackRow(
-                        track = track,
-                        isPlaying = playerState.currentMediaId == "track:${track.id}",
-                        onClick = { onPlayTrack(track) },
-                        onLongClick = { onAddToPlaylist(track) },
-                        onFavoriteClick = { onToggleFavorite(track.id) },
-                    )
+                    Box {
+                        TrackRow(
+                            track = track,
+                            isPlaying = playerState.currentMediaId == "track:${track.id}",
+                            onClick = { onPlayTrack(track) },
+                            onLongClick = { actionTrack = track },
+                            onFavoriteClick = { onToggleFavorite(track.id) },
+                        )
+                        TrackActionsMenu(
+                            expanded = actionTrack?.id == track.id,
+                            track = actionTrack,
+                            onDismiss = { actionTrack = null },
+                            onPlayNext = onPlayNext,
+                            onAddToQueue = onAddToQueue,
+                            onAddToPlaylist = onAddToPlaylist,
+                            onToggleFavorite = { onToggleFavorite(it.id) },
+                            onHide = onHide,
+                            showNeverCompress = false,
+                        )
+                    }
                 }
             }
 

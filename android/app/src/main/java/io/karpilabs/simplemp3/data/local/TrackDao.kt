@@ -8,11 +8,20 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TrackDao {
-    @Query("SELECT * FROM tracks ORDER BY title COLLATE NOCASE ASC")
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 ORDER BY title COLLATE NOCASE ASC")
     fun getAllTracks(): Flow<List<TrackEntity>>
 
-    @Query("SELECT * FROM tracks ORDER BY title COLLATE NOCASE ASC")
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 ORDER BY title COLLATE NOCASE ASC")
     suspend fun getAllTracksOnce(): List<TrackEntity>
+
+    @Query("SELECT * FROM tracks WHERE isHidden = 1 ORDER BY title COLLATE NOCASE ASC")
+    fun getHiddenTracks(): Flow<List<TrackEntity>>
+
+    @Query("UPDATE tracks SET isHidden = :hidden WHERE id = :id")
+    suspend fun setHidden(
+        id: Long,
+        hidden: Boolean,
+    )
 
     @Query("SELECT * FROM tracks WHERE source = :source ORDER BY title COLLATE NOCASE ASC")
     fun getTracksBySource(source: String): Flow<List<TrackEntity>>
@@ -35,9 +44,10 @@ interface TrackDao {
     @Query(
         """
         SELECT * FROM tracks
-        WHERE title LIKE '%' || :query || '%'
+        WHERE isHidden = 0
+          AND (title LIKE '%' || :query || '%'
            OR artist LIKE '%' || :query || '%'
-           OR album LIKE '%' || :query || '%'
+           OR album LIKE '%' || :query || '%')
         ORDER BY title COLLATE NOCASE ASC
         """,
     )
@@ -46,27 +56,28 @@ interface TrackDao {
     @Query(
         """
         SELECT * FROM tracks
-        WHERE title LIKE '%' || :query || '%'
+        WHERE isHidden = 0
+          AND (title LIKE '%' || :query || '%'
            OR artist LIKE '%' || :query || '%'
-           OR album LIKE '%' || :query || '%'
+           OR album LIKE '%' || :query || '%')
         ORDER BY title COLLATE NOCASE ASC
         """,
     )
     suspend fun searchTracksOnce(query: String): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks ORDER BY dateAdded DESC LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 ORDER BY dateAdded DESC LIMIT :limit")
     fun getRecentlyAdded(limit: Int = 30): Flow<List<TrackEntity>>
 
-    @Query("SELECT * FROM tracks WHERE album = :album ORDER BY trackNumber ASC, title ASC")
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND album = :album ORDER BY trackNumber ASC, title ASC")
     fun getTracksByAlbum(album: String): Flow<List<TrackEntity>>
 
-    @Query("SELECT * FROM tracks WHERE album = :album ORDER BY trackNumber ASC, title ASC")
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND album = :album ORDER BY trackNumber ASC, title ASC")
     suspend fun getTracksByAlbumOnce(album: String): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE artist = :artist ORDER BY album ASC, trackNumber ASC")
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND artist = :artist ORDER BY album ASC, trackNumber ASC")
     fun getTracksByArtist(artist: String): Flow<List<TrackEntity>>
 
-    @Query("SELECT * FROM tracks WHERE artist = :artist ORDER BY album ASC, trackNumber ASC")
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND artist = :artist ORDER BY album ASC, trackNumber ASC")
     suspend fun getTracksByArtistOnce(artist: String): List<TrackEntity>
 
     @Query(
@@ -78,6 +89,7 @@ interface TrackDao {
                MIN(artworkUri) AS artworkUri,
                MIN(albumId) AS albumId
         FROM tracks
+        WHERE isHidden = 0
         GROUP BY album, artist
         ORDER BY album COLLATE NOCASE ASC
         """,
@@ -93,6 +105,7 @@ interface TrackDao {
                MIN(artworkUri) AS artworkUri,
                MIN(albumId) AS albumId
         FROM tracks
+        WHERE isHidden = 0
         GROUP BY album, artist
         ORDER BY album COLLATE NOCASE ASC
         """,
@@ -108,6 +121,7 @@ interface TrackDao {
                MIN(artworkUri) AS artworkUri,
                MIN(artistId) AS albumId
         FROM tracks
+        WHERE isHidden = 0
         GROUP BY artist
         ORDER BY artist COLLATE NOCASE ASC
         """,
@@ -123,6 +137,7 @@ interface TrackDao {
                MIN(artworkUri) AS artworkUri,
                MIN(artistId) AS albumId
         FROM tracks
+        WHERE isHidden = 0
         GROUP BY artist
         ORDER BY artist COLLATE NOCASE ASC
         """,
@@ -165,7 +180,7 @@ interface TrackDao {
     @Query(
         """
         SELECT DISTINCT folderPath FROM tracks
-        WHERE folderPath IS NOT NULL AND folderPath != ''
+        WHERE isHidden = 0 AND folderPath IS NOT NULL AND folderPath != ''
         ORDER BY folderPath COLLATE NOCASE ASC
         """,
     )
@@ -174,7 +189,7 @@ interface TrackDao {
     @Query(
         """
         SELECT DISTINCT folderPath FROM tracks
-        WHERE folderPath IS NOT NULL AND folderPath != ''
+        WHERE isHidden = 0 AND folderPath IS NOT NULL AND folderPath != ''
         ORDER BY folderPath COLLATE NOCASE ASC
         """,
     )
@@ -183,7 +198,7 @@ interface TrackDao {
     @Query(
         """
         SELECT * FROM tracks
-        WHERE folderPath = :folderPath
+        WHERE isHidden = 0 AND folderPath = :folderPath
         ORDER BY title COLLATE NOCASE ASC
         """,
     )
@@ -192,7 +207,7 @@ interface TrackDao {
     @Query(
         """
         SELECT * FROM tracks
-        WHERE folderPath = :folderPath
+        WHERE isHidden = 0 AND folderPath = :folderPath
         ORDER BY title COLLATE NOCASE ASC
         """,
     )

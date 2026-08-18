@@ -63,7 +63,8 @@ struct LibraryScreen: View {
                     isPlaying: app.player.state.current?.id == track.id,
                     onTap: { app.playTrack(track, queue: filteredSongs) },
                     onFavorite: { Task { await app.repository.toggleFavorite(trackId: track.id) } },
-                    onMore: { app.addToPlaylistTrack = track }
+                    onMore: { app.addToPlaylistTrack = track },
+                    onHide: { app.hideTrack(track) }
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -163,7 +164,8 @@ struct CollectionDetailScreen: View {
                     isPlaying: app.player.state.current?.id == track.id,
                     onTap: { app.playTrack(track, queue: tracks) },
                     onFavorite: { Task { await app.repository.toggleFavorite(trackId: track.id) } },
-                    onMore: { app.addToPlaylistTrack = track }
+                    onMore: { app.addToPlaylistTrack = track },
+                    onHide: { app.hideTrack(track) }
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)

@@ -262,7 +262,8 @@ struct QuickConnectScreen: View {
                         track: track,
                         isPlaying: app.player.state.current?.id == track.id,
                         onTap: { app.playTrack(track, queue: imports) },
-                        onMore: { app.addToPlaylistTrack = track }
+                        onMore: { app.addToPlaylistTrack = track },
+                        onHide: { app.hideTrack(track) }
                     )
                     .listRowBackground(Color.clear)
                     .swipeActions(edge: .trailing) {
@@ -329,6 +330,11 @@ struct SettingsScreen: View {
                     Task { await app.repository.scanLibrary(force: true) }
                 }
                 LabeledContent("Tracks", value: "\(app.repository.trackCount)")
+                NavigationLink {
+                    HiddenSongsScreen()
+                } label: {
+                    LabeledContent("Hidden songs", value: "\(app.repository.hiddenTracks.count)")
+                }
             }
 
             Section("About") {
@@ -350,5 +356,47 @@ struct SettingsScreen: View {
         let shortVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
         let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
         return "\(shortVersion) (\(build))"
+    }
+}
+
+struct HiddenSongsScreen: View {
+    @Environment(AppModel.self) private var app
+    @Environment(\.appPalette) private var palette
+
+    var body: some View {
+        List {
+            if app.repository.hiddenTracks.isEmpty {
+                ContentUnavailableView(
+                    "No hidden songs",
+                    systemImage: "eye.slash",
+                    description: Text("Long-press a song and choose “Hide from Library” to keep junk like ringtones out of your library. They'll show up here so you can bring them back.")
+                )
+                .foregroundStyle(palette.textSecondary)
+            } else {
+                ForEach(app.repository.hiddenTracks) { track in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(track.title)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(palette.textPrimary)
+                                .lineLimit(1)
+                            Text(track.artist)
+                                .font(.system(size: 13))
+                                .foregroundStyle(palette.textSecondary)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                        Button("Unhide") {
+                            app.unhideTrack(track)
+                        }
+                        .foregroundStyle(AppColors.accentTeal)
+                    }
+                    .listRowBackground(Color.clear)
+                }
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .navigationTitle("Hidden songs")
     }
 }

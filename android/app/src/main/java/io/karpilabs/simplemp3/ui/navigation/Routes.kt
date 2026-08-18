@@ -15,6 +15,7 @@ object Routes {
     const val ARTIST_DETAIL = "artist/{artistName}"
     const val FOLDER_DETAIL = "folder/{folderPath}"
     const val LIBRARY_FOLDERS = "library_folders"
+    const val HIDDEN_SONGS = "hidden_songs"
 
     fun playlistDetail(id: Long) = "playlist/$id"
 

@@ -52,6 +52,8 @@ struct TrackRowView: View {
     var onTap: () -> Void
     var onFavorite: (() -> Void)?
     var onMore: (() -> Void)?
+    /// Long-press → "Hide from Library". Nil suppresses the context menu entirely.
+    var onHide: (() -> Void)? = nil
 
     @Environment(AppModel.self) private var app
     @Environment(\.appPalette) private var palette
@@ -88,6 +90,32 @@ struct TrackRowView: View {
         .padding(.vertical, 6)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
+        .contextMenu {
+            if onHide != nil {
+                if let onMore {
+                    Button {
+                        onMore()
+                    } label: {
+                        Label("Add to Playlist", systemImage: "text.badge.plus")
+                    }
+                }
+                if let onFavorite {
+                    Button {
+                        onFavorite()
+                    } label: {
+                        Label(
+                            app.repository.favoriteIds.contains(track.id) ? "Unlike" : "Like",
+                            systemImage: app.repository.favoriteIds.contains(track.id) ? "heart.slash" : "heart"
+                        )
+                    }
+                }
+                Button(role: .destructive) {
+                    onHide?()
+                } label: {
+                    Label("Hide from Library", systemImage: "eye.slash")
+                }
+            }
+        }
     }
 }
 

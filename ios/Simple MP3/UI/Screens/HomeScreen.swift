@@ -102,7 +102,8 @@ struct HomeScreen: View {
                     isPlaying: app.player.state.current?.id == track.id,
                     onTap: { app.playTrack(track, queue: app.continueListening) },
                     onFavorite: { Task { await app.repository.toggleFavorite(trackId: track.id) } },
-                    onMore: { app.addToPlaylistTrack = track }
+                    onMore: { app.addToPlaylistTrack = track },
+                    onHide: { app.hideTrack(track) }
                 )
             }
         }
@@ -136,7 +137,8 @@ struct HomeScreen: View {
                     isPlaying: app.player.state.current?.id == track.id,
                     onTap: { app.playTrack(track, queue: app.recentlyAdded) },
                     onFavorite: { Task { await app.repository.toggleFavorite(trackId: track.id) } },
-                    onMore: { app.addToPlaylistTrack = track }
+                    onMore: { app.addToPlaylistTrack = track },
+                    onHide: { app.hideTrack(track) }
                 )
             }
         }

@@ -88,6 +88,7 @@ fun PlaylistDetailScreen(
     onPlayNext: (TrackEntity) -> Unit = {},
     onAddToQueue: (TrackEntity) -> Unit = {},
     onAddToPlaylist: (TrackEntity) -> Unit = {},
+    onHide: (TrackEntity) -> Unit = {},
     libraryTracks: List<TrackEntity> = emptyList(),
     onAddTracks: (List<Long>) -> Unit = {},
 ) {
@@ -334,6 +335,7 @@ fun PlaylistDetailScreen(
                                 onAddToPlaylist = onAddToPlaylist,
                                 onToggleFavorite = { onToggleFavorite(it.id) },
                                 onToggleNeverCompress = { onToggleNeverCompress(it.id) },
+                                onHide = onHide,
                             )
                         }
                         IconButton(onClick = { onRemoveTrack(track.id) }) {

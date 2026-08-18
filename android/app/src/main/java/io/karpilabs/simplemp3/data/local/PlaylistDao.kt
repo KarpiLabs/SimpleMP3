@@ -42,7 +42,7 @@ interface PlaylistDao {
         """
         SELECT t.* FROM tracks t
         INNER JOIN playlist_tracks pt ON t.id = pt.trackId
-        WHERE pt.playlistId = :playlistId
+        WHERE pt.playlistId = :playlistId AND t.isHidden = 0
         ORDER BY pt.position ASC
         """,
     )
@@ -52,7 +52,7 @@ interface PlaylistDao {
         """
         SELECT t.* FROM tracks t
         INNER JOIN playlist_tracks pt ON t.id = pt.trackId
-        WHERE pt.playlistId = :playlistId
+        WHERE pt.playlistId = :playlistId AND t.isHidden = 0
         ORDER BY pt.position ASC
         """,
     )
@@ -161,10 +161,12 @@ interface PlaylistDao {
     @Query(
         """
         SELECT p.*,
-               (SELECT COUNT(*) FROM playlist_tracks pt WHERE pt.playlistId = p.id) AS trackCount,
+               (SELECT COUNT(*) FROM playlist_tracks pt
+                INNER JOIN tracks t ON t.id = pt.trackId
+                WHERE pt.playlistId = p.id AND t.isHidden = 0) AS trackCount,
                (SELECT t.artworkUri FROM playlist_tracks pt
                 INNER JOIN tracks t ON t.id = pt.trackId
-                WHERE pt.playlistId = p.id
+                WHERE pt.playlistId = p.id AND t.isHidden = 0
                 ORDER BY pt.position ASC LIMIT 1) AS firstArtworkUri
         FROM playlists p
         ORDER BY p.isSystem DESC, p.updatedAt DESC
@@ -175,10 +177,12 @@ interface PlaylistDao {
     @Query(
         """
         SELECT p.*,
-               (SELECT COUNT(*) FROM playlist_tracks pt WHERE pt.playlistId = p.id) AS trackCount,
+               (SELECT COUNT(*) FROM playlist_tracks pt
+                INNER JOIN tracks t ON t.id = pt.trackId
+                WHERE pt.playlistId = p.id AND t.isHidden = 0) AS trackCount,
                (SELECT t.artworkUri FROM playlist_tracks pt
                 INNER JOIN tracks t ON t.id = pt.trackId
-                WHERE pt.playlistId = p.id
+                WHERE pt.playlistId = p.id AND t.isHidden = 0
                 ORDER BY pt.position ASC LIMIT 1) AS firstArtworkUri
         FROM playlists p
         ORDER BY p.isSystem DESC, p.updatedAt DESC

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiTethering
 import androidx.compose.material3.HorizontalDivider
@@ -73,6 +74,7 @@ fun SettingsScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     onOpenQuickConnect: () -> Unit = {},
     onOpenLibraryFolders: () -> Unit = {},
+    onOpenHiddenSongs: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val versionLabel =
@@ -178,6 +180,14 @@ fun SettingsScreen(
                     title = "Quick Connect",
                     subtitle = "Host a temporary LAN portal to upload & manage playlists",
                     onClick = onOpenQuickConnect,
+                )
+            }
+            item {
+                SettingsNavRow(
+                    icon = Icons.Rounded.VisibilityOff,
+                    title = "Hidden songs",
+                    subtitle = "Manage songs long-press-hidden from your library",
+                    onClick = onOpenHiddenSongs,
                 )
             }
 

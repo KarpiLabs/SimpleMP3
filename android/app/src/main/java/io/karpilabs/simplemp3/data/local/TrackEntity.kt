@@ -58,6 +58,8 @@ data class TrackEntity(
      * (and keep thawed if currently cold).
      */
     val neverCompress: Boolean = false,
+    /** User hid this track from Songs/Albums/Artists/Search/playlists (e.g. ringtone junk). */
+    val isHidden: Boolean = false,
 ) {
     companion object {
         const val SOURCE_LOCAL = "local"

@@ -56,10 +56,28 @@ actor LibraryStore {
 
     // MARK: - Tracks
 
+    /// Non-hidden tracks only — the choke point every browse/search/playlist query filters through.
+    private func visibleTracks() -> [Track] {
+        tracks.values.filter { !$0.isHidden }
+    }
+
     func allTracks() -> [Track] {
-        tracks.values.sorted {
+        visibleTracks().sorted {
             $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
         }
+    }
+
+    func hiddenTracks() -> [Track] {
+        tracks.values
+            .filter { $0.isHidden }
+            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+    }
+
+    func setHidden(id: String, hidden: Bool) {
+        guard var t = tracks[id] else { return }
+        t.isHidden = hidden
+        tracks[id] = t
+        persist()
     }
 
     func track(id: String) -> Track? { tracks[id] }
@@ -69,13 +87,13 @@ actor LibraryStore {
     }
 
     func tracks(source: TrackSource) -> [Track] {
-        tracks.values
+        visibleTracks()
             .filter { $0.source == source }
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
     }
 
     func recentlyAdded(limit: Int = 40) -> [Track] {
-        tracks.values
+        visibleTracks()
             .sorted { $0.dateAdded > $1.dateAdded }
             .prefix(limit)
             .map { $0 }
@@ -135,7 +153,7 @@ actor LibraryStore {
 
     func albums() -> [AlbumGroup] {
         var map: [String: (artist: String, count: Int, duration: Int64, art: String?)] = [:]
-        for t in tracks.values {
+        for t in visibleTracks() {
             let key = "\(t.album)|\(t.artist)"
             var cur = map[key] ?? (t.artist, 0, 0, t.artworkUri)
             cur.count += 1
@@ -158,7 +176,7 @@ actor LibraryStore {
 
     func artists() -> [AlbumGroup] {
         var map: [String: (count: Int, duration: Int64, art: String?)] = [:]
-        for t in tracks.values {
+        for t in visibleTracks() {
             var cur = map[t.artist] ?? (0, 0, t.artworkUri)
             cur.count += 1
             cur.duration += t.duration
@@ -178,7 +196,7 @@ actor LibraryStore {
     }
 
     func tracks(album: String, artist: String? = nil) -> [Track] {
-        tracks.values
+        visibleTracks()
             .filter {
                 $0.album == album && (artist == nil || $0.artist == artist)
             }
@@ -189,7 +207,7 @@ actor LibraryStore {
     }
 
     func tracks(artist: String) -> [Track] {
-        tracks.values
+        visibleTracks()
             .filter { $0.artist == artist }
             .sorted {
                 if $0.album != $1.album {
@@ -200,12 +218,12 @@ actor LibraryStore {
     }
 
     func folderPaths() -> [String] {
-        Array(Set(tracks.values.map(\.folderPath).filter { !$0.isEmpty }))
+        Array(Set(visibleTracks().map(\.folderPath).filter { !$0.isEmpty }))
             .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
     func tracks(folderPath: String) -> [Track] {
-        tracks.values
+        visibleTracks()
             .filter { $0.folderPath == folderPath }
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
     }
@@ -264,7 +282,7 @@ actor LibraryStore {
 
     func tracksForPlaylist(id: String) -> [Track] {
         guard let p = playlists[id] else { return [] }
-        return p.trackIds.compactMap { tracks[$0] }
+        return p.trackIds.compactMap { tracks[$0] }.filter { !$0.isHidden }
     }
 
     @discardableResult

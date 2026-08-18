@@ -25,6 +25,7 @@ final class MusicRepository {
     private(set) var folderPaths: [String] = []
     private(set) var isLoaded = false
     private(set) var favoriteIds: Set<String> = []
+    private(set) var hiddenTracks: [Track] = []
 
     init(preferences: AppPreferences) {
         self.preferences = preferences
@@ -59,6 +60,7 @@ final class MusicRepository {
         jellyfinCount = await store.count(source: .jellyfin)
         youtubeCount = await store.count(source: .youtube)
         folderPaths = await store.folderPaths()
+        hiddenTracks = await store.hiddenTracks()
         if let fav = await store.systemPlaylist(.favorites) {
             favoriteIds = Set(fav.trackIds)
         } else {
@@ -185,6 +187,11 @@ final class MusicRepository {
 
     func isFavorite(trackId: String) async -> Bool {
         await store.isFavorite(trackId: trackId)
+    }
+
+    func setHidden(trackId: String, hidden: Bool) async {
+        await store.setHidden(id: trackId, hidden: hidden)
+        await refresh()
     }
 
     func recordPlay(trackId: String) async {

@@ -110,6 +110,14 @@ final class AppModel {
         player.play(tracks: tracks, startIndex: 0)
     }
 
+    func hideTrack(_ track: Track) {
+        Task { await repository.setHidden(trackId: track.id, hidden: true) }
+    }
+
+    func unhideTrack(_ track: Track) {
+        Task { await repository.setHidden(trackId: track.id, hidden: false) }
+    }
+
     var palette: AppPalette {
         palette(for: UITraitCollection.current.userInterfaceStyle == .light ? .light : .dark)
     }

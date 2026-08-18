@@ -38,6 +38,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +55,7 @@ import io.karpilabs.simplemp3.player.PlayerUiState
 import io.karpilabs.simplemp3.ui.components.AlbumArt
 import io.karpilabs.simplemp3.ui.components.PlaylistCard
 import io.karpilabs.simplemp3.ui.components.SectionHeader
+import io.karpilabs.simplemp3.ui.components.TrackActionsMenu
 import io.karpilabs.simplemp3.ui.components.TrackRow
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.AccentViolet
@@ -78,6 +83,9 @@ fun HomeScreen(
     onOpenPlaylist: (Long) -> Unit,
     onToggleFavorite: (Long) -> Unit,
     onAddToPlaylist: (TrackEntity) -> Unit = {},
+    onPlayNext: (TrackEntity) -> Unit = {},
+    onAddToQueue: (TrackEntity) -> Unit = {},
+    onHide: (TrackEntity) -> Unit = {},
     onOpenJellyfin: () -> Unit = {},
     onOpenTools: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
@@ -88,6 +96,7 @@ fun HomeScreen(
     onSkipPrevious: () -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
+    var actionTrack by remember { mutableStateOf<TrackEntity?>(null) }
     val greeting = rememberGreeting()
     val showJellyfin = jellyfinEnabled
     val jfCount = if (showJellyfin) jellyfinCount else 0
@@ -314,13 +323,26 @@ fun HomeScreen(
                     )
                 }
                 items(continueListening.take(10), key = { "cl_${it.id}" }) { track ->
-                    TrackRow(
-                        track = track,
-                        isPlaying = playerState.currentMediaId == "track:${track.id}",
-                        onClick = { onPlayTrack(track, continueListening) },
-                        onLongClick = { onAddToPlaylist(track) },
-                        onFavoriteClick = { onToggleFavorite(track.id) },
-                    )
+                    Box {
+                        TrackRow(
+                            track = track,
+                            isPlaying = playerState.currentMediaId == "track:${track.id}",
+                            onClick = { onPlayTrack(track, continueListening) },
+                            onLongClick = { actionTrack = track },
+                            onFavoriteClick = { onToggleFavorite(track.id) },
+                        )
+                        TrackActionsMenu(
+                            expanded = actionTrack?.id == track.id,
+                            track = actionTrack,
+                            onDismiss = { actionTrack = null },
+                            onPlayNext = onPlayNext,
+                            onAddToQueue = onAddToQueue,
+                            onAddToPlaylist = onAddToPlaylist,
+                            onToggleFavorite = { onToggleFavorite(it.id) },
+                            onHide = onHide,
+                            showNeverCompress = false,
+                        )
+                    }
                 }
             }
 
@@ -333,13 +355,26 @@ fun HomeScreen(
                     )
                 }
                 items(recentlyAdded.take(12), key = { "ra_${it.id}" }) { track ->
-                    TrackRow(
-                        track = track,
-                        isPlaying = playerState.currentMediaId == "track:${track.id}",
-                        onClick = { onPlayTrack(track, recentlyAdded) },
-                        onLongClick = { onAddToPlaylist(track) },
-                        onFavoriteClick = { onToggleFavorite(track.id) },
-                    )
+                    Box {
+                        TrackRow(
+                            track = track,
+                            isPlaying = playerState.currentMediaId == "track:${track.id}",
+                            onClick = { onPlayTrack(track, recentlyAdded) },
+                            onLongClick = { actionTrack = track },
+                            onFavoriteClick = { onToggleFavorite(track.id) },
+                        )
+                        TrackActionsMenu(
+                            expanded = actionTrack?.id == track.id,
+                            track = actionTrack,
+                            onDismiss = { actionTrack = null },
+                            onPlayNext = onPlayNext,
+                            onAddToQueue = onAddToQueue,
+                            onAddToPlaylist = onAddToPlaylist,
+                            onToggleFavorite = { onToggleFavorite(it.id) },
+                            onHide = onHide,
+                            showNeverCompress = false,
+                        )
+                    }
                 }
             }
 

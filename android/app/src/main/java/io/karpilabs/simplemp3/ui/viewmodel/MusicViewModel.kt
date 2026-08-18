@@ -78,6 +78,10 @@ class MusicViewModel
             repository.libraryFolderRoots
                 .stateIn(viewModelScope, share, emptySet())
 
+        val hiddenTracks: StateFlow<List<TrackEntity>> =
+            repository.hiddenTracks
+                .stateIn(viewModelScope, share, emptyList())
+
         private val _deviceFolders = MutableStateFlow<List<String>>(emptyList())
         val deviceFolders: StateFlow<List<String>> = _deviceFolders.asStateFlow()
 
@@ -366,6 +370,18 @@ class MusicViewModel
         fun toggleFavorite(trackId: Long) {
             viewModelScope.launch {
                 repository.toggleFavorite(trackId)
+            }
+        }
+
+        fun hideTrack(trackId: Long) {
+            viewModelScope.launch {
+                repository.setHidden(trackId, true)
+            }
+        }
+
+        fun unhideTrack(trackId: Long) {
+            viewModelScope.launch {
+                repository.setHidden(trackId, false)
             }
         }
 

@@ -57,6 +57,15 @@ class MusicRepository
 
         val folderPaths: Flow<List<String>> = trackDao.getDistinctFolderPaths()
 
+        val hiddenTracks: Flow<List<TrackEntity>> = trackDao.getHiddenTracks()
+
+        suspend fun setHidden(
+            trackId: Long,
+            hidden: Boolean,
+        ) {
+            trackDao.setHidden(trackId, hidden)
+        }
+
         val libraryFolderRoots: Flow<Set<String>> = appPreferences.libraryFolderRootsFlow
 
         /** Direct track counts keyed by folderPath (for browser badges). */

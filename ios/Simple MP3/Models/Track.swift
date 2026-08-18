@@ -46,6 +46,8 @@ struct Track: Identifiable, Codable, Hashable, Sendable {
     var isSizeOptimized: Bool
     var lastPlayedAt: Int64
     var neverCompress: Bool
+    /// User hid this track from Home/Library/Search/playlists/CarPlay (e.g. ringtone junk).
+    var isHidden: Bool = false
 
     init(
         id: String = UUID().uuidString,
@@ -70,7 +72,8 @@ struct Track: Identifiable, Codable, Hashable, Sendable {
         coldUri: String? = nil,
         isSizeOptimized: Bool = false,
         lastPlayedAt: Int64 = 0,
-        neverCompress: Bool = false
+        neverCompress: Bool = false,
+        isHidden: Bool = false
     ) {
         self.id = id
         self.title = title

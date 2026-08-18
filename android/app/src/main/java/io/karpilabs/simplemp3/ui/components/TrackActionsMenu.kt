@@ -5,6 +5,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import io.karpilabs.simplemp3.data.local.TrackEntity
+import io.karpilabs.simplemp3.ui.theme.AccentCoral
 
 @Composable
 fun TrackActionsMenu(
@@ -16,8 +17,10 @@ fun TrackActionsMenu(
     onAddToPlaylist: (TrackEntity) -> Unit,
     onToggleFavorite: (TrackEntity) -> Unit = {},
     onToggleNeverCompress: (TrackEntity) -> Unit = {},
+    onHide: (TrackEntity) -> Unit = {},
     showFavorite: Boolean = true,
     showNeverCompress: Boolean = true,
+    showHide: Boolean = true,
 ) {
     DropdownMenu(expanded = expanded && track != null, onDismissRequest = onDismiss) {
         val t = track ?: return@DropdownMenu
@@ -65,6 +68,15 @@ fun TrackActionsMenu(
                 onClick = {
                     onDismiss()
                     onToggleNeverCompress(t)
+                },
+            )
+        }
+        if (showHide) {
+            DropdownMenuItem(
+                text = { Text("Hide from library", color = AccentCoral) },
+                onClick = {
+                    onDismiss()
+                    onHide(t)
                 },
             )
         }
