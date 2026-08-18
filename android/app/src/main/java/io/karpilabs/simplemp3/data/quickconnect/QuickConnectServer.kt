@@ -673,23 +673,36 @@ class QuickConnectServer
                 return runCatching { JSONObject(text) }.getOrNull()
             }
 
-            private fun html(body: String): Response = newFixedLengthResponse(Response.Status.OK, "text/html; charset=utf-8", body)
+            private fun applySecurityHeaders(res: Response): Response =
+                res.apply {
+                    addHeader("X-Content-Type-Options", "nosniff")
+                    addHeader("X-Frame-Options", "DENY")
+                }
+
+            private fun html(body: String): Response =
+                applySecurityHeaders(
+                    newFixedLengthResponse(Response.Status.OK, "text/html; charset=utf-8", body),
+                )
 
             private fun jsonOk(obj: JSONObject): Response =
-                newFixedLengthResponse(
-                    Response.Status.OK,
-                    "application/json; charset=utf-8",
-                    obj.toString(),
-                ).also { it.addHeader("Cache-Control", "no-store") }
+                applySecurityHeaders(
+                    newFixedLengthResponse(
+                        Response.Status.OK,
+                        "application/json; charset=utf-8",
+                        obj.toString(),
+                    ).also { it.addHeader("Cache-Control", "no-store") },
+                )
 
             private fun jsonError(
                 status: Response.Status,
                 message: String,
             ): Response =
-                newFixedLengthResponse(
-                    status,
-                    "application/json; charset=utf-8",
-                    JSONObject().put("error", message).toString(),
+                applySecurityHeaders(
+                    newFixedLengthResponse(
+                        status,
+                        "application/json; charset=utf-8",
+                        JSONObject().put("error", message).toString(),
+                    ),
                 )
         }
     }
