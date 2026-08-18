@@ -8,12 +8,12 @@ plugins {
 
 android {
     namespace = "io.karpilabs.simplemp3"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "io.karpilabs.simplemp3"
         minSdk = 29
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 2
         versionName = "1.0"
 
