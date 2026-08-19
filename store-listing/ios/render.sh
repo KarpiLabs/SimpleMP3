@@ -35,11 +35,11 @@ mkdir -p "$SHOT_IPHONE" "$SHOT_IPAD" "$SHOT_IPHONE_67" "$SHOT_IPHONE_65" \
 
 # Scene metadata: file_stem|shot_class|eyebrow|headline (use <br/>)|subhead
 SCENES=(
-  "01-home|shot-1|Simple MP3|Your music.<br/>Your car. Offline.|Playlists that feel premium — ready for CarPlay"
+  "01-home|shot-1|Simple MP3|Your music.<br/>Your car. Offline.|Playlists that feel premium — ready for the drive"
   "02-playlists|shot-2|Playlists|Organize like<br/>a pro|Create collections and take every mix on the road"
   "03-nowplaying|shot-3|Now Playing|Immersive<br/>playback|Queue, shuffle, resume, and big controls when you need them"
   "04-drive|shot-4|Drive Mode|Built for<br/>the drive|Large tap targets and glanceable now-playing for the road"
-  "05-carplay|shot-5|CarPlay|Dash-ready<br/>control|Browse playlists, Jellyfin Offline &amp; songs from CarPlay"
+  "05-carplay|shot-5|In the car|Dash-ready<br/>control|Browse playlists, Jellyfin Offline &amp; songs from the dash"
   "06-jellyfin|shot-6|Jellyfin|Sync offline<br/>from your server|Import from your LAN media server and play without the cloud"
 )
 

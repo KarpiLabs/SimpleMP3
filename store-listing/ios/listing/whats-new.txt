@@ -1,4 +1,4 @@
-• Apple CarPlay browse tree for playlists, offline, and library
+• In-car browse tree for playlists, offline, and library
 • Drive Mode with large controls for the road
 • Jellyfin offline sync for LAN media servers
 • Quick Connect LAN import and polished night UI

@@ -1,0 +1,37 @@
+2. Devices tested
+• iPhone 17 Pro — physical device, iOS 26.2
+• iPhone 17 Pro Max Simulator — iOS 26.2
+• iPad Pro 13-inch (M5) Simulator — iOS 26.2
+CarPlay tested in Simulator (I/O → External Displays → CarPlay). No login required.
+
+3. Functions and audience
+Jerry's Simple MP3 is a local music player. It plays audio already on the device (Media Library and files in the app Documents folder) with playlists, Liked Songs, Recently Played, search, Now Playing, Drive Mode, Apple CarPlay, and optional Quick Connect LAN file upload.
+
+Audience: people who want an offline player without a streaming account — especially commuters. No ads, no social features, no app account.
+
+Problem/value: streaming apps require a subscription and a cloud catalog. This app keeps the user’s own files on device and plays them on iPhone, iPad, and CarPlay.
+
+4. Setup
+No login. No demo account. No sample files required.
+
+1. Open the app and allow Media Library access.
+2. If the device has music, it appears on Home and Library. Tap a track to play.
+3. If empty, add .mp3/.m4a files via Finder File Sharing or Files into the app Documents folder, or use Tools → Quick Connect.
+4. Playlists: Playlists tab → + to create; add tracks from the more menu.
+5. Drive Mode: car icon on Home, or Tools → Settings.
+6. CarPlay: connect a head unit, or Simulator I/O → External Displays → CarPlay.
+7. Quick Connect (optional): Tools → Quick Connect → Start portal. On another device on the same Wi‑Fi, open the shown URL and enter the 6-digit code from the app. Upload audio. Leaving the screen stops the portal.
+
+5. External services
+No developer backend, analytics, ads, payments, social login, or AI.
+
+Uses only Apple frameworks: Media Library / MediaPlayer, AVPlayer, and CarPlay. Quick Connect is an on-device LAN HTTP portal, not a cloud service.
+
+6. Regional differences
+None. The app works the same in all regions. English UI. Content is the user’s own files.
+
+7. Regulated industry / protected material
+Not a regulated industry. The app does not include a licensed or third-party music catalog. Users play audio they already own on the device. CarPlay uses Apple’s standard audio-app entitlement.
+
+8. Guideline 5.2.5 (metadata)
+Public product-page metadata (name, subtitle, keywords, promotional text, description, What’s New, screenshot captions) does not use Apple product names. CarPlay is implemented only through Apple’s official CarPlay Audio entitlement (com.apple.developer.carplay-audio). These review notes mention CarPlay so you can verify the entitlement; it is not used as branding on the App Store product page.

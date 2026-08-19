@@ -96,7 +96,7 @@ struct CarPlayScreenshotMock: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                Text("CarPlay")
+                Text("In the car")
                     .font(.title2.bold())
                     .foregroundStyle(AppColors.accentTeal)
                 Spacer()
@@ -146,7 +146,7 @@ struct CarPlayScreenshotMock: View {
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(NightBackground())
-        .navigationTitle("CarPlay")
+        .navigationTitle("In the car")
         .navigationBarTitleDisplayMode(.inline)
     }
 

@@ -1,1 +1,1 @@
-mp3,music player,offline,playlist,carplay,jellyfin,local music,drive mode,audio player,car
+playlist,jellyfin,local,drive mode,audio player,car,flac,albums,artists,queue,lan,import

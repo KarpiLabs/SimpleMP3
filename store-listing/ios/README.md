@@ -42,7 +42,7 @@ store-listing/ios/
 | 02 | Playlists | System + user playlists |
 | 03 | Now Playing | Full player with art, scrubber, controls |
 | 04 | Drive Mode | Large car-friendly controls |
-| 05 | CarPlay | In-app CarPlay-style browse panel |
+| 05 | In the car | In-app dash-style browse panel (do not caption with Apple product names) |
 | 06 | Jellyfin | Signed-in server + offline-ready tracks |
 
 ## What to upload
@@ -55,6 +55,12 @@ store-listing/ios/
 - `graphics/AppIcon-1024.png`
 
 Optional marketing chrome: `screenshots/iphone/` and `screenshots/ipad/`.
+
+**Guideline 5.2.5:** do not upload `05-carplay.png` while it still shows Apple product names on screen. Prefer 01–04 + 06, or recapture 05 after the in-app mock title is “In the car”. Never caption screenshots with CarPlay.
+
+## App Store metadata (Guideline 5.2.5)
+
+Copy for App Store Connect is in `listing/`. Do **not** put Apple trademarks (CarPlay, Apple Music, etc.) in the name, subtitle, keywords, promotional text, description, What’s New, or screenshot captions. The app’s CarPlay Audio entitlement is real; describe in-car playback as dash / drive / car display instead. Review notes may name CarPlay so App Review can verify the entitlement.
 
 ## Regenerate
 
