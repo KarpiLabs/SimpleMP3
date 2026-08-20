@@ -74,7 +74,7 @@ class JellyfinClient
                     okHttp.newCall(request).execute().use { response ->
                         val body = response.body?.string().orEmpty()
                         if (!response.isSuccessful) {
-                            throw IOException("Login failed (${response.code}): ${body.take(200)}")
+                            throw IOException("Login failed (${response.code})")
                         }
                         val parsed =
                             authAdapter.fromJson(body)
@@ -336,7 +336,7 @@ class JellyfinClient
             okHttp.newCall(request).execute().use { response ->
                 val body = response.body?.string().orEmpty()
                 if (!response.isSuccessful) {
-                    throw IOException("Request failed (${response.code}): ${body.take(200)}")
+                    throw IOException("Request failed (${response.code})")
                 }
                 return adapter.fromJson(body)
             }
