@@ -232,11 +232,6 @@ class LanImportManager
             }
         }
 
-        private fun sanitizeFileName(name: String): String {
-            val base = name.substringAfterLast('/').substringAfterLast('\\')
-            return base.replace(Regex("[^A-Za-z0-9._\\- ]"), "_").take(180).ifBlank { "upload.mp3" }
-        }
-
         private fun extensionOf(name: String): String =
             name
                 .substringAfterLast('.', missingDelimiterValue = "mp3")
@@ -246,5 +241,23 @@ class LanImportManager
         companion object {
             private const val MAX_BYTES = 200L * 1024L * 1024L // 200 MB
             val ALLOWED_EXTENSIONS = setOf("mp3", "m4a", "aac", "flac", "ogg", "opus", "wav")
+
+            /**
+             * Sanitizes user-provided filenames to prevent path traversal, hidden file creation,
+             * or unsafe character injection when saving uploaded files.
+             */
+            fun sanitizeFileName(name: String): String {
+                // Extract leaf filename and strip path separators (/ and \)
+                var base = name.substringAfterLast('/').substringAfterLast('\\').trim()
+                // Strip leading dots and spaces to prevent hidden files or path navigation
+                base = base.trimStart('.', ' ')
+                // Sanitize illegal characters
+                base = base.replace(Regex("[^A-Za-z0-9._\\- ]"), "_")
+                // Remove relative path traversal sequences
+                while (base.contains("..")) {
+                    base = base.replace("..", ".")
+                }
+                return base.take(180).trimStart('.', ' ').ifBlank { "upload.mp3" }
+            }
         }
     }
