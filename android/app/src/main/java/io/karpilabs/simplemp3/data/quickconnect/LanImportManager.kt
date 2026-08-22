@@ -228,7 +228,12 @@ class LanImportManager
         private fun deleteFileUri(uri: String) {
             runCatching {
                 val path = Uri.parse(uri).path ?: return
-                File(path).delete()
+                val targetFile = File(path).canonicalFile
+                val allowedDir = audioDir().canonicalFile
+                // Ensure target file is within the dedicated LAN audio directory to prevent path traversal
+                if (targetFile.canonicalPath.startsWith(allowedDir.canonicalPath + File.separator)) {
+                    targetFile.delete()
+                }
             }
         }
 
