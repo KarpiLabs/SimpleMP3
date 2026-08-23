@@ -441,7 +441,6 @@ final class QuickConnectServer {
         Content-Type: \(contentType)\r
         Content-Length: \(payload.count)\r
         Connection: close\r
-        Access-Control-Allow-Origin: *\r
         \(extra)\r
 
         """
