@@ -37,4 +37,10 @@ class LanImportManagerTest {
         assertEquals("passwd.mp3", LanImportManager.sanitizeFileName("/etc/passwd.mp3"))
         assertEquals("config.txt", LanImportManager.sanitizeFileName("../../../sys/config.txt"))
     }
+
+    @Test
+    fun testSanitizeFileName_specialCharactersAndLongNames() {
+        assertEquals("song_name__.mp3", LanImportManager.sanitizeFileName("song<name>?.mp3"))
+        assertEquals("test__file.mp3", LanImportManager.sanitizeFileName("test$#file.mp3"))
+    }
 }
