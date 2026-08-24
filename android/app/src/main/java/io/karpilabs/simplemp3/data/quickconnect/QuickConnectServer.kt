@@ -677,6 +677,11 @@ class QuickConnectServer
                 res.apply {
                     addHeader("X-Content-Type-Options", "nosniff")
                     addHeader("X-Frame-Options", "DENY")
+                    addHeader("X-XSS-Protection", "1; mode=block")
+                    addHeader(
+                        "Content-Security-Policy",
+                        "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'",
+                    )
                 }
 
             private fun html(body: String): Response =
