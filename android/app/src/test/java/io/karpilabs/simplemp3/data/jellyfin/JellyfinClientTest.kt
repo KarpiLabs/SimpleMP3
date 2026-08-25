@@ -80,4 +80,60 @@ class JellyfinClientTest {
         assertEquals("Request failed (500)", exceptionMessage)
         assertFalse(exceptionMessage.contains(sensitiveBody))
     }
+
+    @Test
+    fun `streamUrl and imageUrl encode special characters in parameters`() {
+        val client = JellyfinClient(OkHttpClient(), moshi)
+        val session = JellyfinSession(
+            serverUrl = "http://localhost:8096",
+            accessToken = "token/with+special=chars&more",
+            userId = "user@domain/123",
+            userName = "test",
+            serverId = "server123",
+            deviceId = "dev123"
+        )
+        val item = JellyfinItem(id = "item/id#123", imageTags = mapOf("Primary" to "tag1"))
+
+        val streamUrl = client.streamUrl(session, "item/id#123")
+        assertEquals(
+            "http://localhost:8096/Audio/item%2Fid%23123/stream?static=true&api_key=token%2Fwith%2Bspecial%3Dchars%26more",
+            streamUrl
+        )
+
+        val imageUrl = client.imageUrl(session, item)
+        assertEquals(
+            "http://localhost:8096/Items/item%2Fid%23123/Images/Primary?maxWidth=400&quality=85&api_key=token%2Fwith%2Bspecial%3Dchars%26more",
+            imageUrl
+        )
+    }
+
+    @Test
+    fun `getAlbums encodes userId in request url`() = runTest {
+        var requestedUrl = ""
+        val mockInterceptor = Interceptor { chain ->
+            requestedUrl = chain.request().url.toString()
+            Response.Builder()
+                .request(chain.request())
+                .protocol(Protocol.HTTP_1_1)
+                .code(200)
+                .message("OK")
+                .body("""{"Items":[],"TotalRecordCount":0}""".toResponseBody("application/json".toMediaType()))
+                .build()
+        }
+        val okHttpClient = OkHttpClient.Builder().addInterceptor(mockInterceptor).build()
+        val client = JellyfinClient(okHttpClient, moshi)
+
+        val session = JellyfinSession(
+            serverUrl = "http://localhost:8096",
+            accessToken = "token123",
+            userId = "user@domain/special",
+            userName = "test",
+            serverId = "server123",
+            deviceId = "dev123"
+        )
+
+        val result = client.getAlbums(session)
+        assertTrue(result.isSuccess)
+        assertTrue(requestedUrl.contains("/Users/user%40domain%2Fspecial/Items"))
+    }
 }
