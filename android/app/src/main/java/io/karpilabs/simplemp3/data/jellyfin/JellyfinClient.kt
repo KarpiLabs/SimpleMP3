@@ -123,7 +123,7 @@ class JellyfinClient
                     if (!searchTerm.isNullOrBlank()) {
                         params += "SearchTerm=${enc(searchTerm)}"
                     }
-                    val url = "${session.serverUrl}/Users/${session.userId}/Items?${params.joinToString("&")}"
+                    val url = "${session.serverUrl}/Users/${enc(session.userId)}/Items?${params.joinToString("&")}"
                     getJson(session, url, queryAdapter) ?: QueryResult()
                 }
             }
@@ -138,7 +138,7 @@ class JellyfinClient
                     val url =
                         buildString {
                             append(session.serverUrl)
-                            append("/Users/${session.userId}/Items?")
+                            append("/Users/${enc(session.userId)}/Items?")
                             append("IncludeItemTypes=MusicAlbum&Recursive=true")
                             append("&SortBy=SortName&SortOrder=Ascending")
                             append("&StartIndex=$startIndex&Limit=$limit")
@@ -158,7 +158,7 @@ class JellyfinClient
                     val url =
                         buildString {
                             append(session.serverUrl)
-                            append("/Users/${session.userId}/Items?")
+                            append("/Users/${enc(session.userId)}/Items?")
                             append("ParentId=${enc(albumId)}")
                             append("&IncludeItemTypes=Audio")
                             append("&Recursive=true")
@@ -181,7 +181,7 @@ class JellyfinClient
                     val url =
                         buildString {
                             append(session.serverUrl)
-                            append("/Users/${session.userId}/Items?")
+                            append("/Users/${enc(session.userId)}/Items?")
                             append("IncludeItemTypes=Playlist&Recursive=true")
                             append("&SortBy=SortName&SortOrder=Ascending")
                             append("&StartIndex=$startIndex&Limit=$limit")
@@ -218,7 +218,7 @@ class JellyfinClient
             withContext(Dispatchers.IO) {
                 runCatching {
                     val url =
-                        "${session.serverUrl}/Users/${session.userId}/Items/${enc(itemId)}" +
+                        "${session.serverUrl}/Users/${enc(session.userId)}/Items/${enc(itemId)}" +
                             "?Fields=BasicSyncInfo,PrimaryImageAspectRatio,MediaSources,Path"
                     getJson(session, url, itemAdapter)
                         ?: throw IOException("Item not found")
@@ -236,13 +236,13 @@ class JellyfinClient
                     !item.albumId.isNullOrBlank() && !item.albumPrimaryImageTag.isNullOrBlank() -> item.albumId
                     else -> return null
                 }
-            return "${session.serverUrl}/Items/$imageItemId/Images/Primary?maxWidth=$maxWidth&quality=85&api_key=${session.accessToken}"
+            return "${session.serverUrl}/Items/${enc(imageItemId)}/Images/Primary?maxWidth=$maxWidth&quality=85&api_key=${enc(session.accessToken)}"
         }
 
         fun streamUrl(
             session: JellyfinSession,
             itemId: String,
-        ): String = "${session.serverUrl}/Audio/$itemId/stream?static=true&api_key=${session.accessToken}"
+        ): String = "${session.serverUrl}/Audio/${enc(itemId)}/stream?static=true&api_key=${enc(session.accessToken)}"
 
         suspend fun downloadToFile(
             session: JellyfinSession,
@@ -342,5 +342,5 @@ class JellyfinClient
             }
         }
 
-        private fun enc(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8.name())
+        private fun enc(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8.name()).replace("+", "%20")
     }
