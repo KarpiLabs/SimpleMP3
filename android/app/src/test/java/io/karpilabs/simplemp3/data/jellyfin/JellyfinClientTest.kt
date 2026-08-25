@@ -100,6 +100,12 @@ class JellyfinClientTest {
             streamUrl
         )
 
+        val streamUrlWithSpace = client.streamUrl(session, "item id")
+        assertEquals(
+            "http://localhost:8096/Audio/item%20id/stream?static=true&api_key=token%2Fwith%2Bspecial%3Dchars%26more",
+            streamUrlWithSpace
+        )
+
         val imageUrl = client.imageUrl(session, item)
         assertEquals(
             "http://localhost:8096/Items/item%2Fid%23123/Images/Primary?maxWidth=400&quality=85&api_key=token%2Fwith%2Bspecial%3Dchars%26more",
