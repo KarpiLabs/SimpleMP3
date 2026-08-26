@@ -9,6 +9,7 @@ import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.PlaylistWithMeta
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
+import io.karpilabs.simplemp3.data.prefs.BufferProfile
 import io.karpilabs.simplemp3.data.prefs.ResumeSnapshot
 import io.karpilabs.simplemp3.data.prefs.ThemeMode
 import io.karpilabs.simplemp3.data.repository.MusicRepository
@@ -132,6 +133,10 @@ class MusicViewModel
             appPreferences.themeModeFlow
                 .stateIn(viewModelScope, share, ThemeMode.SYSTEM)
 
+        val bufferProfile: StateFlow<BufferProfile> =
+            appPreferences.bufferProfileFlow
+                .stateIn(viewModelScope, share, BufferProfile.BALANCED)
+
         private val _searchQuery = MutableStateFlow("")
         val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
@@ -206,6 +211,12 @@ class MusicViewModel
         fun setLargeFileOptimize(enabled: Boolean) {
             viewModelScope.launch {
                 appPreferences.setLargeFileOptimize(enabled)
+            }
+        }
+
+        fun setBufferProfile(profile: BufferProfile) {
+            viewModelScope.launch {
+                appPreferences.setBufferProfile(profile)
             }
         }
 

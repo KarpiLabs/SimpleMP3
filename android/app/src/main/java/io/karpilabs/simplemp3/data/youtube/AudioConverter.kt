@@ -57,6 +57,57 @@ object AudioConverter {
             audioArgs = "-c:a libmp3lame -b:a ${bitrateKbps.coerceIn(64, 320)}k ",
         )
 
+    /**
+     * Save a network stream (progressive URL or HLS `.m3u8`) to a local `.m4a` by
+     * stream-copying the audio — no re-encode, so it's fast and lossless. Requires
+     * an FFmpeg build with network protocol (https/tls) support; HLS segments are
+     * typically ADTS AAC, so [aac_adtstoasc] is applied for a valid MP4/M4A.
+     *
+     * @param input a remote URL or a local file path FFmpeg can read
+     * @return the [outputM4a] on success
+     */
+    fun remuxToM4a(
+        input: String,
+        outputM4a: File,
+        metadata: Metadata,
+    ): Result<File> {
+        outputM4a.parentFile?.mkdirs()
+        outputM4a.delete()
+
+        val cmd =
+            buildString {
+                append("-y ")
+                append("-i ").append(shellQuote(input)).append(' ')
+                append("-map 0:a:0 ")
+                append("-c:a copy ")
+                // HLS segments are usually ADTS AAC; convert to ASC for a valid MP4 container.
+                append("-bsf:a aac_adtstoasc ")
+                append("-movflags +faststart ")
+                append("-id3v2_version 3 ")
+                append("-metadata title=").append(shellQuote(metadata.title)).append(' ')
+                append("-metadata artist=").append(shellQuote(metadata.artist)).append(' ')
+                append("-metadata album=").append(shellQuote(metadata.album)).append(' ')
+                append(shellQuote(outputM4a.absolutePath))
+            }
+
+        val session = FFmpegKit.execute(cmd)
+        val code = session.returnCode
+        return when {
+            ReturnCode.isSuccess(code) && outputM4a.exists() && outputM4a.length() > 0L ->
+                Result.success(outputM4a)
+            ReturnCode.isCancel(code) ->
+                Result.failure(IllegalStateException("Save cancelled"))
+            else -> {
+                outputM4a.delete()
+                val fail =
+                    session.failStackTrace?.takeIf { it.isNotBlank() }
+                        ?: session.output?.takeLast(400)
+                        ?: "FFmpeg failed (code=${code?.value})"
+                Result.failure(IllegalStateException(fail))
+            }
+        }
+    }
+
     private fun convertToMp3Internal(
         input: File,
         outputMp3: File,

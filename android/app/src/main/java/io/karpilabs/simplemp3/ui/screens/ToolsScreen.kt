@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material.icons.rounded.WifiTethering
 import androidx.compose.material3.Icon
@@ -37,6 +38,7 @@ import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 @Composable
 fun ToolsScreen(
     onOpenYoutube: () -> Unit,
+    onOpenStreams: () -> Unit,
     onOpenQuickConnect: () -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
@@ -73,6 +75,23 @@ fun ToolsScreen(
                         ),
                     ),
                 onClick = onOpenYoutube,
+            )
+        }
+
+        item {
+            ToolsFeatureCard(
+                icon = Icons.Rounded.Podcasts,
+                title = "Streams",
+                subtitle = "Play or save an .m3u8 / HLS audio stream",
+                brush =
+                    Brush.horizontalGradient(
+                        listOf(
+                            AccentTeal.copy(alpha = 0.3f),
+                            palette.elevated,
+                            AccentViolet.copy(alpha = 0.18f),
+                        ),
+                    ),
+                onClick = onOpenStreams,
             )
         }
 

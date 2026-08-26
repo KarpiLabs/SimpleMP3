@@ -39,6 +39,11 @@ object MediaIds {
     /** Prefix for “shuffle then play this collection” actions. */
     const val SHUFFLE_PREFIX = "shuffle:"
 
+    /** Ad-hoc live network stream not backed by a library track. */
+    const val STREAM_PREFIX = "stream:"
+
+    fun stream(url: String) = "$STREAM_PREFIX$url"
+
     fun playlist(id: Long) = "$PLAYLIST_PREFIX$id"
 
     fun album(name: String) = "$ALBUM_PREFIX${Uri.encode(name)}"
@@ -212,6 +217,37 @@ object MediaItemFactory {
     }
 
     fun fromTracks(tracks: List<TrackEntity>): List<MediaItem> = tracks.map { fromTrack(it) }
+
+    /**
+     * A live network stream (progressive URL or HLS `.m3u8`) played directly, not
+     * backed by a library track. The [MimeTypes.APPLICATION_M3U8] hint lets the HLS
+     * source factory take `.m3u8` URLs that don't carry a helpful extension/header.
+     */
+    @OptIn(UnstableApi::class)
+    fun fromStream(
+        url: String,
+        title: String,
+    ): MediaItem {
+        val metadata =
+            MediaMetadata
+                .Builder()
+                .setTitle(title.ifBlank { "Stream" })
+                .setArtist("Live stream")
+                .setIsPlayable(true)
+                .setIsBrowsable(false)
+                .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                .build()
+        val builder =
+            MediaItem
+                .Builder()
+                .setMediaId(MediaIds.stream(url))
+                .setUri(url)
+                .setMediaMetadata(metadata)
+        if (url.substringBefore('?').endsWith(".m3u8", ignoreCase = true)) {
+            builder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8)
+        }
+        return builder.build()
+    }
 
     @OptIn(UnstableApi::class)
     private fun browsable(

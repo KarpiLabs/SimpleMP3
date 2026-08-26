@@ -60,12 +60,14 @@ import io.karpilabs.simplemp3.ui.screens.QuickConnectScreen
 import io.karpilabs.simplemp3.ui.screens.SearchScreen
 import io.karpilabs.simplemp3.ui.screens.SettingsScreen
 import io.karpilabs.simplemp3.ui.screens.ToolsScreen
+import io.karpilabs.simplemp3.ui.screens.StreamScreen
 import io.karpilabs.simplemp3.ui.screens.YoutubeScreen
 import io.karpilabs.simplemp3.ui.theme.DeepViolet
 import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.viewmodel.JellyfinViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.MusicViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.QuickConnectViewModel
+import io.karpilabs.simplemp3.ui.viewmodel.StreamViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.YoutubeViewModel
 
 private data class TabItem(
@@ -243,11 +245,13 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                 composable(Routes.TOOLS) {
                     ToolsScreen(
                         onOpenYoutube = { navController.navigate(Routes.YOUTUBE) },
+                        onOpenStreams = { navController.navigate(Routes.STREAMS) },
                         onOpenQuickConnect = { navController.navigate(Routes.QUICK_CONNECT) },
                     )
                 }
                 composable(Routes.SETTINGS) {
                     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+                    val bufferProfile by viewModel.bufferProfile.collectAsStateWithLifecycle()
                     SettingsScreen(
                         jellyfinEnabled = jellyfinEnabled,
                         autoDriveModeOnCar = autoDriveModeOnCar,
@@ -258,6 +262,7 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         largeFileOptimize = largeFileOptimize,
                         largeFileColdPack = largeFileColdPack,
                         themeMode = themeMode,
+                        bufferProfile = bufferProfile,
                         onBack = { navController.popBackStack() },
                         onJellyfinEnabledChange = viewModel::setJellyfinEnabled,
                         onAutoDriveModeOnCarChange = viewModel::setAutoDriveModeOnCar,
@@ -268,6 +273,7 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onLargeFileOptimizeChange = viewModel::setLargeFileOptimize,
                         onLargeFileColdPackChange = viewModel::setLargeFileColdPack,
                         onThemeModeChange = viewModel::setThemeMode,
+                        onBufferProfileChange = viewModel::setBufferProfile,
                         onOpenQuickConnect = { navController.navigate(Routes.QUICK_CONNECT) },
                         onOpenLibraryFolders = { navController.navigate(Routes.LIBRARY_FOLDERS) },
                         onOpenHiddenSongs = { navController.navigate(Routes.HIDDEN_SONGS) },
@@ -370,6 +376,26 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onRemove = ytVm::remove,
                         onToggleNeverCompress = ytVm::toggleNeverCompress,
                         onClearAll = ytVm::clearAll,
+                    )
+                }
+                composable(Routes.STREAMS) {
+                    val streamVm: StreamViewModel = hiltViewModel()
+                    val streamUi by streamVm.ui.collectAsStateWithLifecycle()
+                    val streamProgress by streamVm.progress.collectAsStateWithLifecycle()
+                    val savedStreams by streamVm.saved.collectAsStateWithLifecycle()
+
+                    StreamScreen(
+                        ui = streamUi,
+                        progress = streamProgress,
+                        saved = savedStreams,
+                        onBack = { navController.popBackStack() },
+                        onUrlChange = streamVm::setUrl,
+                        onPasteUrl = streamVm::pasteUrl,
+                        onTitleChange = streamVm::setTitle,
+                        onPlayLive = streamVm::playLive,
+                        onSave = streamVm::save,
+                        onPlayTrack = { track, queue -> viewModel.playTrack(track, queue) },
+                        onRemove = streamVm::remove,
                     )
                 }
                 composable(Routes.QUICK_CONNECT) {

@@ -163,6 +163,24 @@ class PlayerConnection
             }
         }
 
+        /**
+         * Play a live network stream URL (progressive or HLS `.m3u8`) immediately,
+         * replacing the current queue. Not persisted as a resumable session.
+         */
+        fun playStreamUrl(
+            url: String,
+            title: String,
+        ) {
+            val cleaned = url.trim()
+            if (cleaned.isBlank()) return
+            val c = controller ?: return
+            lastQueueIds = emptyList()
+            val item = MediaItemFactory.fromStream(cleaned, title)
+            c.setMediaItems(listOf(item), 0, 0L)
+            c.prepare()
+            c.play()
+        }
+
         fun playTrackInQueue(
             tracks: List<TrackEntity>,
             trackId: Long,

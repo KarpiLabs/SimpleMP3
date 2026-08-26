@@ -5,6 +5,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,6 +20,7 @@ object ServiceModule {
     @Singleton
     fun provideExoPlayer(
         @ApplicationContext context: Context,
+        appPreferences: AppPreferences,
     ): ExoPlayer {
         val audioAttributes =
             AudioAttributes
@@ -27,19 +29,17 @@ object ServiceModule {
                 .setUsage(C.USAGE_MEDIA)
                 .build()
 
-        // Larger buffers help movie-length MP3s (seek / rebuffer less often on slow storage).
+        // Larger buffers help movie-length MP3s and flaky stream URLs (seek / rebuffer
+        // less often on slow storage). User-configurable; applied at process start.
+        val buffer = appPreferences.getBufferProfileBlocking()
         val loadControl =
             DefaultLoadControl
                 .Builder()
                 .setBufferDurationsMs(
-                    // minBufferMs
-                    30_000,
-                    // maxBufferMs
-                    180_000,
-                    // bufferForPlaybackMs
-                    2_000,
-                    // bufferForPlaybackAfterRebufferMs
-                    5_000,
+                    buffer.minBufferMs,
+                    buffer.maxBufferMs,
+                    buffer.forPlaybackMs,
+                    buffer.forPlaybackAfterRebufferMs,
                 ).setPrioritizeTimeOverSizeThresholds(true)
                 .setBackBuffer(/* backBufferDurationMs */ 60_000, /* retainBackBufferFromKeyframe */ true)
                 .build()

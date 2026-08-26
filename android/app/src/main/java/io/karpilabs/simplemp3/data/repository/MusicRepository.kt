@@ -55,6 +55,9 @@ class MusicRepository
         val youtubeTracks: Flow<List<TrackEntity>> =
             trackDao.getTracksBySource(TrackEntity.SOURCE_YOUTUBE)
 
+        val streamTracks: Flow<List<TrackEntity>> =
+            trackDao.getTracksBySource(TrackEntity.SOURCE_STREAM)
+
         val folderPaths: Flow<List<String>> = trackDao.getDistinctFolderPaths()
 
         val hiddenTracks: Flow<List<TrackEntity>> = trackDao.getHiddenTracks()

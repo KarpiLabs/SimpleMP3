@@ -5,8 +5,6 @@ import android.content.Intent
 
 import android.util.Log
 import androidx.annotation.OptIn
-import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -82,10 +80,12 @@ class PlaybackService : MediaLibraryService() {
              */
             override fun onPlayerError(error: PlaybackException) {
                 Log.w(TAG, "Playback error on \"${player.currentMediaItem?.mediaId}\": ${error.errorCodeName}", error)
+                // Preserve intent: only resume automatically if playback was actually wanted.
+                val wasPlaying = player.playWhenReady
                 if (player.hasNextMediaItem()) {
                     player.seekToNextMediaItem()
                     player.prepare()
-                    player.play()
+                    if (wasPlaying) player.play()
                 } else {
                     player.pause()
                 }
@@ -96,15 +96,8 @@ class PlaybackService : MediaLibraryService() {
     override fun onCreate() {
         super.onCreate()
 
-        val audioAttributes =
-            AudioAttributes
-                .Builder()
-                .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                .setUsage(C.USAGE_MEDIA)
-                .build()
-
-        player.setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
-        player.setHandleAudioBecomingNoisy(true)
+        // Audio attributes / focus and become-noisy handling are configured once on the
+        // injected ExoPlayer in ServiceModule — no need to re-apply them here.
         // Keep advancing through the queue when a track ends.
         player.repeatMode = Player.REPEAT_MODE_OFF
         player.shuffleModeEnabled = false
