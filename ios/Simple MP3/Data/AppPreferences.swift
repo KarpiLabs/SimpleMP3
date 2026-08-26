@@ -6,6 +6,32 @@
 import Foundation
 import Observation
 
+/// Playback buffer size. Bigger buffers rebuffer less on flaky car networks at the
+/// cost of a longer initial load. `forwardSeconds` feeds
+/// `AVPlayerItem.preferredForwardBufferDuration`. Mirrors Android's BufferProfile.
+enum BufferProfile: String, CaseIterable, Sendable {
+    case small
+    case balanced
+    case large
+
+    var label: String {
+        switch self {
+        case .small: return "Small"
+        case .balanced: return "Balanced"
+        case .large: return "Large"
+        }
+    }
+
+    /// Preferred forward buffer in seconds (0 == system default for balanced).
+    var forwardSeconds: Double {
+        switch self {
+        case .small: return 15
+        case .balanced: return 0
+        case .large: return 60
+        }
+    }
+}
+
 @Observable
 @MainActor
 final class AppPreferences {
@@ -22,6 +48,7 @@ final class AppPreferences {
         static let wifiOnlyDownloads = "wifiOnlyDownloads"
         static let resumeEnabled = "resumeEnabled"
         static let themeMode = "themeMode"
+        static let bufferProfile = "bufferProfile"
         static let lastLibraryScanMs = "lastLibraryScanMs"
         static let resumeSnapshot = "resumeSnapshot"
         static let jellyfinServerUrl = "jellyfinServerUrl"
@@ -61,6 +88,9 @@ final class AppPreferences {
     var themeMode: ThemeMode {
         didSet { defaults.set(themeMode.rawValue, forKey: Key.themeMode) }
     }
+    var bufferProfile: BufferProfile {
+        didSet { defaults.set(bufferProfile.rawValue, forKey: Key.bufferProfile) }
+    }
 
     var jellyfinServerUrl: String {
         didSet { defaults.set(jellyfinServerUrl, forKey: Key.jellyfinServerUrl) }
@@ -95,6 +125,11 @@ final class AppPreferences {
             themeMode = mode
         } else {
             themeMode = .system
+        }
+        if let raw = d.string(forKey: Key.bufferProfile), let profile = BufferProfile(rawValue: raw) {
+            bufferProfile = profile
+        } else {
+            bufferProfile = .balanced
         }
         jellyfinServerUrl = d.string(forKey: Key.jellyfinServerUrl) ?? ""
         jellyfinUser = d.string(forKey: Key.jellyfinUser) ?? ""

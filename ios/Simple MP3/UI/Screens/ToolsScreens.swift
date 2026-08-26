@@ -26,6 +26,15 @@ struct ToolsScreen: View {
                     )
                 }
                 NavigationLink {
+                    StreamsScreen()
+                } label: {
+                    toolRow(
+                        icon: "dot.radiowaves.left.and.right",
+                        title: "Streams",
+                        subtitle: "Play or save an .m3u8 / HLS audio stream"
+                    )
+                }
+                NavigationLink {
                     QuickConnectScreen()
                 } label: {
                     toolRow(
@@ -312,6 +321,18 @@ struct SettingsScreen: View {
                 }
             }
 
+            Section {
+                Picker("Playback buffer", selection: $prefs.bufferProfile) {
+                    ForEach(BufferProfile.allCases, id: \.self) { profile in
+                        Text(profile.label).tag(profile)
+                    }
+                }
+            } header: {
+                Text("Playback")
+            } footer: {
+                Text("Larger buffers rebuffer less on flaky networks (e.g. streams over cellular) at the cost of a longer initial load. Applies to the next track.")
+            }
+
             Section("CarPlay & Drive") {
                 Toggle("Drive Mode", isOn: $prefs.driveMode)
                 Toggle("Auto Drive Mode on CarPlay", isOn: $prefs.autoDriveModeOnCar)
@@ -356,6 +377,147 @@ struct SettingsScreen: View {
         let shortVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
         let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
         return "\(shortVersion) (\(build))"
+    }
+}
+
+struct StreamsScreen: View {
+    @Environment(AppModel.self) private var app
+    @Environment(\.appPalette) private var palette
+
+    @State private var url = ""
+    @State private var title = ""
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+    @State private var saved: [Track] = []
+
+    var body: some View {
+        List {
+            Section {
+                Text("Paste an .m3u8 (HLS) or direct audio URL. Play it live, or save a copy offline (.m4a) for CarPlay.")
+                    .font(.caption)
+                    .foregroundStyle(palette.textSecondary)
+                TextField("https://…/playlist.m3u8", text: $url)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.URL)
+                TextField("Title (optional)", text: $title)
+
+                Button {
+                    app.player.playStream(url: url, title: title)
+                } label: {
+                    Label("Play live", systemImage: "play.fill")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                }
+                .disabled(url.trimmingCharacters(in: .whitespaces).isEmpty || isSaving)
+
+                Button {
+                    Task { await save() }
+                } label: {
+                    if isSaving {
+                        ProgressView().frame(maxWidth: .infinity)
+                    } else {
+                        Label("Save offline", systemImage: "arrow.down.circle")
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .disabled(url.trimmingCharacters(in: .whitespaces).isEmpty || isSaving)
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundStyle(AppColors.accentCoral)
+                }
+            } header: {
+                Text("Stream").foregroundStyle(palette.textMuted)
+            }
+
+            Section {
+                if saved.isEmpty {
+                    Text("No saved streams yet.")
+                        .font(.caption)
+                        .foregroundStyle(palette.textSecondary)
+                } else {
+                    ForEach(saved) { track in
+                        TrackRowView(
+                            track: track,
+                            isPlaying: app.player.state.current?.id == track.id,
+                            onTap: { app.playTrack(track, queue: saved) },
+                            onMore: { app.addToPlaylistTrack = track },
+                            onHide: { app.hideTrack(track) }
+                        )
+                        .listRowBackground(Color.clear)
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                Task {
+                                    await app.repository.deleteTrack(id: track.id)
+                                    await reload()
+                                }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("Saved Streams").foregroundStyle(palette.textMuted)
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .navigationTitle("Streams")
+        .task { await reload() }
+    }
+
+    private func reload() async {
+        saved = await app.repository.tracks(source: .stream)
+    }
+
+    private func save() async {
+        let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+
+        let key = "stream:\(abs(trimmed.hashValue))"
+        let dir = await app.repository.mediaDirectory(for: .stream)
+        let dest = dir.appendingPathComponent("\(abs(trimmed.hashValue)).m4a")
+        let name = title.trimmingCharacters(in: .whitespaces).isEmpty
+            ? defaultTitle(from: trimmed)
+            : title.trimmingCharacters(in: .whitespaces)
+
+        do {
+            let file = try await StreamSaver.save(urlString: trimmed, to: dest)
+            let durMs = await StreamSaver.durationMs(of: file)
+            let track = Track(
+                id: key,
+                title: name,
+                artist: "Stream",
+                album: "Saved Streams",
+                uri: file.absoluteString,
+                duration: durMs,
+                source: .stream,
+                externalId: key,
+                isOffline: true
+            )
+            await app.repository.upsertTrack(track)
+            if let playlist = await app.repository.systemPlaylist(.savedStreams) {
+                await app.repository.addToPlaylist(playlistId: playlist.id, trackId: track.id)
+            }
+            url = ""
+            title = ""
+            await reload()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func defaultTitle(from urlString: String) -> String {
+        let last = urlString
+            .components(separatedBy: "?").first?
+            .components(separatedBy: "/").last?
+            .components(separatedBy: ".").first ?? ""
+        return last.isEmpty ? "Saved stream" : last
     }
 }
 

@@ -46,6 +46,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.rounded.Speed
+import io.karpilabs.simplemp3.data.prefs.BufferProfile
 import io.karpilabs.simplemp3.data.prefs.ThemeMode
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.AccentViolet
@@ -62,6 +64,7 @@ fun SettingsScreen(
     largeFileOptimize: Boolean,
     largeFileColdPack: Boolean,
     themeMode: ThemeMode,
+    bufferProfile: BufferProfile,
     onBack: () -> Unit,
     onJellyfinEnabledChange: (Boolean) -> Unit,
     onAutoDriveModeOnCarChange: (Boolean) -> Unit,
@@ -72,6 +75,7 @@ fun SettingsScreen(
     onLargeFileOptimizeChange: (Boolean) -> Unit,
     onLargeFileColdPackChange: (Boolean) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
+    onBufferProfileChange: (BufferProfile) -> Unit,
     onOpenQuickConnect: () -> Unit = {},
     onOpenLibraryFolders: () -> Unit = {},
     onOpenHiddenSongs: () -> Unit = {},
@@ -231,6 +235,27 @@ fun SettingsScreen(
                         },
                     checked = resumeEnabled,
                     onCheckedChange = onResumeEnabledChange,
+                )
+            }
+            item {
+                SettingsNavRow(
+                    icon = Icons.Rounded.Speed,
+                    title = "Playback buffer",
+                    subtitle =
+                        when (bufferProfile) {
+                            BufferProfile.SMALL -> "Small · faster start, more rebuffering · applies after restart"
+                            BufferProfile.BALANCED -> "Balanced · default · applies after restart"
+                            BufferProfile.LARGE -> "Large · smoothest on flaky streams, more memory · applies after restart"
+                        },
+                    onClick = {
+                        val next =
+                            when (bufferProfile) {
+                                BufferProfile.SMALL -> BufferProfile.BALANCED
+                                BufferProfile.BALANCED -> BufferProfile.LARGE
+                                BufferProfile.LARGE -> BufferProfile.SMALL
+                            }
+                        onBufferProfileChange(next)
+                    },
                 )
             }
 

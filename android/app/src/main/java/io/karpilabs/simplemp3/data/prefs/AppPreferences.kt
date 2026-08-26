@@ -18,6 +18,22 @@ private val Context.appDataStore by preferencesDataStore(name = "app_prefs")
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+/**
+ * Playback buffer size. Bigger buffers rebuffer less on flaky car networks / slow
+ * storage at the cost of RAM and a longer initial load. Values feed ExoPlayer's
+ * DefaultLoadControl (Android) and AVPlayerItem.preferredForwardBufferDuration (iOS).
+ */
+enum class BufferProfile(
+    val minBufferMs: Int,
+    val maxBufferMs: Int,
+    val forPlaybackMs: Int,
+    val forPlaybackAfterRebufferMs: Int,
+) {
+    SMALL(15_000, 60_000, 1_500, 3_000),
+    BALANCED(30_000, 180_000, 2_000, 5_000),
+    LARGE(60_000, 600_000, 2_500, 8_000),
+}
+
 data class ResumeSnapshot(
     val trackIds: List<Long>,
     val index: Int,
@@ -84,6 +100,9 @@ class AppPreferences
 
             /** SYSTEM / LIGHT / DARK — see [ThemeMode]. */
             val THEME_MODE = stringPreferencesKey("theme_mode")
+
+            /** SMALL / BALANCED / LARGE playback buffer — see [BufferProfile]. */
+            val BUFFER_PROFILE = stringPreferencesKey("buffer_profile")
         }
 
         val themeModeFlow: Flow<ThemeMode> =
@@ -96,6 +115,25 @@ class AppPreferences
         suspend fun setThemeMode(mode: ThemeMode) {
             context.appDataStore.edit { it[Keys.THEME_MODE] = mode.name }
         }
+
+        val bufferProfileFlow: Flow<BufferProfile> =
+            context.appDataStore.data.map { prefs ->
+                BufferProfile.entries.firstOrNull { it.name == prefs[Keys.BUFFER_PROFILE] }
+                    ?: BufferProfile.BALANCED
+            }
+
+        suspend fun getBufferProfile(): BufferProfile = bufferProfileFlow.first()
+
+        suspend fun setBufferProfile(profile: BufferProfile) {
+            context.appDataStore.edit { it[Keys.BUFFER_PROFILE] = profile.name }
+        }
+
+        /**
+         * Synchronous read for constructing the ExoPlayer singleton at DI time (before
+         * any coroutine scope exists). Changes to the profile apply on next app start.
+         */
+        fun getBufferProfileBlocking(): BufferProfile =
+            kotlinx.coroutines.runBlocking { getBufferProfile() }
 
         suspend fun getLastLibraryScanMs(): Long =
             context.appDataStore.data
