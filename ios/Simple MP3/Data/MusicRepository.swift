@@ -222,6 +222,7 @@ final class MusicRepository {
         case .jellyfin: return await store.jellyfinDirectory()
         case .youtube: return await store.youtubeDirectory()
         case .lan: return await store.lanDirectory()
+        case .stream: return await store.streamDirectory()
         case .local: return await store.mediaDirectory()
         }
     }

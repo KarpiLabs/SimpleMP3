@@ -110,6 +110,23 @@ final class PlaybackManager {
         play(tracks: q, startIndex: idx)
     }
 
+    /// Play a live network stream URL (progressive or HLS `.m3u8`) directly — AVPlayer
+    /// handles HLS natively. Not saved to the library.
+    func playStream(url: String, title: String) {
+        let cleaned = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty else { return }
+        let track = Track(
+            id: "stream:\(cleaned.hashValue)",
+            title: title.isEmpty ? "Stream" : title,
+            artist: "Live stream",
+            album: "Streams",
+            uri: cleaned,
+            source: .stream,
+            isOffline: false
+        )
+        play(tracks: [track])
+    }
+
     func togglePlayPause() {
         if state.isPlaying {
             pause()
@@ -243,6 +260,12 @@ final class PlaybackManager {
         }
 
         let item = AVPlayerItem(url: url)
+        // User-configurable buffer (parity with Android's DefaultLoadControl); 0 == system default.
+        let forward = preferences?.bufferProfile.forwardSeconds ?? 0
+        if forward > 0 {
+            item.preferredForwardBufferDuration = forward
+        }
+        player.automaticallyWaitsToMinimizeStalling = true
         player.replaceCurrentItem(with: item)
         if positionMs > 0 {
             let t = CMTime(seconds: Double(positionMs) / 1000.0, preferredTimescale: 600)
@@ -252,7 +275,6 @@ final class PlaybackManager {
             player.play()
             state.isPlaying = true
         }
-        state.isBuffering = false
         publishNowPlaying(for: track)
         Task {
             await repository?.recordPlay(trackId: track.id)
@@ -312,6 +334,8 @@ final class PlaybackManager {
             }
         }
         state.isPlaying = player.rate > 0
+        // Reflect real buffering rather than a synchronous guess at load time.
+        state.isBuffering = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
         updateNowPlayingPlayback()
     }
 

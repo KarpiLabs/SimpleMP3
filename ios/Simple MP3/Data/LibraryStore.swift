@@ -414,4 +414,10 @@ actor LibraryStore {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
     }
+
+    func streamDirectory() -> URL {
+        let dir = mediaDirectory().appendingPathComponent("Streams", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
 }

@@ -12,6 +12,8 @@ enum TrackSource: String, Codable, CaseIterable, Sendable {
     case jellyfin
     case youtube
     case lan
+    /// Saved from a network stream (e.g. .m3u8 / HLS) via the Streams tool.
+    case stream
 }
 
 enum StorageState: String, Codable, Sendable {
@@ -113,7 +115,7 @@ struct Track: Identifiable, Codable, Hashable, Sendable {
     }
 
     var isAppOwned: Bool {
-        source == .jellyfin || source == .youtube || source == .lan
+        source == .jellyfin || source == .youtube || source == .lan || source == .stream
     }
 
     var isCold: Bool { storageState == .cold }
@@ -154,6 +156,7 @@ nonisolated enum SystemPlaylist: String, CaseIterable, Sendable {
     case jellyfinOffline = "jellyfin_offline"
     case youtubeDownloads = "youtube_downloads"
     case lanImports = "lan_imports"
+    case savedStreams = "saved_streams"
 
     var displayName: String {
         switch self {
@@ -162,6 +165,7 @@ nonisolated enum SystemPlaylist: String, CaseIterable, Sendable {
         case .jellyfinOffline: return "Jellyfin Offline"
         case .youtubeDownloads: return "Imported Audio"
         case .lanImports: return "LAN Imports"
+        case .savedStreams: return "Saved Streams"
         }
     }
 
@@ -172,6 +176,7 @@ nonisolated enum SystemPlaylist: String, CaseIterable, Sendable {
         case .jellyfinOffline: return "Synced from your Jellyfin server"
         case .youtubeDownloads: return "Imported audio files"
         case .lanImports: return "Uploaded via Quick Connect"
+        case .savedStreams: return "Network streams saved offline"
         }
     }
 }
