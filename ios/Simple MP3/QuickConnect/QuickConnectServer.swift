@@ -323,14 +323,16 @@ final class QuickConnectServer {
         var errors: [[String: String]] = []
 
         for file in files {
-            let ext = (file.filename as NSString).pathExtension.lowercased()
+            let rawName = (file.filename as NSString).lastPathComponent.trimmingCharacters(in: CharacterSet(charactersIn: ". "))
+            let safeName = rawName.isEmpty ? "upload.mp3" : rawName
+            let ext = (safeName as NSString).pathExtension.lowercased()
             if !allowed.contains(ext) {
                 errors.append(["filename": file.filename, "error": "Unsupported type"])
                 continue
             }
             do {
                 let dir = await repository.mediaDirectory(for: .lan)
-                let dest = dir.appendingPathComponent("\(UUID().uuidString)_\(file.filename)")
+                let dest = dir.appendingPathComponent("\(UUID().uuidString)_\(safeName)")
                 try file.data.write(to: dest)
                 var track = await MediaLibraryScanner.metadataTrack(from: dest, source: .lan)
                     ?? Track(
@@ -432,8 +434,17 @@ final class QuickConnectServer {
     ) {
         let reason = status == 200 ? "OK" : "ERR"
         let payload = Data(body.utf8)
-        var extra = ""
+        var headers: [String: String] = [
+            "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "DENY",
+            "X-XSS-Protection": "1; mode=block",
+            "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"
+        ]
         for (key, value) in extraHeaders {
+            headers[key] = value
+        }
+        var extra = ""
+        for (key, value) in headers {
             extra += "\(key): \(value)\r\n"
         }
         let header = """
