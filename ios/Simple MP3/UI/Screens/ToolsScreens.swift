@@ -335,6 +335,7 @@ struct SettingsScreen: View {
 
             Section("CarPlay & Drive") {
                 Toggle("Drive Mode", isOn: $prefs.driveMode)
+                Toggle("Show weather in CarPlay", isOn: $prefs.showCarPlayWeather)
                 Toggle("Auto Drive Mode on CarPlay", isOn: $prefs.autoDriveModeOnCar)
                 Toggle("Auto-resume when car connects", isOn: $prefs.autoResumeOnDrive)
                 Toggle("Pause when car disconnects", isOn: $prefs.pauseOnCarDisconnect)

@@ -168,6 +168,11 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     private func buildHomeTemplate() async -> CPListTemplate {
         var sections: [CPListSection] = []
 
+        var greetingHeader = Formatters.greeting()
+        if app.preferences.showCarPlayWeather, let weather = await WeatherService.shared.getWeatherSummary() {
+            greetingHeader += " · \(weather)"
+        }
+
         let continueTracks = await app.repository.getContinueTracks()
         if !continueTracks.isEmpty {
             let shelf = Array(continueTracks.prefix(8))
@@ -187,7 +192,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
                     completion()
                 }
             }
-            sections.append(CPListSection(items: [row], header: Formatters.greeting(), sectionIndexTitle: nil))
+            sections.append(CPListSection(items: [row], header: greetingHeader, sectionIndexTitle: nil))
         }
 
         let playlists = Array(app.visiblePlaylists.prefix(10))
