@@ -609,13 +609,14 @@ class QuickConnectServer
                 imported: MutableList<TrackEntity>,
                 errors: MutableList<String>,
             ) {
+                val safeName = LanImportManager.sanitizeFileName(originalName)
                 try {
                     FileInputStream(tempFile).use { stream ->
-                        val track = lanImportManager.importStream(stream, originalName, playlistId)
+                        val track = lanImportManager.importStream(stream, safeName, playlistId)
                         imported += track
                     }
                 } catch (e: Exception) {
-                    errors += "$originalName: ${e.message ?: "failed"}"
+                    errors += "$safeName: ${e.message ?: "failed"}"
                 }
             }
 

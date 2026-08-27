@@ -39,6 +39,7 @@ final class AppPreferences {
 
     private enum Key {
         static let driveMode = "driveMode"
+        static let showCarPlayWeather = "showCarPlayWeather"
         static let autoDriveModeOnCar = "autoDriveModeOnCar"
         static let autoResumeOnDrive = "autoResumeOnDrive"
         static let pauseOnCarDisconnect = "pauseOnCarDisconnect"
@@ -60,6 +61,9 @@ final class AppPreferences {
 
     var driveMode: Bool {
         didSet { defaults.set(driveMode, forKey: Key.driveMode) }
+    }
+    var showCarPlayWeather: Bool {
+        didSet { defaults.set(showCarPlayWeather, forKey: Key.showCarPlayWeather) }
     }
     var autoDriveModeOnCar: Bool {
         didSet { defaults.set(autoDriveModeOnCar, forKey: Key.autoDriveModeOnCar) }
@@ -113,6 +117,7 @@ final class AppPreferences {
     init() {
         let d = UserDefaults.standard
         driveMode = d.bool(forKey: Key.driveMode)
+        showCarPlayWeather = d.object(forKey: Key.showCarPlayWeather) as? Bool ?? true
         autoDriveModeOnCar = d.object(forKey: Key.autoDriveModeOnCar) as? Bool ?? true
         autoResumeOnDrive = d.object(forKey: Key.autoResumeOnDrive) as? Bool ?? true
         pauseOnCarDisconnect = d.object(forKey: Key.pauseOnCarDisconnect) as? Bool ?? true

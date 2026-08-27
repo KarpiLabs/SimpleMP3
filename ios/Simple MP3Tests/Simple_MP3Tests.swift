@@ -52,4 +52,10 @@ struct Simple_MP3Tests {
         )
         #expect(Formatters.dataRateLabel(isLive: false, bitrateBps: 128_000, throughputBps: 0) == nil)
     }
+  
+    @MainActor
+    @Test func testShowCarPlayWeatherDefault() async throws {
+        let prefs = AppPreferences()
+        #expect(prefs.showCarPlayWeather == true)
+    }
 }

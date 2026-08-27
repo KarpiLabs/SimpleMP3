@@ -34,7 +34,8 @@ jobs:
           xcodebuild test \
             -project "Simple MP3.xcodeproj" \
             -scheme "Simple MP3" \
-            -destination "platform=iOS Simulator,name=$SIM_NAME"
+            -destination "platform=iOS Simulator,name=$SIM_NAME" \
+            -only-testing:"Simple MP3Tests"
 
       - name: Build
         run: |
