@@ -467,6 +467,14 @@ private fun DriveModeHome(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        playerState.streamRateLabel?.let { rate ->
+            Text(
+                text = rate,
+                style = MaterialTheme.typography.labelLarge,
+                color = AccentTeal,
+                maxLines = 1,
+            )
+        }
 
         Spacer(Modifier.height(28.dp))
 

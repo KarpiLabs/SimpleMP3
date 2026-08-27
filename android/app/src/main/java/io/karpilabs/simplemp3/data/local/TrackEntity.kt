@@ -69,7 +69,7 @@ data class TrackEntity(
         /** Uploaded via Quick Connect LAN portal */
         const val SOURCE_LAN = "lan"
 
-        /** Saved from a network stream (e.g. .m3u8 / HLS) via the Streams tool */
+        /** Bookmarked live network stream (e.g. .m3u8 / HLS) via the Streams tool */
         const val SOURCE_STREAM = "stream"
 
         const val STORAGE_HOT = "hot"
@@ -81,12 +81,17 @@ data class TrackEntity(
     val isLan: Boolean get() = source == SOURCE_LAN
     val isStream: Boolean get() = source == SOURCE_STREAM
     val isCold: Boolean get() = storageState == STORAGE_COLD
+    val isRemoteStream: Boolean
+        get() =
+            source == SOURCE_STREAM &&
+                (uri.startsWith("http://") || uri.startsWith("https://"))
+
     val isAppOwned: Boolean
         get() =
             source == SOURCE_JELLYFIN ||
                 source == SOURCE_YOUTUBE ||
                 source == SOURCE_LAN ||
-                source == SOURCE_STREAM
+                (source == SOURCE_STREAM && !isRemoteStream)
 }
 
 /** Stable negative Long id from an external string id (never collides with MediaStore). */

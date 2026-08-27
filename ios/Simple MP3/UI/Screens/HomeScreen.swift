@@ -202,6 +202,11 @@ struct DriveModeHome: View {
             Text(app.player.state.current?.artist ?? "Tap play to resume")
                 .font(.title3)
                 .foregroundStyle(palette.textSecondary)
+            if let rate = app.player.state.streamRateLabel {
+                Text(rate)
+                    .font(.headline)
+                    .foregroundStyle(AppColors.accentTeal)
+            }
 
             HStack(spacing: 48) {
                 Button { app.player.skipPrevious() } label: {

@@ -21,11 +21,20 @@ struct PlayerUiState: Equatable {
     var shuffle: Bool = false
     var repeatMode: RepeatMode = .off
     var isBuffering: Bool = false
+    var isLive: Bool = false
+    /// Encoded / indicated bitrate of the selected stream variant.
+    var bitrateBps: Int64 = 0
+    /// Observed network throughput from the access log.
+    var throughputBps: Int64 = 0
 
     var hasTrack: Bool { current != nil }
     var progress: Double {
         guard durationMs > 0 else { return 0 }
         return min(1, Double(positionMs) / Double(durationMs))
+    }
+
+    var streamRateLabel: String? {
+        Formatters.dataRateLabel(isLive: isLive, bitrateBps: bitrateBps, throughputBps: throughputBps)
     }
 }
 
@@ -299,6 +308,11 @@ final class PlaybackManager {
         state.durationMs = track.duration
         state.positionMs = positionMs
         state.isBuffering = true
+        state.isLive = track.isRemoteStream
+        if !track.isRemoteStream {
+            state.bitrateBps = 0
+            state.throughputBps = 0
+        }
 
         guard let url = resolveURL(for: track) else {
             state.isBuffering = false
@@ -311,6 +325,11 @@ final class PlaybackManager {
         let forward = preferences?.bufferProfile.forwardSeconds ?? 0
         if forward > 0 {
             item.preferredForwardBufferDuration = forward
+        }
+        if track.isRemoteStream {
+            // Prefer audio-only / lowest-resolution HLS variants so we don't pull video.
+            item.preferredMaximumResolution = CGSize(width: 1, height: 1)
+            item.preferredPeakBitRate = 512_000
         }
         player.automaticallyWaitsToMinimizeStalling = true
         player.replaceCurrentItem(with: item)
@@ -383,7 +402,32 @@ final class PlaybackManager {
         state.isPlaying = player.rate > 0
         // Reflect real buffering rather than a synchronous guess at load time.
         state.isBuffering = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
+        updateStreamStats()
         updateNowPlayingPlayback()
+    }
+
+    /// Cap live streams to audio: disable any video tracks once the item is ready,
+    /// and read indicated/observed bitrate from the access log.
+    private func updateStreamStats() {
+        let item = player.currentItem
+        if state.current?.isRemoteStream == true, let item {
+            for track in item.tracks where track.assetTrack?.mediaType == .video {
+                track.isEnabled = false
+            }
+        }
+        let indefinite = item?.duration.isIndefinite == true
+        let live = state.current?.isRemoteStream == true || indefinite
+        state.isLive = live
+        guard live else {
+            state.bitrateBps = 0
+            state.throughputBps = 0
+            return
+        }
+        guard let event = item?.accessLog()?.events.last else { return }
+        let indicated = event.indicatedBitrate
+        let observed = event.observedBitrate
+        state.bitrateBps = indicated.isFinite && indicated > 0 ? Int64(indicated) : 0
+        state.throughputBps = observed.isFinite && observed > 0 ? Int64(observed) : 0
     }
 
     private func setupEndObserver() {

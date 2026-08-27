@@ -203,13 +203,22 @@ fun NowPlayingSheet(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (state.album.isNotBlank()) {
+                if (state.album.isNotBlank() && !state.isLive) {
                     Text(
                         text = state.album,
                         style = MaterialTheme.typography.bodySmall,
                         color = palette.textMuted,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                state.streamRateLabel?.let { rate ->
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = rate,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = AccentTeal,
+                        maxLines = 1,
                     )
                 }
 
@@ -226,50 +235,60 @@ fun NowPlayingSheet(
                 }
                 var dragging by remember { androidx.compose.runtime.mutableStateOf(false) }
 
-                Slider(
-                    value =
-                        if (dragging) {
-                            sliderPos
-                        } else {
-                            if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else 0f
+                if (state.isLive) {
+                    Text(
+                        text = formatDuration(state.positionMs),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = palette.textMuted,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
+                } else {
+                    Slider(
+                        value =
+                            if (dragging) {
+                                sliderPos
+                            } else {
+                                if (state.durationMs > 0) state.positionMs.toFloat() / state.durationMs else 0f
+                            },
+                        onValueChange = {
+                            dragging = true
+                            sliderPos = it
                         },
-                    onValueChange = {
-                        dragging = true
-                        sliderPos = it
-                    },
-                    onValueChangeFinished = {
-                        dragging = false
-                        onSeek((sliderPos * state.durationMs).toLong())
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors =
-                        SliderDefaults.colors(
-                            thumbColor = AccentTeal,
-                            activeTrackColor = AccentTeal,
-                            inactiveTrackColor = Color.White.copy(alpha = 0.15f),
-                        ),
-                )
+                        onValueChangeFinished = {
+                            dragging = false
+                            onSeek((sliderPos * state.durationMs).toLong())
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors =
+                            SliderDefaults.colors(
+                                thumbColor = AccentTeal,
+                                activeTrackColor = AccentTeal,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.15f),
+                            ),
+                    )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    val shownPos =
-                        if (dragging) {
-                            (sliderPos * state.durationMs).toLong()
-                        } else {
-                            state.positionMs
-                        }
-                    Text(
-                        text = formatDuration(shownPos),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = palette.textMuted,
-                    )
-                    Text(
-                        text = formatDuration(state.durationMs),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = palette.textMuted,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        val shownPos =
+                            if (dragging) {
+                                (sliderPos * state.durationMs).toLong()
+                            } else {
+                                state.positionMs
+                            }
+                        Text(
+                            text = formatDuration(shownPos),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = palette.textMuted,
+                        )
+                        Text(
+                            text = formatDuration(state.durationMs),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = palette.textMuted,
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(20.dp))

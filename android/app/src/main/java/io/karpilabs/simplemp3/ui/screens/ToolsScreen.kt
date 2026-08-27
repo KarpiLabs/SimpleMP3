@@ -82,7 +82,7 @@ fun ToolsScreen(
             ToolsFeatureCard(
                 icon = Icons.Rounded.Podcasts,
                 title = "Streams",
-                subtitle = "Play or save an .m3u8 / HLS audio stream",
+                subtitle = "Play live, or save a stream to a playlist",
                 brush =
                     Brush.horizontalGradient(
                         listOf(

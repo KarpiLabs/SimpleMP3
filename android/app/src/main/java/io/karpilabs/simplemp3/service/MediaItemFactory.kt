@@ -201,19 +201,23 @@ object MediaItemFactory {
                 .setIsPlayable(playable)
                 .setIsBrowsable(false)
                 .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
-                .setDurationMs(track.duration)
                 .apply {
+                    if (track.duration > 0) setDurationMs(track.duration)
                     track.artworkUri?.let { setArtworkUri(it.toUri()) }
                     if (track.trackNumber > 0) setTrackNumber(track.trackNumber)
                     if (track.year > 0) setReleaseYear(track.year)
                 }.build()
 
-        return MediaItem
-            .Builder()
-            .setMediaId(MediaIds.track(track.id))
-            .setUri(track.uri)
-            .setMediaMetadata(metadata)
-            .build()
+        val builder =
+            MediaItem
+                .Builder()
+                .setMediaId(MediaIds.track(track.id))
+                .setUri(track.uri)
+                .setMediaMetadata(metadata)
+        if (track.isRemoteStream && isHlsUrl(track.uri)) {
+            builder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8)
+        }
+        return builder.build()
     }
 
     fun fromTracks(tracks: List<TrackEntity>): List<MediaItem> = tracks.map { fromTrack(it) }
@@ -243,11 +247,14 @@ object MediaItemFactory {
                 .setMediaId(MediaIds.stream(url))
                 .setUri(url)
                 .setMediaMetadata(metadata)
-        if (url.substringBefore('?').endsWith(".m3u8", ignoreCase = true)) {
+        if (isHlsUrl(url)) {
             builder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8)
         }
         return builder.build()
     }
+
+    private fun isHlsUrl(url: String): Boolean =
+        url.substringBefore('#').substringBefore('?').endsWith(".m3u8", ignoreCase = true)
 
     @OptIn(UnstableApi::class)
     private fun browsable(

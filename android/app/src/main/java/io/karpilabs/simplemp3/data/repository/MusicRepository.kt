@@ -154,6 +154,16 @@ class MusicRepository
                     ),
                 )
             }
+            if (playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_STREAMS) == null) {
+                playlistDao.insertPlaylist(
+                    PlaylistEntity(
+                        name = "Saved Streams",
+                        description = "Live streams saved to a playlist",
+                        isSystem = true,
+                        systemType = PlaylistEntity.SYSTEM_STREAMS,
+                    ),
+                )
+            }
         }
 
         /**

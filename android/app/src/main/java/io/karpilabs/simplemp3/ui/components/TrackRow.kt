@@ -85,8 +85,13 @@ fun TrackRow(
                     text =
                         buildString {
                             append(track.artist)
-                            append(" · ")
-                            append(formatDuration(track.duration))
+                            when {
+                                track.isStream && track.duration <= 0 -> append(" · Live")
+                                else -> {
+                                    append(" · ")
+                                    append(formatDuration(track.duration))
+                                }
+                            }
                             when {
                                 track.isYoutube -> append(" · YouTube")
                                 track.isJellyfin -> append(" · Offline")

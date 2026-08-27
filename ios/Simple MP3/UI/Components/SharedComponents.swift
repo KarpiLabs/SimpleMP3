@@ -54,6 +54,7 @@ struct TrackRowView: View {
     var onMore: (() -> Void)?
     /// Long-press → "Hide from Library". Nil suppresses the context menu entirely.
     var onHide: (() -> Void)? = nil
+    var onSetIcon: (() -> Void)? = nil
 
     @Environment(AppModel.self) private var app
     @Environment(\.appPalette) private var palette
@@ -66,7 +67,7 @@ struct TrackRowView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(isPlaying ? palette.accent : palette.textPrimary)
                     .lineLimit(1)
-                Text("\(track.artist) · \(Formatters.duration(track.duration))")
+                Text(track.detailLine)
                     .font(.system(size: 13))
                     .foregroundStyle(palette.textSecondary)
                     .lineLimit(1)
@@ -91,6 +92,13 @@ struct TrackRowView: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
         .contextMenu {
+            if let onSetIcon {
+                Button {
+                    onSetIcon()
+                } label: {
+                    Label("Set icon", systemImage: "photo")
+                }
+            }
             if onHide != nil {
                 if let onMore {
                     Button {
@@ -210,9 +218,9 @@ struct MiniPlayerBar: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(palette.textPrimary)
                         .lineLimit(1)
-                    Text(track.artist)
+                    Text(app.player.state.streamRateLabel ?? track.artist)
                         .font(.system(size: 12))
-                        .foregroundStyle(palette.textSecondary)
+                        .foregroundStyle(app.player.state.isLive ? palette.accent : palette.textSecondary)
                         .lineLimit(1)
                 }
                 Spacer()
@@ -291,25 +299,36 @@ struct NowPlayingSheet: View {
                     Text(state.current?.artist ?? "")
                         .font(.system(size: 16))
                         .foregroundStyle(palette.textSecondary)
+                    if let rate = state.streamRateLabel {
+                        Text(rate)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(palette.accent)
+                    }
                 }
                 .padding(.horizontal)
 
                 VStack(spacing: 8) {
-                    Slider(
-                        value: Binding(
-                            get: { state.progress },
-                            set: { app.player.seek(fraction: $0) }
-                        ),
-                        in: 0...1
-                    )
-                    .tint(palette.accent)
-                    HStack {
+                    if state.isLive {
                         Text(Formatters.duration(state.positionMs))
-                        Spacer()
-                        Text(Formatters.duration(state.durationMs))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(palette.textMuted)
+                    } else {
+                        Slider(
+                            value: Binding(
+                                get: { state.progress },
+                                set: { app.player.seek(fraction: $0) }
+                            ),
+                            in: 0...1
+                        )
+                        .tint(palette.accent)
+                        HStack {
+                            Text(Formatters.duration(state.positionMs))
+                            Spacer()
+                            Text(Formatters.duration(state.durationMs))
+                        }
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(palette.textMuted)
                     }
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(palette.textMuted)
                 }
                 .padding(.horizontal, 24)
 

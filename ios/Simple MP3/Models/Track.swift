@@ -12,7 +12,7 @@ enum TrackSource: String, Codable, CaseIterable, Sendable {
     case jellyfin
     case youtube
     case lan
-    /// Saved from a network stream (e.g. .m3u8 / HLS) via the Streams tool.
+    /// Bookmarked live network stream (e.g. .m3u8 / HLS) via the Streams tool.
     case stream
 }
 
@@ -114,8 +114,24 @@ struct Track: Identifiable, Codable, Hashable, Sendable {
         return URL(string: uri)
     }
 
+    var isRemoteStream: Bool {
+        source == .stream && (uri.hasPrefix("http://") || uri.hasPrefix("https://"))
+    }
+
     var isAppOwned: Bool {
-        source == .jellyfin || source == .youtube || source == .lan || source == .stream
+        switch source {
+        case .jellyfin, .youtube, .lan: return true
+        case .stream: return !isRemoteStream
+        case .local: return false
+        }
+    }
+
+    var detailLine: String {
+        if source == .stream && duration <= 0 {
+            return "\(artist) · Live"
+        }
+        let total = max(0, Int(duration / 1000))
+        return String(format: "%@ · %d:%02d", artist, total / 60, total % 60)
     }
 
     var isCold: Bool { storageState == .cold }
@@ -176,7 +192,7 @@ nonisolated enum SystemPlaylist: String, CaseIterable, Sendable {
         case .jellyfinOffline: return "Synced from your Jellyfin server"
         case .youtubeDownloads: return "Imported audio files"
         case .lanImports: return "Uploaded via Quick Connect"
-        case .savedStreams: return "Network streams saved offline"
+        case .savedStreams: return "Live streams saved to a playlist"
         }
     }
 }

@@ -162,6 +162,12 @@ interface TrackDao {
     @Query("DELETE FROM tracks WHERE id = :id")
     suspend fun deleteTrackById(id: Long)
 
+    @Query("UPDATE tracks SET artworkUri = :artworkUri WHERE id = :id")
+    suspend fun updateArtworkUri(
+        id: Long,
+        artworkUri: String?,
+    )
+
     @Query("SELECT id FROM tracks")
     suspend fun getAllTrackIds(): List<Long>
 

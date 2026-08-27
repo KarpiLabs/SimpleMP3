@@ -56,15 +56,26 @@ fun MiniPlayer(
                 .background(palette.elevated)
                 .clickable(onClick = onExpand),
     ) {
-        LinearProgressIndicator(
-            progress = { progress },
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(2.dp),
-            color = palette.accent,
-            trackColor = palette.card,
-        )
+        if (state.isLive && state.isPlaying) {
+            LinearProgressIndicator(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(2.dp),
+                color = palette.accent,
+                trackColor = palette.card,
+            )
+        } else {
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(2.dp),
+                color = palette.accent,
+                trackColor = palette.card,
+            )
+        }
         Row(
             modifier =
                 Modifier
@@ -88,9 +99,11 @@ fun MiniPlayer(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = state.artist.ifBlank { "Simple MP3" },
+                    text =
+                        state.streamRateLabel
+                            ?: state.artist.ifBlank { "Simple MP3" },
                     style = MaterialTheme.typography.bodySmall,
-                    color = palette.textSecondary,
+                    color = if (state.isLive) palette.accent else palette.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

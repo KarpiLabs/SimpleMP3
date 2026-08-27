@@ -1,10 +1,13 @@
 package io.karpilabs.simplemp3.di
 
 import android.content.Context
+import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import dagger.Module
 import dagger.Provides
@@ -16,6 +19,7 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object ServiceModule {
+    @OptIn(UnstableApi::class)
     @Provides
     @Singleton
     fun provideExoPlayer(
@@ -44,8 +48,20 @@ object ServiceModule {
                 .setBackBuffer(/* backBufferDurationMs */ 60_000, /* retainBackBufferFromKeyframe */ true)
                 .build()
 
+        // This is an audio player: never select video/image tracks. For HLS that
+        // advertises audio-only renditions, ExoPlayer will use those instead of
+        // downloading a video variant.
+        val trackSelector = DefaultTrackSelector(context)
+        trackSelector.setParameters(
+            trackSelector
+                .buildUponParameters()
+                .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
+                .setTrackTypeDisabled(C.TRACK_TYPE_IMAGE, true),
+        )
+
         return ExoPlayer
             .Builder(context)
+            .setTrackSelector(trackSelector)
             .setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
             .setHandleAudioBecomingNoisy(true)
             .setLoadControl(loadControl)
