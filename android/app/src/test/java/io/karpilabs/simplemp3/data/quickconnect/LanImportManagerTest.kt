@@ -36,6 +36,7 @@ class LanImportManagerTest {
     fun testSanitizeFileName_additionalPathTraversalCases() {
         assertEquals("passwd.mp3", LanImportManager.sanitizeFileName("/etc/passwd.mp3"))
         assertEquals("config.txt", LanImportManager.sanitizeFileName("../../../sys/config.txt"))
+        assertEquals("malicious.mp3", LanImportManager.sanitizeFileName("..\\..\\..\\sdcard\\Download\\malicious.mp3"))
     }
 
     @Test
