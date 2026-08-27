@@ -197,15 +197,20 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
 
         let playlists = Array(app.visiblePlaylists.prefix(10))
         if !playlists.isEmpty {
+            let headerText = sections.isEmpty ? greetingHeader : nil
             sections.append(CPListSection(
                 items: playlists.map(playlistItem),
-                header: nil,
+                header: headerText,
                 sectionIndexTitle: nil
             ))
         }
 
         if sections.isEmpty {
-            sections = [CPListSection(items: [CPListItem(text: "No music yet", detailText: "Add music on your iPhone")])]
+            sections = [CPListSection(
+                items: [CPListItem(text: "No music yet", detailText: "Add music on your iPhone")],
+                header: greetingHeader,
+                sectionIndexTitle: nil
+            )]
         }
 
         return CPListTemplate(title: "Home", sections: sections)
