@@ -16,6 +16,7 @@ import io.karpilabs.simplemp3.data.storage.LargeFileStorageManager
 import io.karpilabs.simplemp3.service.MediaIds
 import io.karpilabs.simplemp3.service.MediaItemFactory
 import io.karpilabs.simplemp3.service.PlaybackService
+import io.karpilabs.simplemp3.service.StreamPlayback
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -54,7 +55,13 @@ data class PlayerUiState(
     val currentIndex: Int = 0,
     val queue: List<QueueItemUi> = emptyList(),
     val sleepTimerRemainingMs: Long = 0L,
-)
+    val isLive: Boolean = false,
+    val bitrateBps: Int = 0,
+    val throughputBps: Long = 0L,
+) {
+    val streamRateLabel: String?
+        get() = StreamPlayback.dataRateLabel(isLive, bitrateBps, throughputBps)
+}
 
 @Singleton
 class PlayerConnection
@@ -106,10 +113,24 @@ class PlayerConnection
                 }
             }
 
+        private val extrasListener =
+            object : MediaController.Listener {
+                override fun onExtrasChanged(
+                    controller: MediaController,
+                    extras: android.os.Bundle,
+                ) {
+                    publish(controller)
+                }
+            }
+
         fun connect() {
             if (controller != null || controllerFuture != null) return
             val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
-            val future = MediaController.Builder(context, token).buildAsync()
+            val future =
+                MediaController
+                    .Builder(context, token)
+                    .setListener(extrasListener)
+                    .buildAsync()
             controllerFuture = future
             future.addListener({
                 try {
@@ -410,6 +431,13 @@ class PlayerConnection
                 } else {
                     0L
                 }
+            val extras = (player as? MediaController)?.sessionExtras
+            val live =
+                extras?.getBoolean(StreamPlayback.EXTRA_IS_LIVE) == true ||
+                    StreamPlayback.isLivePlayback(player)
+            val bitrate =
+                extras?.getInt(StreamPlayback.EXTRA_BITRATE_BPS)?.takeIf { it > 0 }
+                    ?: StreamPlayback.selectedAudioBitrateBps(player)
             _state.update {
                 it.copy(
                     isConnected = true,
@@ -431,6 +459,9 @@ class PlayerConnection
                     currentIndex = player.currentMediaItemIndex.coerceAtLeast(0),
                     queue = queue,
                     sleepTimerRemainingMs = remaining,
+                    isLive = live,
+                    bitrateBps = bitrate,
+                    throughputBps = extras?.getLong(StreamPlayback.EXTRA_THROUGHPUT_BPS) ?: 0L,
                 )
             }
         }

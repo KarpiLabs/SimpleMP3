@@ -2,13 +2,15 @@ package io.karpilabs.simplemp3.service
 
 import android.app.PendingIntent
 import android.content.Intent
-
+import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
@@ -20,6 +22,7 @@ import io.karpilabs.simplemp3.data.storage.LargeFileStorageManager
 import io.karpilabs.simplemp3.widget.PlayerWidgetUpdater
 import javax.inject.Inject
 
+@OptIn(UnstableApi::class)
 @AndroidEntryPoint
 class PlaybackService : MediaLibraryService() {
     companion object {
@@ -40,6 +43,8 @@ class PlaybackService : MediaLibraryService() {
 
     private var librarySession: MediaLibrarySession? = null
     private var callback: LibrarySessionCallback? = null
+    private var lastThroughputBps: Long = 0L
+    private var lastStatsPublishMs: Long = 0L
 
     private val playerListener =
         object : Player.Listener {
@@ -58,11 +63,18 @@ class PlaybackService : MediaLibraryService() {
                 if (player.isPlaying) {
                     callback?.recordPlayForCurrent()
                 }
+                lastThroughputBps = 0L
                 PlayerWidgetUpdater.publishFromPlayer(this@PlaybackService, player)
+                publishStreamStats(force = true)
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 PlayerWidgetUpdater.publishFromPlayer(this@PlaybackService, player)
+                publishStreamStats(force = true)
+            }
+
+            override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+                publishStreamStats(force = true)
             }
 
             override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
@@ -102,6 +114,7 @@ class PlaybackService : MediaLibraryService() {
         player.repeatMode = Player.REPEAT_MODE_OFF
         player.shuffleModeEnabled = false
         player.addListener(playerListener)
+        player.addAnalyticsListener(streamStatsListener)
 
         val sessionCallback =
             LibrarySessionCallback(
@@ -131,6 +144,35 @@ class PlaybackService : MediaLibraryService() {
 
         updateCustomLayout()
         PlayerWidgetUpdater.publishFromPlayer(this, player)
+        publishStreamStats(force = true)
+    }
+
+    private val streamStatsListener =
+        object : AnalyticsListener {
+            override fun onBandwidthEstimate(
+                eventTime: AnalyticsListener.EventTime,
+                totalLoadTimeMs: Int,
+                totalBytesLoaded: Long,
+                bitrateEstimate: Long,
+            ) {
+                lastThroughputBps = bitrateEstimate
+                publishStreamStats(force = false)
+            }
+        }
+
+    private fun publishStreamStats(force: Boolean) {
+        val session = librarySession ?: return
+        val now = SystemClock.elapsedRealtime()
+        if (!force && now - lastStatsPublishMs < 400L) return
+        lastStatsPublishMs = now
+        val live = StreamPlayback.isLivePlayback(player)
+        val extras =
+            Bundle().apply {
+                putBoolean(StreamPlayback.EXTRA_IS_LIVE, live)
+                putInt(StreamPlayback.EXTRA_BITRATE_BPS, StreamPlayback.selectedAudioBitrateBps(player))
+                putLong(StreamPlayback.EXTRA_THROUGHPUT_BPS, if (live) lastThroughputBps else 0L)
+            }
+        session.setSessionExtras(extras)
     }
 
     /**
@@ -185,6 +227,7 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onDestroy() {
         player.removeListener(playerListener)
+        player.removeAnalyticsListener(streamStatsListener)
         librarySession?.run {
             // Do not release shared singleton player here if other components need it —
             // stop and clear instead; full release on process death.

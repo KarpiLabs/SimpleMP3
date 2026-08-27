@@ -140,6 +140,24 @@ enum Formatters {
         return String(format: "%d:%02d", m, s)
     }
 
+    static func dataRate(_ bps: Int64) -> String {
+        guard bps > 0 else { return "" }
+        let kbps = (bps + 500) / 1000
+        if kbps >= 1000 {
+            let mbps = Double(kbps) / 1000.0
+            if mbps >= 10 { return String(format: "%d Mbps", Int(mbps)) }
+            return String(format: "%.1f Mbps", mbps)
+        }
+        return "\(kbps) kbps"
+    }
+
+    static func dataRateLabel(isLive: Bool, bitrateBps: Int64, throughputBps: Int64) -> String? {
+        guard isLive else { return nil }
+        let bps = bitrateBps > 0 ? bitrateBps : throughputBps
+        if bps > 0 { return "Live · \(dataRate(bps))" }
+        return "Live"
+    }
+
     static func trackCount(_ n: Int) -> String {
         n == 1 ? "1 song" : "\(n) songs"
     }

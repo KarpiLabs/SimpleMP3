@@ -394,6 +394,9 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onTitleChange = streamVm::setTitle,
                         onPlayLive = streamVm::playLive,
                         onSave = streamVm::save,
+                        onPickArtwork = streamVm::setPendingArtwork,
+                        onClearArtwork = streamVm::clearPendingArtwork,
+                        onSetTrackArtwork = streamVm::setTrackArtwork,
                         onPlayTrack = { track, queue -> viewModel.playTrack(track, queue) },
                         onRemove = streamVm::remove,
                     )

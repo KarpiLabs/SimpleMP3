@@ -3,6 +3,7 @@
 //  Simple MP3
 //
 
+import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
@@ -31,7 +32,7 @@ struct ToolsScreen: View {
                     toolRow(
                         icon: "dot.radiowaves.left.and.right",
                         title: "Streams",
-                        subtitle: "Play or save an .m3u8 / HLS audio stream"
+                        subtitle: "Play live, or save a stream to a playlist"
                     )
                 }
                 NavigationLink {
@@ -389,11 +390,15 @@ struct StreamsScreen: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var saved: [Track] = []
+    @State private var pendingArtURL: URL?
+    @State private var pickerItem: PhotosPickerItem?
+    @State private var showPicker = false
+    @State private var artTarget: Track?
 
     var body: some View {
         List {
             Section {
-                Text("Paste an .m3u8 (HLS) or direct audio URL. Play it live, or save a copy offline (.m4a) for CarPlay.")
+                Text("Paste an .m3u8 (HLS) or direct audio URL. Play it live, or save the stream to the Saved Streams playlist — the live URL is kept, nothing is downloaded. We'll grab a thumbnail when we can, or you can set a custom icon.")
                     .font(.caption)
                     .foregroundStyle(palette.textSecondary)
                 TextField("https://…/playlist.m3u8", text: $url)
@@ -401,6 +406,35 @@ struct StreamsScreen: View {
                     .autocorrectionDisabled()
                     .keyboardType(.URL)
                 TextField("Title (optional)", text: $title)
+
+                Button {
+                    artTarget = nil
+                    showPicker = true
+                } label: {
+                    HStack {
+                        if let pendingArtURL, let img = UIImage(contentsOfFile: pendingArtURL.path) {
+                            Image(uiImage: img)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 44, height: 44)
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        } else {
+                            Image(systemName: "photo.badge.plus")
+                                .font(.title3)
+                                .frame(width: 44, height: 44)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(pendingArtURL == nil ? "Icon (optional)" : "Custom icon set")
+                            Text(pendingArtURL == nil
+                                 ? "Pick one, or we'll try the stream's thumbnail"
+                                 : "Tap to change")
+                                .font(.caption)
+                                .foregroundStyle(palette.textSecondary)
+                        }
+                        Spacer()
+                    }
+                }
+                .disabled(isSaving)
 
                 Button {
                     app.player.playStream(url: url, title: title)
@@ -417,7 +451,7 @@ struct StreamsScreen: View {
                     if isSaving {
                         ProgressView().frame(maxWidth: .infinity)
                     } else {
-                        Label("Save offline", systemImage: "arrow.down.circle")
+                        Label("Save stream", systemImage: "text.badge.plus")
                             .frame(maxWidth: .infinity)
                     }
                 }
@@ -434,7 +468,7 @@ struct StreamsScreen: View {
 
             Section {
                 if saved.isEmpty {
-                    Text("No saved streams yet.")
+                    Text("Saved streams stay in the Saved Streams playlist and play live on CarPlay.")
                         .font(.caption)
                         .foregroundStyle(palette.textSecondary)
                 } else {
@@ -444,10 +478,21 @@ struct StreamsScreen: View {
                             isPlaying: app.player.state.current?.id == track.id,
                             onTap: { app.playTrack(track, queue: saved) },
                             onMore: { app.addToPlaylistTrack = track },
-                            onHide: { app.hideTrack(track) }
+                            onHide: { app.hideTrack(track) },
+                            onSetIcon: {
+                                artTarget = track
+                                showPicker = true
+                            }
                         )
                         .listRowBackground(Color.clear)
                         .swipeActions(edge: .trailing) {
+                            Button {
+                                artTarget = track
+                                showPicker = true
+                            } label: {
+                                Label("Set icon", systemImage: "photo")
+                            }
+                            .tint(.indigo)
                             Button(role: .destructive) {
                                 Task {
                                     await app.repository.deleteTrack(id: track.id)
@@ -465,6 +510,11 @@ struct StreamsScreen: View {
         }
         .scrollContentBackground(.hidden)
         .navigationTitle("Streams")
+        .photosPicker(isPresented: $showPicker, selection: $pickerItem, matching: .images)
+        .onChange(of: pickerItem) { _, item in
+            guard let item else { return }
+            Task { await applyPickedImage(item) }
+        }
         .task { await reload() }
     }
 
@@ -479,26 +529,51 @@ struct StreamsScreen: View {
         errorMessage = nil
         defer { isSaving = false }
 
-        let key = "stream:\(abs(trimmed.hashValue))"
-        let dir = await app.repository.mediaDirectory(for: .stream)
-        let dest = dir.appendingPathComponent("\(abs(trimmed.hashValue)).m4a")
-        let name = title.trimmingCharacters(in: .whitespaces).isEmpty
-            ? defaultTitle(from: trimmed)
-            : title.trimmingCharacters(in: .whitespaces)
-
         do {
-            let file = try await StreamSaver.save(urlString: trimmed, to: dest)
-            let durMs = await StreamSaver.durationMs(of: file)
+            let streamURL = try StreamSaver.validateURL(trimmed)
+            let key = StreamSaver.streamKey(for: trimmed)
+            let dir = await app.repository.mediaDirectory(for: .stream)
+            var artworkUri = pendingArtURL?.absoluteString
+            var icyName: String?
+
+            if artworkUri == nil {
+                let probe = await StreamSaver.captureArtwork(from: streamURL)
+                icyName = probe.icyName
+                if let data = probe.imageData {
+                    let dest = dir.appendingPathComponent("\(key).img")
+                    artworkUri = try StreamSaver.persistArtwork(data, to: dest).absoluteString
+                }
+            } else if let pending = pendingArtURL {
+                let dest = dir.appendingPathComponent("\(key).img")
+                if pending != dest {
+                    try? FileManager.default.removeItem(at: dest)
+                    try FileManager.default.copyItem(at: pending, to: dest)
+                    artworkUri = dest.absoluteString
+                }
+            }
+
+            let name = title.trimmingCharacters(in: .whitespaces).isEmpty
+                ? (icyName?.isEmpty == false ? icyName! : defaultTitle(from: trimmed))
+                : title.trimmingCharacters(in: .whitespaces)
+
+            if let existing = saved.first(where: { $0.externalId == key || $0.id == key }),
+               existing.uri.hasPrefix("file:"),
+               let fileURL = existing.fileURL,
+               fileURL.isFileURL {
+                try? FileManager.default.removeItem(at: fileURL)
+            }
+
             let track = Track(
                 id: key,
                 title: name,
                 artist: "Stream",
                 album: "Saved Streams",
-                uri: file.absoluteString,
-                duration: durMs,
+                uri: trimmed,
+                duration: 0,
+                artworkUri: artworkUri,
                 source: .stream,
                 externalId: key,
-                isOffline: true
+                isOffline: false
             )
             await app.repository.upsertTrack(track)
             if let playlist = await app.repository.systemPlaylist(.savedStreams) {
@@ -506,10 +581,34 @@ struct StreamsScreen: View {
             }
             url = ""
             title = ""
+            pendingArtURL = nil
+            pickerItem = nil
             await reload()
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func applyPickedImage(_ item: PhotosPickerItem) async {
+        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+        let dir = await app.repository.mediaDirectory(for: .stream)
+        if let target = artTarget {
+            let dest = dir.appendingPathComponent("\(target.id).img")
+            do {
+                let url = try StreamSaver.persistArtwork(data, to: dest)
+                var updated = target
+                updated.artworkUri = url.absoluteString
+                await app.repository.upsertTrack(updated)
+                await reload()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            artTarget = nil
+        } else {
+            let dest = dir.appendingPathComponent("pending_icon.img")
+            pendingArtURL = try? StreamSaver.persistArtwork(data, to: dest)
+        }
+        pickerItem = nil
     }
 
     private func defaultTitle(from urlString: String) -> String {
