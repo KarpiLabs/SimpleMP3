@@ -128,7 +128,7 @@ struct SplashView: View {
                 .font(.system(size: 20, weight: .medium))
                 .foregroundStyle(AppColors.accentTeal.opacity(0.35))
                 .offset(x: 100, y: 120 + notesOffset[2])
-            Image(systemName: "car.fill")
+            Image(systemName: "waveform")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(AppColors.accentGold.opacity(0.35))
                 .offset(x: -110, y: 130 + notesOffset[0])
@@ -201,7 +201,7 @@ struct SplashView: View {
                 )
                 .shadow(color: .black.opacity(0.35), radius: 8, y: 2)
 
-            Text("Local music · CarPlay ready")
+            Text("Local music")
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .foregroundStyle(AppColors.accentTeal)
                 .tracking(0.4)
