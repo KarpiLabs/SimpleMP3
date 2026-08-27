@@ -14,4 +14,9 @@ struct Simple_MP3Tests {
         // Write your test here and use APIs like `#expect(...)` to check expected conditions.
     }
 
+    @MainActor
+    @Test func testShowCarPlayWeatherDefault() async throws {
+        let prefs = AppPreferences()
+        #expect(prefs.showCarPlayWeather == true)
+    }
 }

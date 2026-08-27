@@ -8,6 +8,8 @@
 	<string>LaunchScreen</string>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>Simple MP3 needs access to your music library to play local tracks and show them on CarPlay.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Simple MP3 uses your location to display local weather in CarPlay.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Simple MP3 uses the local network for Jellyfin sync and Quick Connect LAN uploads.</string>
 	<key>NSBonjourServices</key>
