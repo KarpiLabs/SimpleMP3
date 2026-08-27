@@ -55,6 +55,8 @@ final class PlaybackManager {
     private let player = AVPlayer()
     private var timeObserver: Any?
     private var endObserver: NSObjectProtocol?
+    private var interruptionObserver: NSObjectProtocol?
+    private var wasPlayingBeforeInterruption: Bool = false
     private var order: [Int] = []
     private var shuffleOrder: [Int] = []
     private var repository: MusicRepository?
@@ -66,6 +68,7 @@ final class PlaybackManager {
         configureSession()
         setupRemoteCommands()
         setupEndObserver()
+        setupInterruptionObserver()
         timeObserver = player.addPeriodicTimeObserver(
             forInterval: CMTime(seconds: 0.5, preferredTimescale: 600),
             queue: .main
@@ -73,6 +76,50 @@ final class PlaybackManager {
             Task { @MainActor [weak self] in
                 self?.handleTime(time)
             }
+        }
+    }
+
+    private func setupInterruptionObserver() {
+        interruptionObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance(),
+            queue: .main
+        ) { [weak self] note in
+            Task { @MainActor [weak self] in
+                self?.handleInterruption(notification: note)
+            }
+        }
+    }
+
+    private func handleInterruption(notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+            return
+        }
+
+        switch type {
+        case .began:
+            wasPlayingBeforeInterruption = state.isPlaying
+            if state.isPlaying {
+                pause()
+            }
+        case .ended:
+            guard wasPlayingBeforeInterruption else { return }
+            wasPlayingBeforeInterruption = false
+
+            var shouldResume = true
+            if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
+                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+                shouldResume = options.contains(.shouldResume)
+            }
+
+            if shouldResume {
+                try? AVAudioSession.sharedInstance().setActive(true)
+                resume()
+            }
+        @unknown default:
+            break
         }
     }
 
