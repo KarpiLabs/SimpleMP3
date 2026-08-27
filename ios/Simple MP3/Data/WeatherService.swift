@@ -12,6 +12,7 @@ final class WeatherService: NSObject, CLLocationManagerDelegate {
 
     private let locationManager = CLLocationManager()
     private var locationContinuation: CheckedContinuation<CLLocation?, Never>?
+    private var authContinuation: CheckedContinuation<Bool, Never>?
     private var cachedWeather: (text: String, timestamp: Date)?
 
     override private init() {
@@ -40,11 +41,20 @@ final class WeatherService: NSObject, CLLocationManagerDelegate {
     }
 
     private func requestLocation() async -> CLLocation? {
-        let status = locationManager.authorizationStatus
+        var status = locationManager.authorizationStatus
+
         if status == .notDetermined {
-            locationManager.requestWhenInUseAuthorization()
-        } else if status == .denied || status == .restricted {
+            let granted = await requestAuthorization()
+            if !granted { return nil }
+            status = locationManager.authorizationStatus
+        }
+
+        if status == .denied || status == .restricted {
             return nil
+        }
+
+        if let loc = locationManager.location, Date().timeIntervalSince(loc.timestamp) < 600 {
+            return loc
         }
 
         return await withCheckedContinuation { continuation in
@@ -56,7 +66,29 @@ final class WeatherService: NSObject, CLLocationManagerDelegate {
         }
     }
 
+    private func requestAuthorization() async -> Bool {
+        await withCheckedContinuation { continuation in
+            if self.authContinuation != nil {
+                self.authContinuation?.resume(returning: false)
+            }
+            self.authContinuation = continuation
+            self.locationManager.requestWhenInUseAuthorization()
+        }
+    }
+
     // MARK: - CLLocationManagerDelegate
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        guard status != .notDetermined else { return }
+        Task { @MainActor in
+            if let continuation = self.authContinuation {
+                let granted = (status == .authorizedWhenInUse || status == .authorizedAlways)
+                continuation.resume(returning: granted)
+                self.authContinuation = nil
+            }
+        }
+    }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         let loc = locations.first
