@@ -291,6 +291,24 @@ final class QuickConnectServer {
         )
     }
 
+    static func sanitizeFileName(_ name: String) -> String {
+        var base = name.components(separatedBy: "/").last ?? name
+        base = base.components(separatedBy: "\\").last ?? base
+        base = base.trimmingCharacters(in: .whitespacesAndNewlines)
+        while base.hasPrefix(".") || base.hasPrefix(" ") {
+            base = String(base.dropFirst())
+        }
+        base = base.replacingOccurrences(of: #"[^A-Za-z0-9._\- ]"#, with: "_", options: .regularExpression)
+        while base.contains("..") {
+            base = base.replacingOccurrences(of: "..", with: ".")
+        }
+        base = base.trimmingCharacters(in: CharacterSet(charactersIn: ". "))
+        if base.count > 180 {
+            base = String(base.prefix(180))
+        }
+        return base.isEmpty ? "upload.mp3" : base
+    }
+
     private static func constantTimeEquals(_ a: String, _ b: String) -> Bool {
         let aa = Array(a.utf8)
         let bb = Array(b.utf8)
@@ -323,8 +341,7 @@ final class QuickConnectServer {
         var errors: [[String: String]] = []
 
         for file in files {
-            let rawName = (file.filename as NSString).lastPathComponent.trimmingCharacters(in: CharacterSet(charactersIn: ". "))
-            let safeName = rawName.isEmpty ? "upload.mp3" : rawName
+            let safeName = Self.sanitizeFileName(file.filename)
             let ext = (safeName as NSString).pathExtension.lowercased()
             if !allowed.contains(ext) {
                 errors.append(["filename": file.filename, "error": "Unsupported type"])
@@ -332,7 +349,12 @@ final class QuickConnectServer {
             }
             do {
                 let dir = await repository.mediaDirectory(for: .lan)
-                let dest = dir.appendingPathComponent("\(UUID().uuidString)_\(safeName)")
+                let dest = dir.appendingPathComponent("\(UUID().uuidString)_\(safeName)").standardizedFileURL
+                let dirPath = dir.standardizedFileURL.path
+                guard dest.path.hasPrefix(dirPath.hasSuffix("/") ? dirPath : dirPath + "/") else {
+                    errors.append(["filename": file.filename, "error": "Invalid destination path"])
+                    continue
+                }
                 try file.data.write(to: dest)
                 var track = await MediaLibraryScanner.metadataTrack(from: dest, source: .lan)
                     ?? Track(
