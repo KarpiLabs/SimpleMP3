@@ -286,7 +286,7 @@ final class QuickConnectServer {
             status: 200,
             object: ["ok": true],
             extraHeaders: [
-                "Set-Cookie": "\(Self.cookieName)=\(sessionToken); Path=/; HttpOnly; SameSite=Lax"
+                "Set-Cookie": "\(Self.cookieName)=\(sessionToken); Path=/; HttpOnly; SameSite=Strict"
             ]
         )
     }
