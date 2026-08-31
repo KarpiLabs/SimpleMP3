@@ -175,6 +175,8 @@ final class QuickConnectServer {
         var contentLength = 0
         var contentType = ""
         var cookieHeader = ""
+        var authHeader = ""
+        var codeHeader = ""
         for line in lines.dropFirst() {
             let lower = line.lowercased()
             if lower.hasPrefix("content-length:") {
@@ -183,6 +185,10 @@ final class QuickConnectServer {
                 contentType = String(line.dropFirst("content-type:".count)).trimmingCharacters(in: .whitespaces)
             } else if lower.hasPrefix("cookie:") {
                 cookieHeader = String(line.dropFirst("cookie:".count)).trimmingCharacters(in: .whitespaces)
+            } else if lower.hasPrefix("authorization:") {
+                authHeader = String(line.dropFirst("authorization:".count)).trimmingCharacters(in: .whitespaces)
+            } else if lower.hasPrefix("x-access-code:") {
+                codeHeader = String(line.dropFirst("x-access-code:".count)).trimmingCharacters(in: .whitespaces)
             }
         }
 
@@ -211,7 +217,7 @@ final class QuickConnectServer {
         }
 
         if method == "POST" && path.hasPrefix("/upload") {
-            guard isAuthorized(cookieHeader: cookieHeader) else {
+            guard isAuthorized(cookieHeader: cookieHeader, authHeader: authHeader, codeHeader: codeHeader) else {
                 respondJSON(connection, status: 401, object: [
                     "ok": false,
                     "error": "Unlock with the access code shown on the phone"
@@ -228,9 +234,23 @@ final class QuickConnectServer {
         return true
     }
 
-    private func isAuthorized(cookieHeader: String) -> Bool {
-        guard !sessionToken.isEmpty else { return false }
-        return cookieValue(cookieHeader, name: Self.cookieName) == sessionToken
+    /// Verifies request authorization via Cookie, Bearer Token, or X-Access-Code header using constant-time comparison to prevent timing leaks.
+    private func isAuthorized(cookieHeader: String, authHeader: String, codeHeader: String) -> Bool {
+        if !sessionToken.isEmpty {
+            if let token = cookieValue(cookieHeader, name: Self.cookieName), Self.constantTimeEquals(token, sessionToken) {
+                return true
+            }
+            if authHeader.lowercased().hasPrefix("bearer ") {
+                let token = String(authHeader.dropFirst(7)).trimmingCharacters(in: .whitespaces)
+                if Self.constantTimeEquals(token, sessionToken) {
+                    return true
+                }
+            }
+        }
+        if !accessCode.isEmpty, !codeHeader.isEmpty, Self.constantTimeEquals(codeHeader, accessCode) {
+            return true
+        }
+        return false
     }
 
     private func cookieValue(_ header: String, name: String) -> String? {
