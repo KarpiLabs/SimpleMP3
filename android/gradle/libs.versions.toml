@@ -46,7 +46,7 @@ work = "2.9.1"
 hiltWork = "1.2.0"
 desugarJdkLibs = "2.1.5"
 newpipeExtractor = "v0.26.4"
-mozillaRhino = "1.7.15"
+mozillaRhino = "1.9.1"
 # Community 16KB-page repackage of retired arthenica FFmpegKit (LGPL)
 ffmpegKit = "6.1.1"
 nanohttpd = "2.3.1"
