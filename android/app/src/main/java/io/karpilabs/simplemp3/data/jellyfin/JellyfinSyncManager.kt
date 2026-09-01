@@ -286,11 +286,19 @@ class JellyfinSyncManager
                 File(audioDir(), fileNameFor(jfId, track.uri)).delete()
                 File(artDir(), "$jfId.jpg").delete()
             }
-            runCatching {
-                val path = Uri.parse(track.uri).path
-                if (path != null) File(path).delete()
-            }
+            deleteFileUriSafely(track.uri)
             trackDao.deleteTrackById(trackId)
+        }
+
+        private fun deleteFileUriSafely(uri: String) {
+            runCatching {
+                val path = Uri.parse(uri).path ?: return
+                val targetFile = File(path).canonicalFile
+                val allowedDir = File(context.filesDir, "offline/jellyfin").canonicalFile
+                if (targetFile.canonicalPath.startsWith(allowedDir.canonicalPath + File.separator)) {
+                    targetFile.delete()
+                }
+            }
         }
 
         suspend fun clearAllOffline(): Int {

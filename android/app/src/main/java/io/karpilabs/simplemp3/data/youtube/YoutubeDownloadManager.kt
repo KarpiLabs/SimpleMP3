@@ -315,10 +315,19 @@ class YoutubeDownloadManager
                 audioDir().listFiles()?.filter { it.nameWithoutExtension == id }?.forEach { it.delete() }
                 File(artDir(), "$id.jpg").delete()
             }
-            runCatching {
-                Uri.parse(track.uri).path?.let { File(it).delete() }
-            }
+            deleteFileUriSafely(track.uri)
             trackDao.deleteTrackById(trackId)
+        }
+
+        private fun deleteFileUriSafely(uri: String) {
+            runCatching {
+                val path = Uri.parse(uri).path ?: return
+                val targetFile = File(path).canonicalFile
+                val allowedDir = File(context.filesDir, "offline/youtube").canonicalFile
+                if (targetFile.canonicalPath.startsWith(allowedDir.canonicalPath + File.separator)) {
+                    targetFile.delete()
+                }
+            }
         }
 
         suspend fun clearAll(): Int {
