@@ -312,13 +312,28 @@ class YoutubeDownloadManager
             val track = trackDao.getTrackById(trackId) ?: return
             if (track.source != TrackEntity.SOURCE_YOUTUBE) return
             track.jellyfinId?.let { id ->
-                audioDir().listFiles()?.filter { it.nameWithoutExtension == id }?.forEach { it.delete() }
-                File(artDir(), "$id.jpg").delete()
+                audioDir().listFiles()?.filter { it.nameWithoutExtension == id }?.forEach { deleteFileSafely(it) }
+                deleteFileSafely(File(artDir(), "$id.jpg"))
             }
-            runCatching {
-                Uri.parse(track.uri).path?.let { File(it).delete() }
-            }
+            deleteFileUriSafely(track.uri)
             trackDao.deleteTrackById(trackId)
+        }
+
+        private fun deleteFileUriSafely(uri: String) {
+            runCatching {
+                val path = Uri.parse(uri).path ?: return
+                deleteFileSafely(File(path))
+            }
+        }
+
+        private fun deleteFileSafely(file: File) {
+            runCatching {
+                val targetFile = file.canonicalFile
+                val allowedDir = File(context.filesDir, "offline/youtube").canonicalFile
+                if (targetFile.canonicalPath.startsWith(allowedDir.canonicalPath + File.separator)) {
+                    targetFile.delete()
+                }
+            }
         }
 
         suspend fun clearAll(): Int {
