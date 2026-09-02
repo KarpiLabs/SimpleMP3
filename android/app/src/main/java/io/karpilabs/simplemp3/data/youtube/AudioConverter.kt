@@ -74,22 +74,7 @@ object AudioConverter {
         outputM4a.parentFile?.mkdirs()
         outputM4a.delete()
 
-        // Use argument array with executeWithArguments to prevent argument injection / shell breakout
-        val args =
-            arrayOf(
-                "-y",
-                "-i", input,
-                "-map", "0:a:0",
-                "-c:a", "copy",
-                "-bsf:a", "aac_adtstoasc",
-                "-movflags", "+faststart",
-                "-id3v2_version", "3",
-                "-metadata", "title=${metadata.title}",
-                "-metadata", "artist=${metadata.artist}",
-                "-metadata", "album=${metadata.album}",
-                outputM4a.absolutePath,
-            )
-
+        val args = buildRemuxArgs(input, outputM4a, metadata)
         val session = FFmpegKit.executeWithArguments(args)
         val code = session.returnCode
         return when {
@@ -108,6 +93,63 @@ object AudioConverter {
         }
     }
 
+    internal fun buildRemuxArgs(
+        input: String,
+        outputM4a: File,
+        metadata: Metadata,
+    ): Array<String> =
+        arrayOf(
+            "-y",
+            "-i", input,
+            "-map", "0:a:0",
+            "-c:a", "copy",
+            "-bsf:a", "aac_adtstoasc",
+            "-movflags", "+faststart",
+            "-id3v2_version", "3",
+            "-metadata", "title=${metadata.title}",
+            "-metadata", "artist=${metadata.artist}",
+            "-metadata", "album=${metadata.album}",
+            outputM4a.absolutePath,
+        )
+
+    internal fun buildMp3Args(
+        input: File,
+        outputMp3: File,
+        metadata: Metadata,
+        coverImage: File?,
+        audioArgs: List<String>,
+        withCover: Boolean,
+    ): Array<String> {
+        val args = mutableListOf("-y", "-i", input.absolutePath)
+        if (withCover && coverImage != null && coverImage.exists() && coverImage.length() > 0L) {
+            args.addAll(
+                listOf(
+                    "-i", coverImage.absolutePath,
+                    "-map", "0:a",
+                    "-map", "1:0",
+                    "-c:v", "copy",
+                    "-disposition:v:0", "attached_pic",
+                    "-metadata:s:v", "title=Album cover",
+                    "-metadata:s:v", "comment=Cover (front)",
+                ),
+            )
+        } else {
+            args.addAll(listOf("-map", "0:a"))
+        }
+        args.addAll(audioArgs)
+        args.addAll(
+            listOf(
+                "-id3v2_version", "3",
+                "-metadata", "title=${metadata.title}",
+                "-metadata", "artist=${metadata.artist}",
+                "-metadata", "album=${metadata.album}",
+                "-metadata", "album_artist=${metadata.artist}",
+                outputMp3.absolutePath,
+            ),
+        )
+        return args.toTypedArray()
+    }
+
     private fun convertToMp3Internal(
         input: File,
         outputMp3: File,
@@ -121,38 +163,9 @@ object AudioConverter {
         outputMp3.parentFile?.mkdirs()
         outputMp3.delete()
 
-        fun buildArgs(withCover: Boolean): Array<String> {
-            val args = mutableListOf("-y", "-i", input.absolutePath)
-            if (withCover && coverImage != null && coverImage.exists() && coverImage.length() > 0L) {
-                args.addAll(
-                    listOf(
-                        "-i", coverImage.absolutePath,
-                        "-map", "0:a",
-                        "-map", "1:0",
-                        "-c:v", "copy",
-                        "-disposition:v:0", "attached_pic",
-                        "-metadata:s:v", "title=Album cover",
-                        "-metadata:s:v", "comment=Cover (front)",
-                    ),
-                )
-            } else {
-                args.addAll(listOf("-map", "0:a"))
-            }
-            args.addAll(audioArgs)
-            args.addAll(
-                listOf(
-                    "-id3v2_version", "3",
-                    "-metadata", "title=${metadata.title}",
-                    "-metadata", "artist=${metadata.artist}",
-                    "-metadata", "album=${metadata.album}",
-                    "-metadata", "album_artist=${metadata.artist}",
-                    outputMp3.absolutePath,
-                ),
-            )
-            return args.toTypedArray()
-        }
-
-        val session = FFmpegKit.executeWithArguments(buildArgs(withCover = true))
+        val session = FFmpegKit.executeWithArguments(
+            buildMp3Args(input, outputMp3, metadata, coverImage, audioArgs, withCover = true)
+        )
         val code = session.returnCode
         return when {
             ReturnCode.isSuccess(code) && outputMp3.exists() && outputMp3.length() > 0L ->
@@ -162,7 +175,9 @@ object AudioConverter {
             else -> {
                 if (coverImage != null) {
                     outputMp3.delete()
-                    val retry = FFmpegKit.executeWithArguments(buildArgs(withCover = false))
+                    val retry = FFmpegKit.executeWithArguments(
+                        buildMp3Args(input, outputMp3, metadata, coverImage, audioArgs, withCover = false)
+                    )
                     if (ReturnCode.isSuccess(retry.returnCode) &&
                         outputMp3.exists() &&
                         outputMp3.length() > 0L
@@ -185,5 +200,4 @@ object AudioConverter {
             }
         }
     }
-
 }
