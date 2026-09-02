@@ -36,7 +36,7 @@ object AudioConverter {
             outputMp3 = outputMp3,
             metadata = metadata,
             coverImage = coverImage,
-            audioArgs = "-c:a libmp3lame -q:a 0 ",
+            audioArgs = listOf("-c:a", "libmp3lame", "-q:a", "0"),
         )
 
     /**
@@ -54,7 +54,7 @@ object AudioConverter {
             outputMp3 = outputMp3,
             metadata = metadata,
             coverImage = coverImage,
-            audioArgs = "-c:a libmp3lame -b:a ${bitrateKbps.coerceIn(64, 320)}k ",
+            audioArgs = listOf("-c:a", "libmp3lame", "-b:a", "${bitrateKbps.coerceIn(64, 320)}k"),
         )
 
     /**
@@ -74,23 +74,8 @@ object AudioConverter {
         outputM4a.parentFile?.mkdirs()
         outputM4a.delete()
 
-        val cmd =
-            buildString {
-                append("-y ")
-                append("-i ").append(shellQuote(input)).append(' ')
-                append("-map 0:a:0 ")
-                append("-c:a copy ")
-                // HLS segments are usually ADTS AAC; convert to ASC for a valid MP4 container.
-                append("-bsf:a aac_adtstoasc ")
-                append("-movflags +faststart ")
-                append("-id3v2_version 3 ")
-                append("-metadata title=").append(shellQuote(metadata.title)).append(' ')
-                append("-metadata artist=").append(shellQuote(metadata.artist)).append(' ')
-                append("-metadata album=").append(shellQuote(metadata.album)).append(' ')
-                append(shellQuote(outputM4a.absolutePath))
-            }
-
-        val session = FFmpegKit.execute(cmd)
+        val args = buildRemuxArgs(input, outputM4a, metadata)
+        val session = FFmpegKit.executeWithArguments(args)
         val code = session.returnCode
         return when {
             ReturnCode.isSuccess(code) && outputM4a.exists() && outputM4a.length() > 0L ->
@@ -108,12 +93,69 @@ object AudioConverter {
         }
     }
 
+    internal fun buildRemuxArgs(
+        input: String,
+        outputM4a: File,
+        metadata: Metadata,
+    ): Array<String> =
+        arrayOf(
+            "-y",
+            "-i", input,
+            "-map", "0:a:0",
+            "-c:a", "copy",
+            "-bsf:a", "aac_adtstoasc",
+            "-movflags", "+faststart",
+            "-id3v2_version", "3",
+            "-metadata", "title=${metadata.title}",
+            "-metadata", "artist=${metadata.artist}",
+            "-metadata", "album=${metadata.album}",
+            outputM4a.absolutePath,
+        )
+
+    internal fun buildMp3Args(
+        input: File,
+        outputMp3: File,
+        metadata: Metadata,
+        coverImage: File?,
+        audioArgs: List<String>,
+        withCover: Boolean,
+    ): Array<String> {
+        val args = mutableListOf("-y", "-i", input.absolutePath)
+        if (withCover && coverImage != null && coverImage.exists() && coverImage.length() > 0L) {
+            args.addAll(
+                listOf(
+                    "-i", coverImage.absolutePath,
+                    "-map", "0:a",
+                    "-map", "1:0",
+                    "-c:v", "copy",
+                    "-disposition:v:0", "attached_pic",
+                    "-metadata:s:v", "title=Album cover",
+                    "-metadata:s:v", "comment=Cover (front)",
+                ),
+            )
+        } else {
+            args.addAll(listOf("-map", "0:a"))
+        }
+        args.addAll(audioArgs)
+        args.addAll(
+            listOf(
+                "-id3v2_version", "3",
+                "-metadata", "title=${metadata.title}",
+                "-metadata", "artist=${metadata.artist}",
+                "-metadata", "album=${metadata.album}",
+                "-metadata", "album_artist=${metadata.artist}",
+                outputMp3.absolutePath,
+            ),
+        )
+        return args.toTypedArray()
+    }
+
     private fun convertToMp3Internal(
         input: File,
         outputMp3: File,
         metadata: Metadata,
         coverImage: File?,
-        audioArgs: String,
+        audioArgs: List<String>,
     ): Result<File> {
         if (!input.exists() || input.length() == 0L) {
             return Result.failure(IllegalStateException("Input audio missing or empty"))
@@ -121,30 +163,9 @@ object AudioConverter {
         outputMp3.parentFile?.mkdirs()
         outputMp3.delete()
 
-        fun buildCmd(withCover: Boolean): String =
-            buildString {
-                append("-y ")
-                append("-i ").append(shellQuote(input.absolutePath)).append(' ')
-                if (withCover && coverImage != null && coverImage.exists() && coverImage.length() > 0L) {
-                    append("-i ").append(shellQuote(coverImage.absolutePath)).append(' ')
-                    append("-map 0:a -map 1:0 ")
-                    append("-c:v copy ")
-                    append("-disposition:v:0 attached_pic ")
-                    append("-metadata:s:v title=\"Album cover\" ")
-                    append("-metadata:s:v comment=\"Cover (front)\" ")
-                } else {
-                    append("-map 0:a ")
-                }
-                append(audioArgs)
-                append("-id3v2_version 3 ")
-                append("-metadata title=").append(shellQuote(metadata.title)).append(' ')
-                append("-metadata artist=").append(shellQuote(metadata.artist)).append(' ')
-                append("-metadata album=").append(shellQuote(metadata.album)).append(' ')
-                append("-metadata album_artist=").append(shellQuote(metadata.artist)).append(' ')
-                append(shellQuote(outputMp3.absolutePath))
-            }
-
-        val session = FFmpegKit.execute(buildCmd(withCover = true))
+        val session = FFmpegKit.executeWithArguments(
+            buildMp3Args(input, outputMp3, metadata, coverImage, audioArgs, withCover = true)
+        )
         val code = session.returnCode
         return when {
             ReturnCode.isSuccess(code) && outputMp3.exists() && outputMp3.length() > 0L ->
@@ -154,7 +175,9 @@ object AudioConverter {
             else -> {
                 if (coverImage != null) {
                     outputMp3.delete()
-                    val retry = FFmpegKit.execute(buildCmd(withCover = false))
+                    val retry = FFmpegKit.executeWithArguments(
+                        buildMp3Args(input, outputMp3, metadata, coverImage, audioArgs, withCover = false)
+                    )
                     if (ReturnCode.isSuccess(retry.returnCode) &&
                         outputMp3.exists() &&
                         outputMp3.length() > 0L
@@ -176,17 +199,5 @@ object AudioConverter {
                 }
             }
         }
-    }
-
-    /** Escape a path/value for FFmpegKit's space-split command parser. */
-    private fun shellQuote(value: String): String {
-        // FFmpegKit splits on spaces; wrap and escape quotes/newlines.
-        val escaped =
-            value
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", " ")
-                .replace("\r", " ")
-        return "\"$escaped\""
     }
 }
