@@ -127,8 +127,8 @@ class StreamSaveManager
                             jellyfinId = streamKey,
                         )
 
-                    if (existing != null && existing.uri != cleaned && existing.uri.startsWith("file:")) {
-                        runCatching { Uri.parse(existing.uri).path?.let { File(it).delete() } }
+                    if (existing != null && existing.uri != cleaned) {
+                        deleteFileUriSafely(existing.uri)
                     }
 
                     trackDao.insertTrack(track)
@@ -185,15 +185,27 @@ class StreamSaveManager
         suspend fun removeSaved(trackId: Long) {
             val track = trackDao.getTrackById(trackId) ?: return
             if (track.source != TrackEntity.SOURCE_STREAM) return
-            if (track.uri.startsWith("file:")) {
-                runCatching { Uri.parse(track.uri).path?.let { File(it).delete() } }
+            deleteFileUriSafely(track.uri)
+            track.artworkUri?.let { uri -> deleteFileUriSafely(uri) }
+            trackDao.deleteTrackById(trackId)
+        }
+
+        private fun deleteFileUriSafely(uri: String) {
+            runCatching {
+                if (!uri.startsWith("file:")) return
+                val path = Uri.parse(uri).path ?: return
+                deleteFileSafely(File(path))
             }
-            track.artworkUri?.let { uri ->
-                if (uri.startsWith("file:")) {
-                    runCatching { Uri.parse(uri).path?.let { File(it).delete() } }
+        }
+
+        private fun deleteFileSafely(file: File) {
+            runCatching {
+                val targetFile = file.canonicalFile
+                val allowedDir = artDir().canonicalFile
+                if (targetFile.canonicalPath.startsWith(allowedDir.canonicalPath + File.separator)) {
+                    targetFile.delete()
                 }
             }
-            trackDao.deleteTrackById(trackId)
         }
 
         private suspend fun ensureStreamsPlaylist() {
