@@ -7,7 +7,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
-import java.net.URI
 
 class StreamSaveManagerPathTraversalTest {
 
@@ -39,30 +38,16 @@ class StreamSaveManagerPathTraversalTest {
         }
         assertTrue("Valid artwork file should exist before test", validArtFile.exists())
 
-        val allowedDir = allowedArtDir.canonicalFile
-
-        // Function simulating deleteFileUriSafely logic from StreamSaveManager
-        fun deleteSafely(uriString: String) {
-            runCatching {
-                if (!uriString.startsWith("file:")) return
-                val path = URI.create(uriString).path ?: return
-                val targetFile = File(path).canonicalFile
-                if (targetFile.canonicalPath.startsWith(allowedDir.canonicalPath + File.separator)) {
-                    targetFile.delete()
-                }
-            }
-        }
-
-        // Attempt deletion using path traversal / file URI pointing to sensitive file
+        // Exercise the actual production method on StreamSaveManager
         val maliciousUri = sensitiveFile.toURI().toString()
-        deleteSafely(maliciousUri)
+        StreamSaveManager.deleteFileUriSafely(maliciousUri, allowedArtDir)
 
         // Verify sensitive file was NOT deleted
         assertTrue("Sensitive file should still exist after path traversal deletion attempt", sensitiveFile.exists())
 
-        // Attempt deletion of valid artwork file
+        // Exercise the actual production method on valid file
         val validUri = validArtFile.toURI().toString()
-        deleteSafely(validUri)
+        StreamSaveManager.deleteFileUriSafely(validUri, allowedArtDir)
 
         // Verify valid artwork file WAS deleted
         assertFalse("Valid artwork file should be deleted", validArtFile.exists())

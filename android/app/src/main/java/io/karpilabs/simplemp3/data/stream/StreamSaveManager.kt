@@ -191,19 +191,33 @@ class StreamSaveManager
         }
 
         private fun deleteFileUriSafely(uri: String) {
-            runCatching {
-                if (!uri.startsWith("file:")) return
-                val path = Uri.parse(uri).path ?: return
-                deleteFileSafely(File(path))
-            }
+            deleteFileUriSafely(uri, artDir())
         }
 
-        private fun deleteFileSafely(file: File) {
-            runCatching {
-                val targetFile = file.canonicalFile
-                val allowedDir = artDir().canonicalFile
-                if (targetFile.canonicalPath.startsWith(allowedDir.canonicalPath + File.separator)) {
-                    targetFile.delete()
+        companion object {
+            internal fun deleteFileUriSafely(
+                uri: String,
+                allowedDir: File,
+            ) {
+                runCatching {
+                    if (!uri.startsWith("file:")) return
+                    val path = runCatching { Uri.parse(uri).path }.getOrNull()
+                        ?: runCatching { java.net.URI.create(uri).path }.getOrNull()
+                        ?: return
+                    deleteFileSafely(File(path), allowedDir)
+                }
+            }
+
+            internal fun deleteFileSafely(
+                file: File,
+                allowedDir: File,
+            ) {
+                runCatching {
+                    val targetFile = file.canonicalFile
+                    val baseDir = allowedDir.canonicalFile
+                    if (targetFile.canonicalPath.startsWith(baseDir.canonicalPath + File.separator)) {
+                        targetFile.delete()
+                    }
                 }
             }
         }
