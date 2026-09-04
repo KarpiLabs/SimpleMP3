@@ -650,8 +650,6 @@ class QuickConnectServer
                         .firstOrNull { it.startsWith("$COOKIE_NAME=") }
                         ?.substringAfter('=')
                 if (fromCookie != null && constantTimeEquals(fromCookie, sessionToken)) return true
-                val header = session.headers["x-access-code"]
-                if (header != null && constantTimeEquals(header, accessCode)) return true
                 val auth = session.headers["authorization"]
                 if (auth != null && constantTimeEquals(auth.removePrefix("Bearer ").trim(), sessionToken)) {
                     return true
