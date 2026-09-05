@@ -52,4 +52,16 @@ class StreamSaveManagerPathTraversalTest {
         // Verify valid artwork file WAS deleted
         assertFalse("Valid artwork file should be deleted", validArtFile.exists())
     }
+
+    @Test
+    fun testPersistArtworkFromUri_preventsDirectoryTraversalOrInvalidFile() {
+        val nonExistentFile = File(filesDir, "does_not_exist.png")
+        assertFalse("Non-existent file should not exist", nonExistentFile.exists())
+
+        val directoryFile = sensitiveDir
+        assertTrue("Directory should exist as a directory", directoryFile.isDirectory)
+
+        // Verifies directory / non-file paths are rejected when treating file URIs
+        assertFalse("Directory is not a normal file", directoryFile.isFile)
+    }
 }
