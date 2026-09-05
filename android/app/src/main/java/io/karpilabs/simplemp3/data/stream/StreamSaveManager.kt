@@ -272,7 +272,7 @@ class StreamSaveManager
                         source.scheme == "file" -> {
                             val path = source.path ?: return@runCatching null
                             val from = File(path)
-                            if (!from.isFile || !from.exists()) return@runCatching null
+                            if (!from.isFile) return@runCatching null
                             from.copyTo(dest, overwrite = true)
                             true
                         }
