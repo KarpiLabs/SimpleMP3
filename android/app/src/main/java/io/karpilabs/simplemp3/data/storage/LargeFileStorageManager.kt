@@ -209,10 +209,15 @@ class LargeFileStorageManager
             val coldPath =
                 track.coldUri?.let { uriPath(it) }
                     ?: File(coldDir(), "${track.id}.mp3.gz").absolutePath
-            val coldFile = File(coldPath)
-            val hotFile =
-                uriPath(track.uri)?.let { File(it) }
-                    ?: File(context.filesDir, "storage/warm/${track.id}.mp3")
+            val coldFile = File(coldPath).canonicalFile
+            val hotFile = (uriPath(track.uri)?.let { File(it) }
+                ?: File(context.filesDir, "storage/warm/${track.id}.mp3")).canonicalFile
+            val baseDir = (context.dataDir ?: context.filesDir.parentFile ?: context.filesDir).canonicalFile
+            if (!coldFile.path.startsWith(baseDir.path + File.separator) ||
+                !hotFile.path.startsWith(baseDir.path + File.separator)) {
+                Log.e(TAG, "Path traversal attempt blocked in thaw for track ${track.id}")
+                return track
+            }
 
             if (hotFile.exists() && hotFile.length() > 0L) {
                 val updated =
