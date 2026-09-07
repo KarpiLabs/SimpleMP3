@@ -62,9 +62,11 @@ actor LibraryStore {
     }
 
     func allTracks() -> [Track] {
-        visibleTracks().sorted {
-            $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
-        }
+        visibleTracks()
+            .excludingLiveStreams()
+            .sorted {
+                $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+            }
     }
 
     func hiddenTracks() -> [Track] {
@@ -282,7 +284,11 @@ actor LibraryStore {
 
     func tracksForPlaylist(id: String) -> [Track] {
         guard let p = playlists[id] else { return [] }
-        return p.trackIds.compactMap { tracks[$0] }.filter { !$0.isHidden }
+        let list = p.trackIds.compactMap { tracks[$0] }.filter { !$0.isHidden }
+        if p.systemType == SystemPlaylist.favorites.rawValue {
+            return list.excludingLiveStreams()
+        }
+        return list
     }
 
     @discardableResult
@@ -328,7 +334,14 @@ actor LibraryStore {
 
     func setPlaylistTrackIds(playlistId: String, trackIds: [String]) {
         guard var p = playlists[playlistId] else { return }
-        p.trackIds = trackIds
+        if p.systemType == SystemPlaylist.favorites.rawValue {
+            let keptStreams = p.trackIds.filter { id in
+                tracks[id]?.source == .stream && !trackIds.contains(id)
+            }
+            p.trackIds = trackIds + keptStreams
+        } else {
+            p.trackIds = trackIds
+        }
         p.touch()
         playlists[playlistId] = p
         persist()

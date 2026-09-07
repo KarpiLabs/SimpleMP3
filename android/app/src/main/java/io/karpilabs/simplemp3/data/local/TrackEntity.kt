@@ -94,6 +94,9 @@ data class TrackEntity(
                 (source == SOURCE_STREAM && !isRemoteStream)
 }
 
+/** Live streams stay out of All Songs / Liked Songs so skip-next cannot land on one. */
+fun List<TrackEntity>.excludingLiveStreams(): List<TrackEntity> = filter { !it.isStream }
+
 /** Stable negative Long id from an external string id (never collides with MediaStore). */
 fun externalItemIdToTrackId(itemId: String): Long {
     var h = 0xcbf29ce484222325UL

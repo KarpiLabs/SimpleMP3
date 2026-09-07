@@ -137,6 +137,13 @@ struct Track: Identifiable, Codable, Hashable, Sendable {
     var isCold: Bool { storageState == .cold }
 }
 
+extension Array where Element == Track {
+    /// Live streams stay out of All Songs / Liked Songs so skip-next cannot land on one.
+    func excludingLiveStreams() -> [Track] {
+        filter { $0.source != .stream }
+    }
+}
+
 struct AlbumGroup: Identifiable, Hashable, Sendable {
     var id: String { "\(name)|\(subtitle)" }
     let name: String

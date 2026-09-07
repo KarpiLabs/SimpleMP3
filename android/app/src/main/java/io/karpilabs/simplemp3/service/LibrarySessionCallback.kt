@@ -17,6 +17,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.TrackEntity
+import io.karpilabs.simplemp3.data.local.excludingLiveStreams
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import io.karpilabs.simplemp3.data.repository.MusicRepository
 import io.karpilabs.simplemp3.data.storage.LargeFileStorageManager
@@ -32,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Android Auto / media browser tree:
  *
- * Root → Continue · Liked · YouTube · Up Next · Playlists · Offline ·
+ * Root → Continue · Liked · Streams · YouTube · Up Next · Playlists · Offline ·
  *        Albums · Artists · Songs · Recently Played
  *
  * - Single-track plays expand into a full queue
@@ -700,12 +701,14 @@ class LibrarySessionCallback(
     private suspend fun playableTracksFromParent(parentId: String): List<MediaItem> {
         val tracks =
             when {
-                parentId == MediaIds.SONGS -> repository.getAllTracksOnce()
+                parentId == MediaIds.SONGS -> repository.getAllTracksOnce().excludingLiveStreams()
 
                 parentId == MediaIds.RECENT || parentId == MediaIds.CONTINUE ->
                     repository.getContinueTracksOnce()
 
-                parentId == MediaIds.LIKED -> repository.getLikedTracksOnce()
+                parentId == MediaIds.LIKED -> repository.getLikedTracksOnce().excludingLiveStreams()
+
+                parentId == MediaIds.STREAMS -> repository.getStreamTracksOnce()
 
                 parentId == MediaIds.YOUTUBE -> repository.getYoutubeTracksOnce()
 
@@ -755,7 +758,7 @@ class LibrarySessionCallback(
                 repository.getArtistsOnce().map { MediaItemFactory.fromArtist(it) }
 
             parentId == MediaIds.SONGS -> {
-                val tracks = MediaItemFactory.fromTracks(repository.getAllTracksOnce())
+                val tracks = MediaItemFactory.fromTracks(repository.getAllTracksOnce().excludingLiveStreams())
                 if (tracks.size > 1) {
                     listOf(MediaItemFactory.shufflePlayAction(MediaIds.SONGS)) + tracks
                 } else {
@@ -780,8 +783,13 @@ class LibrarySessionCallback(
             }
 
             parentId == MediaIds.LIKED -> {
-                val tracks = MediaItemFactory.fromTracks(repository.getLikedTracksOnce())
+                val tracks = MediaItemFactory.fromTracks(repository.getLikedTracksOnce().excludingLiveStreams())
                 withShuffleHeader(MediaIds.LIKED, tracks)
+            }
+
+            parentId == MediaIds.STREAMS -> {
+                val tracks = MediaItemFactory.fromTracks(repository.getStreamTracksOnce())
+                withShuffleHeader(MediaIds.STREAMS, tracks)
             }
 
             parentId == MediaIds.YOUTUBE -> {
@@ -837,7 +845,8 @@ class LibrarySessionCallback(
 
     private suspend fun buildRootChildren(): List<MediaItem> {
         val continueTracks = repository.getContinueTracksOnce()
-        val liked = repository.getLikedTracksOnce()
+        val liked = repository.getLikedTracksOnce().excludingLiveStreams()
+        val streams = repository.getStreamTracksOnce()
         val youtube = repository.getYoutubeTracksOnce()
         val queueCount = withContext(Dispatchers.Main) { player.mediaItemCount }
 
@@ -867,6 +876,21 @@ class LibrarySessionCallback(
                         },
                     isPlayable = liked.isNotEmpty(),
                     artworkUri = liked.firstOrNull()?.artworkUri,
+                ),
+            )
+            add(
+                MediaItemFactory.category(
+                    mediaId = MediaIds.STREAMS,
+                    title = "Streams",
+                    subtitle =
+                        when (streams.size) {
+                            0 -> "Live radio & streams"
+                            1 -> "1 station"
+                            else -> "${streams.size} stations"
+                        },
+                    isPlayable = streams.isNotEmpty(),
+                    artworkUri = streams.firstOrNull()?.artworkUri,
+                    browsableHint = MediaItemFactory.CONTENT_STYLE_LIST,
                 ),
             )
             add(

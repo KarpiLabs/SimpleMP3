@@ -7,6 +7,7 @@ import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.PlaylistWithMeta
 import io.karpilabs.simplemp3.data.local.TrackDao
 import io.karpilabs.simplemp3.data.local.TrackEntity
+import io.karpilabs.simplemp3.data.local.excludingLiveStreams
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import io.karpilabs.simplemp3.data.scanner.MediaStoreScanner
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -254,9 +255,27 @@ class MusicRepository
 
         fun getPlaylist(id: Long): Flow<PlaylistEntity?> = playlistDao.getPlaylist(id)
 
-        fun getPlaylistTracks(playlistId: Long): Flow<List<TrackEntity>> = playlistDao.getTracksForPlaylist(playlistId)
+        fun getPlaylistTracks(playlistId: Long): Flow<List<TrackEntity>> =
+            combine(
+                playlistDao.getPlaylist(playlistId),
+                playlistDao.getTracksForPlaylist(playlistId),
+            ) { playlist, tracks ->
+                if (playlist?.systemType == PlaylistEntity.SYSTEM_FAVORITES) {
+                    tracks.excludingLiveStreams()
+                } else {
+                    tracks
+                }
+            }
 
-        suspend fun getPlaylistTracksOnce(playlistId: Long): List<TrackEntity> = playlistDao.getTracksForPlaylistOnce(playlistId)
+        suspend fun getPlaylistTracksOnce(playlistId: Long): List<TrackEntity> {
+            val tracks = playlistDao.getTracksForPlaylistOnce(playlistId)
+            val playlist = playlistDao.getPlaylistOnce(playlistId)
+            return if (playlist?.systemType == PlaylistEntity.SYSTEM_FAVORITES) {
+                tracks.excludingLiveStreams()
+            } else {
+                tracks
+            }
+        }
 
         suspend fun getPlaylistsOnce(): List<PlaylistWithMeta> = playlistDao.getPlaylistsWithMetaOnce()
 
@@ -383,6 +402,9 @@ class MusicRepository
         }
 
         suspend fun getYoutubeTracksOnce(): List<TrackEntity> = trackDao.getTracksBySourceOnce(TrackEntity.SOURCE_YOUTUBE)
+
+        suspend fun getStreamTracksOnce(): List<TrackEntity> =
+            trackDao.getTracksBySourceOnce(TrackEntity.SOURCE_STREAM).filter { !it.isHidden }
 
         /** Resume snapshot tracks in order, or recently played if no session. */
         suspend fun getContinueTracksOnce(): List<TrackEntity> {

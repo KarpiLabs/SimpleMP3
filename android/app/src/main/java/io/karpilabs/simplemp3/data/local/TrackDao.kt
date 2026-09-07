@@ -8,10 +8,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TrackDao {
-    @Query("SELECT * FROM tracks WHERE isHidden = 0 ORDER BY title COLLATE NOCASE ASC")
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND source != 'stream' ORDER BY title COLLATE NOCASE ASC")
     fun getAllTracks(): Flow<List<TrackEntity>>
 
-    @Query("SELECT * FROM tracks WHERE isHidden = 0 ORDER BY title COLLATE NOCASE ASC")
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND source != 'stream' ORDER BY title COLLATE NOCASE ASC")
     suspend fun getAllTracksOnce(): List<TrackEntity>
 
     @Query("SELECT * FROM tracks WHERE isHidden = 1 ORDER BY title COLLATE NOCASE ASC")

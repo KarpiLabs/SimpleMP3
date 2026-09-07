@@ -244,7 +244,7 @@ final class MusicRepository {
 
     func getLikedTracks() async -> [Track] {
         guard let p = await store.systemPlaylist(.favorites) else { return [] }
-        return await store.tracksForPlaylist(id: p.id)
+        return await store.tracksForPlaylist(id: p.id).excludingLiveStreams()
     }
 
     func getRecentlyPlayed(limit: Int = 40) async -> [Track] {
