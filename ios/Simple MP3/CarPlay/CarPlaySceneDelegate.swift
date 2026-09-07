@@ -2,9 +2,9 @@
 //  CarPlaySceneDelegate.swift
 //  Simple MP3
 //
-//  Apple CarPlay templates — tab bar root (Home / Recently Played / Browse /
-//  Your Library): a greeting header, a horizontal "continue listening" image
-//  row, and playlist shelves.
+//  Apple CarPlay templates — tab bar root (Home / Recently Played / Streams /
+//  Browse / Your Library): a greeting header, a horizontal "continue listening"
+//  image row, and playlist shelves.
 //
 //  Requires entitlement: com.apple.developer.carplay-audio
 //
@@ -140,7 +140,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         }
     }
 
-    // MARK: - Root (tab bar: Home · Recently Played · Browse · Your Library)
+    // MARK: - Root (tab bar: Home · Recently Played · Streams · Browse · Your Library)
 
     @MainActor
     private func buildRootTemplate() async -> CPTabBarTemplate {
@@ -152,6 +152,10 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         recent.tabTitle = "Recently Played"
         recent.tabImage = UIImage(systemName: "clock.fill")
 
+        let streams = await buildStreamsTemplate()
+        streams.tabTitle = "Streams"
+        streams.tabImage = UIImage(systemName: "dot.radiowaves.left.and.right")
+
         let browse = buildBrowseTemplate()
         browse.tabTitle = "Browse"
         browse.tabImage = UIImage(systemName: "square.grid.2x2.fill")
@@ -160,7 +164,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         library.tabTitle = "Your Library"
         library.tabImage = UIImage(systemName: "books.vertical.fill")
 
-        return CPTabBarTemplate(templates: [home, recent, browse, library])
+        return CPTabBarTemplate(templates: [home, recent, streams, browse, library])
     }
 
     /// Greeting header + horizontal "continue listening" shelf + playlist shelf.
@@ -223,6 +227,12 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     }
 
     @MainActor
+    private func buildStreamsTemplate() async -> CPListTemplate {
+        let tracks = await app.repository.tracks(source: .stream)
+        return trackListTemplate(title: "Streams", tracks: tracks)
+    }
+
+    @MainActor
     private func buildBrowseTemplate() -> CPListTemplate {
         var items: [CPListItem] = []
         if app.preferences.jellyfinEnabled {
@@ -230,7 +240,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         }
         items.append(folderItem(title: "Albums", detail: "\(app.repository.albums.count)", id: "albums"))
         items.append(folderItem(title: "Artists", detail: "\(app.repository.artists.count)", id: "artists"))
-        items.append(folderItem(title: "Songs", detail: Formatters.trackCount(app.repository.trackCount), id: "songs"))
+        items.append(folderItem(title: "Songs", detail: Formatters.trackCount(app.repository.tracks.count), id: "songs"))
         attachSectionHandlers(items)
         return CPListTemplate(title: "Browse", sections: [CPListSection(items: items)])
     }
@@ -274,6 +284,9 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         case "liked":
             let tracks = await app.repository.getLikedTracks()
             pushTrackList(title: "Liked Songs", tracks: tracks)
+        case "streams":
+            let tracks = await app.repository.tracks(source: .stream)
+            pushTrackList(title: "Streams", tracks: tracks)
         case "playlists":
             pushPlaylists()
         case "jellyfin":
@@ -284,7 +297,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         case "artists":
             pushArtists()
         case "songs":
-            pushTrackList(title: "Songs", tracks: app.repository.tracks)
+            pushTrackList(title: "Songs", tracks: app.repository.tracks.excludingLiveStreams())
         case "now":
             pushNowPlaying()
         default:

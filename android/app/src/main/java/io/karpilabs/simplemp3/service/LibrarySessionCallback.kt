@@ -1019,6 +1019,12 @@ class LibrarySessionCallback(
                     "Liked Songs",
                     isPlayable = true,
                 )
+            mediaId == MediaIds.STREAMS ->
+                MediaItemFactory.category(
+                    MediaIds.STREAMS,
+                    "Streams",
+                    isPlayable = true,
+                )
             mediaId == MediaIds.YOUTUBE ->
                 MediaItemFactory.category(
                     MediaIds.YOUTUBE,
@@ -1083,13 +1089,14 @@ class LibrarySessionCallback(
                     val artist = MediaIds.parseArtist(mediaId) ?: return null
                     repository.getTracksByArtistOnce(artist)
                 }
-                mediaId == MediaIds.SONGS -> repository.getAllTracksOnce()
+                mediaId == MediaIds.SONGS -> repository.getAllTracksOnce().excludingLiveStreams()
                 mediaId == MediaIds.RECENT -> {
                     val id = repository.getRecentlyPlayedPlaylistId() ?: return emptyList()
                     repository.getPlaylistTracksOnce(id)
                 }
                 mediaId == MediaIds.CONTINUE -> repository.getContinueTracksOnce()
-                mediaId == MediaIds.LIKED -> repository.getLikedTracksOnce()
+                mediaId == MediaIds.LIKED -> repository.getLikedTracksOnce().excludingLiveStreams()
+                mediaId == MediaIds.STREAMS -> repository.getStreamTracksOnce()
                 mediaId == MediaIds.YOUTUBE -> repository.getYoutubeTracksOnce()
                 mediaId == MediaIds.QUEUE -> return currentQueueItems()
                 mediaId == MediaIds.OFFLINE -> {
