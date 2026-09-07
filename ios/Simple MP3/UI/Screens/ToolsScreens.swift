@@ -547,7 +547,7 @@ struct StreamsScreen: View {
             } else if let pending = pendingArtURL {
                 let dest = dir.appendingPathComponent("\(key).img")
                 if pending != dest {
-                    try? FileManager.default.removeItem(at: dest)
+                    MusicRepository.deleteFileSafely(at: dest)
                     try FileManager.default.copyItem(at: pending, to: dest)
                     artworkUri = dest.absoluteString
                 }
@@ -561,7 +561,7 @@ struct StreamsScreen: View {
                existing.uri.hasPrefix("file:"),
                let fileURL = existing.fileURL,
                fileURL.isFileURL {
-                try? FileManager.default.removeItem(at: fileURL)
+                MusicRepository.deleteFileSafely(at: fileURL)
             }
 
             let track = Track(
