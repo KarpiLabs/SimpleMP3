@@ -16,6 +16,7 @@ final class MusicRepository {
     private(set) var playlists: [PlaylistMeta] = []
     private(set) var albums: [AlbumGroup] = []
     private(set) var artists: [AlbumGroup] = []
+    private(set) var genres: [AlbumGroup] = []
     private(set) var recentlyAdded: [Track] = []
     private(set) var continueListening: [Track] = []
     private(set) var trackCount: Int = 0
@@ -54,6 +55,7 @@ final class MusicRepository {
         playlists = await store.playlistMetas()
         albums = await store.albums()
         artists = await store.artists()
+        genres = await store.genres()
         recentlyAdded = await store.recentlyAdded(limit: 40)
         continueListening = await store.continueListening(limit: 20)
         trackCount = await store.trackCount()
@@ -129,6 +131,14 @@ final class MusicRepository {
         await store.tracks(folderPath: folderPath)
     }
 
+    func smartTracks(_ smart: SmartPlaylist) async -> [Track] {
+        await store.smartTracks(smart)
+    }
+
+    func tracks(genre: String) async -> [Track] {
+        await store.tracks(genre: genre)
+    }
+
     func tracksForPlaylist(id: String) async -> [Track] {
         await store.tracksForPlaylist(id: id)
     }
@@ -197,6 +207,10 @@ final class MusicRepository {
     func recordPlay(trackId: String) async {
         await store.recordPlay(trackId: trackId)
         await refresh()
+    }
+
+    func setTrackGain(trackId: String, gainDb: Double?) async {
+        await store.setTrackGain(id: trackId, gainDb: gainDb)
     }
 
     func upsertTrack(_ track: Track) async {

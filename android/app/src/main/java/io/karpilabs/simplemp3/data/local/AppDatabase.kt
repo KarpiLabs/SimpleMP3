@@ -9,7 +9,7 @@ import androidx.room.RoomDatabase
         PlaylistEntity::class,
         PlaylistTrackCrossRef::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {

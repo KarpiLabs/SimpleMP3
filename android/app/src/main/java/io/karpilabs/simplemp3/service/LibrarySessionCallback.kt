@@ -656,7 +656,15 @@ class LibrarySessionCallback(
                 // Re-resolve via track ids so cold files thaw
                 val ids = fromSearch.mapNotNull { MediaIds.parseTrackId(it.mediaId) }
                 val tracks = repository.getTracksByIdsOrdered(ids)
-                return MediaItemFactory.fromTracks(storageManager.ensurePlayable(tracks))
+                val queue =
+                    if (track.isStream) {
+                        tracks.filter { it.isStream }
+                    } else {
+                        tracks.excludingLiveStreams()
+                    }
+                if (queue.size > 1 && queue.any { it.id == track.id }) {
+                    return MediaItemFactory.fromTracks(storageManager.ensurePlayable(queue))
+                }
             }
         }
 

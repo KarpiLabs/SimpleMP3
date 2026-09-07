@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.karpilabs.simplemp3.data.scrobble.ScrobbleConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -103,6 +104,25 @@ class AppPreferences
 
             /** SMALL / BALANCED / LARGE playback buffer — see [BufferProfile]. */
             val BUFFER_PROFILE = stringPreferencesKey("buffer_profile")
+
+            /** Even out loudness across tracks using ReplayGain tags. */
+            val NORMALIZE_VOLUME = booleanPreferencesKey("normalize_volume")
+
+            /** Extra gain (dB) applied on top of ReplayGain when normalizing. */
+            val NORMALIZE_PREAMP_DB = intPreferencesKey("normalize_preamp_db")
+
+            // ── Scrobbling ──────────────────────────────────────────
+            /** none | listenbrainz | lastfm */
+            val SCROBBLE_PROVIDER = stringPreferencesKey("scrobble_provider")
+            val SCROBBLE_ENABLED = booleanPreferencesKey("scrobble_enabled")
+            val LISTENBRAINZ_TOKEN = stringPreferencesKey("listenbrainz_token")
+            val LASTFM_SESSION_KEY = stringPreferencesKey("lastfm_session_key")
+            val LASTFM_USERNAME = stringPreferencesKey("lastfm_username")
+            val LASTFM_API_KEY = stringPreferencesKey("lastfm_api_key")
+            val LASTFM_API_SECRET = stringPreferencesKey("lastfm_api_secret")
+
+            /** JSON-encoded queue of scrobbles awaiting network. */
+            val SCROBBLE_QUEUE = stringPreferencesKey("scrobble_queue")
         }
 
         val themeModeFlow: Flow<ThemeMode> =
@@ -126,6 +146,94 @@ class AppPreferences
 
         suspend fun setBufferProfile(profile: BufferProfile) {
             context.appDataStore.edit { it[Keys.BUFFER_PROFILE] = profile.name }
+        }
+
+        /** Default off: even out loudness across tracks using ReplayGain tags. */
+        val normalizeVolumeFlow: Flow<Boolean> =
+            context.appDataStore.data.map {
+                it[Keys.NORMALIZE_VOLUME] ?: false
+            }
+
+        suspend fun setNormalizeVolume(enabled: Boolean) {
+            context.appDataStore.edit { it[Keys.NORMALIZE_VOLUME] = enabled }
+        }
+
+        suspend fun isNormalizeVolume(): Boolean = normalizeVolumeFlow.first()
+
+        /** Extra gain (dB) applied on top of ReplayGain; clamped to [-12, 12]. Default 0. */
+        val normalizePreampDbFlow: Flow<Int> =
+            context.appDataStore.data.map {
+                (it[Keys.NORMALIZE_PREAMP_DB] ?: 0).coerceIn(-12, 12)
+            }
+
+        suspend fun setNormalizePreampDb(db: Int) {
+            context.appDataStore.edit { it[Keys.NORMALIZE_PREAMP_DB] = db.coerceIn(-12, 12) }
+        }
+
+        suspend fun getNormalizePreampDb(): Int = normalizePreampDbFlow.first()
+
+        // ── Scrobbling ─────────────────────────────────────────────
+
+        val scrobbleConfigFlow: Flow<ScrobbleConfig> =
+            context.appDataStore.data.map { prefs ->
+                ScrobbleConfig(
+                    provider = prefs[Keys.SCROBBLE_PROVIDER] ?: ScrobbleConfig.PROVIDER_NONE,
+                    enabled = prefs[Keys.SCROBBLE_ENABLED] ?: false,
+                    listenBrainzToken = prefs[Keys.LISTENBRAINZ_TOKEN].orEmpty(),
+                    lastfmSessionKey = prefs[Keys.LASTFM_SESSION_KEY].orEmpty(),
+                    lastfmUsername = prefs[Keys.LASTFM_USERNAME].orEmpty(),
+                    lastfmApiKey = prefs[Keys.LASTFM_API_KEY].orEmpty(),
+                    lastfmApiSecret = prefs[Keys.LASTFM_API_SECRET].orEmpty(),
+                )
+            }
+
+        suspend fun getScrobbleConfig(): ScrobbleConfig = scrobbleConfigFlow.first()
+
+        suspend fun setScrobbleProvider(provider: String) {
+            context.appDataStore.edit { it[Keys.SCROBBLE_PROVIDER] = provider }
+        }
+
+        suspend fun setScrobbleEnabled(enabled: Boolean) {
+            context.appDataStore.edit { it[Keys.SCROBBLE_ENABLED] = enabled }
+        }
+
+        suspend fun setListenBrainzToken(token: String) {
+            context.appDataStore.edit { it[Keys.LISTENBRAINZ_TOKEN] = token.trim() }
+        }
+
+        suspend fun setLastfmSession(
+            username: String,
+            sessionKey: String,
+        ) {
+            context.appDataStore.edit {
+                it[Keys.LASTFM_USERNAME] = username
+                it[Keys.LASTFM_SESSION_KEY] = sessionKey
+            }
+        }
+
+        suspend fun setLastfmCredentials(
+            apiKey: String,
+            apiSecret: String,
+        ) {
+            context.appDataStore.edit {
+                it[Keys.LASTFM_API_KEY] = apiKey.trim()
+                it[Keys.LASTFM_API_SECRET] = apiSecret.trim()
+            }
+        }
+
+        suspend fun clearLastfmSession() {
+            context.appDataStore.edit {
+                it.remove(Keys.LASTFM_SESSION_KEY)
+                it.remove(Keys.LASTFM_USERNAME)
+            }
+        }
+
+        suspend fun getScrobbleQueue(): String = context.appDataStore.data.map { it[Keys.SCROBBLE_QUEUE].orEmpty() }.first()
+
+        suspend fun setScrobbleQueue(json: String) {
+            context.appDataStore.edit {
+                if (json.isBlank()) it.remove(Keys.SCROBBLE_QUEUE) else it[Keys.SCROBBLE_QUEUE] = json
+            }
         }
 
         /**

@@ -61,12 +61,15 @@ actor LibraryStore {
         tracks.values.filter { !$0.isHidden }
     }
 
+    /// Library songs (no live streams) — All Songs / albums / artists / folders / search.
+    private func librarySongs() -> [Track] {
+        visibleTracks().excludingLiveStreams()
+    }
+
     func allTracks() -> [Track] {
-        visibleTracks()
-            .excludingLiveStreams()
-            .sorted {
-                $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
-            }
+        librarySongs().sorted {
+            $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+        }
     }
 
     func hiddenTracks() -> [Track] {
@@ -84,6 +87,14 @@ actor LibraryStore {
 
     func track(id: String) -> Track? { tracks[id] }
 
+    /// Persist a ReplayGain track gain (dB) parsed from file metadata.
+    func setTrackGain(id: String, gainDb: Double?) {
+        guard var t = tracks[id] else { return }
+        t.trackGainDb = gainDb
+        tracks[id] = t
+        persist()
+    }
+
     func tracks(ids: [String]) -> [Track] {
         ids.compactMap { tracks[$0] }
     }
@@ -95,7 +106,7 @@ actor LibraryStore {
     }
 
     func recentlyAdded(limit: Int = 40) -> [Track] {
-        visibleTracks()
+        librarySongs()
             .sorted { $0.dateAdded > $1.dateAdded }
             .prefix(limit)
             .map { $0 }
@@ -104,7 +115,7 @@ actor LibraryStore {
     func search(_ query: String) -> [Track] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return [] }
-        return allTracks().filter {
+        return visibleTracks().filter {
             $0.title.localizedCaseInsensitiveContains(q)
                 || $0.artist.localizedCaseInsensitiveContains(q)
                 || $0.album.localizedCaseInsensitiveContains(q)
@@ -155,7 +166,7 @@ actor LibraryStore {
 
     func albums() -> [AlbumGroup] {
         var map: [String: (artist: String, count: Int, duration: Int64, art: String?)] = [:]
-        for t in visibleTracks() {
+        for t in librarySongs() {
             let key = "\(t.album)|\(t.artist)"
             var cur = map[key] ?? (t.artist, 0, 0, t.artworkUri)
             cur.count += 1
@@ -178,7 +189,7 @@ actor LibraryStore {
 
     func artists() -> [AlbumGroup] {
         var map: [String: (count: Int, duration: Int64, art: String?)] = [:]
-        for t in visibleTracks() {
+        for t in librarySongs() {
             var cur = map[t.artist] ?? (0, 0, t.artworkUri)
             cur.count += 1
             cur.duration += t.duration
@@ -198,7 +209,7 @@ actor LibraryStore {
     }
 
     func tracks(album: String, artist: String? = nil) -> [Track] {
-        visibleTracks()
+        librarySongs()
             .filter {
                 $0.album == album && (artist == nil || $0.artist == artist)
             }
@@ -209,7 +220,7 @@ actor LibraryStore {
     }
 
     func tracks(artist: String) -> [Track] {
-        visibleTracks()
+        librarySongs()
             .filter { $0.artist == artist }
             .sorted {
                 if $0.album != $1.album {
@@ -220,12 +231,12 @@ actor LibraryStore {
     }
 
     func folderPaths() -> [String] {
-        Array(Set(visibleTracks().map(\.folderPath).filter { !$0.isEmpty }))
+        Array(Set(librarySongs().map(\.folderPath).filter { !$0.isEmpty }))
             .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
     func tracks(folderPath: String) -> [Track] {
-        visibleTracks()
+        librarySongs()
             .filter { $0.folderPath == folderPath }
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
     }
@@ -393,9 +404,68 @@ actor LibraryStore {
         playlists[recent.id] = recent
         if var t = tracks[trackId] {
             t.lastPlayedAt = Int64(Date().timeIntervalSince1970 * 1000)
+            t.playCount += 1
             tracks[trackId] = t
         }
         persist()
+    }
+
+    // MARK: - Smart playlists
+
+    func mostPlayed(limit: Int = 100) -> [Track] {
+        visibleTracks()
+            .excludingLiveStreams()
+            .filter { $0.playCount > 0 }
+            .sorted {
+                if $0.playCount != $1.playCount { return $0.playCount > $1.playCount }
+                return $0.lastPlayedAt > $1.lastPlayedAt
+            }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    func smartTracks(_ smart: SmartPlaylist, limit: Int = 100) -> [Track] {
+        switch smart {
+        case .mostPlayed: return mostPlayed(limit: limit)
+        case .recentlyAdded: return recentlyAdded(limit: limit)
+        }
+    }
+
+    /// Distinct genres with counts, mirroring `albums()` / `artists()`.
+    func genres() -> [AlbumGroup] {
+        var map: [String: (count: Int, duration: Int64, art: String?)] = [:]
+        for t in visibleTracks() where t.source != .stream {
+            guard let g = t.genre, !g.isEmpty else { continue }
+            var cur = map[g] ?? (0, 0, t.artworkUri)
+            cur.count += 1
+            cur.duration += t.duration
+            if cur.art == nil { cur.art = t.artworkUri }
+            map[g] = cur
+        }
+        return map.map { name, v in
+            AlbumGroup(
+                name: name,
+                subtitle: "",
+                trackCount: v.count,
+                totalDuration: v.duration,
+                artworkUri: v.art
+            )
+        }
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    func tracks(genre: String) -> [Track] {
+        visibleTracks()
+            .filter { $0.source != .stream && $0.genre == genre }
+            .sorted {
+                if $0.artist != $1.artist {
+                    return $0.artist.localizedCaseInsensitiveCompare($1.artist) == .orderedAscending
+                }
+                if $0.album != $1.album {
+                    return $0.album.localizedCaseInsensitiveCompare($1.album) == .orderedAscending
+                }
+                return $0.trackNumber < $1.trackNumber
+            }
     }
 
     func continueListening(limit: Int = 20) -> [Track] {

@@ -44,6 +44,36 @@ nonisolated struct Playlist: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+/// Computed ("auto") playlists derived from track metadata rather than stored
+/// track ids. Contents are queried on demand so they always stay fresh.
+nonisolated enum SmartPlaylist: String, CaseIterable, Identifiable, Sendable {
+    case mostPlayed = "most_played"
+    case recentlyAdded = "recently_added"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .mostPlayed: return "Most Played"
+        case .recentlyAdded: return "Recently Added"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .mostPlayed: return "Your top tracks by play count"
+        case .recentlyAdded: return "The latest additions to your library"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .mostPlayed: return "chart.line.uptrend.xyaxis"
+        case .recentlyAdded: return "clock.arrow.circlepath"
+        }
+    }
+}
+
 struct ResumeSnapshot: Codable, Equatable, Sendable {
     var trackIds: [String]
     var index: Int

@@ -248,6 +248,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     @MainActor
     private func buildLibraryTemplate() -> CPListTemplate {
         var items: [CPListItem] = []
+        items.append(folderItem(title: "Streams", detail: "Live radio", id: "streams"))
         items.append(folderItem(title: "Liked Songs", detail: "Favorites", id: "liked"))
         items.append(folderItem(title: "Playlists", detail: "\(app.visiblePlaylists.count)", id: "playlists"))
         let nowDetail = app.player.state.current?.title ?? "Nothing playing"

@@ -15,6 +15,8 @@ import androidx.room.PrimaryKey
         Index(value = ["storageState"]),
         Index(value = ["size"]),
         Index(value = ["folderPath"]),
+        Index(value = ["playCount"]),
+        Index(value = ["genre"]),
     ],
 )
 data class TrackEntity(
@@ -53,6 +55,13 @@ data class TrackEntity(
     val isSizeOptimized: Boolean = false,
     /** Last time this track was prepared for playback (ms). */
     val lastPlayedAt: Long = 0L,
+    /** Number of times this track has started playback — drives the Most Played smart playlist. */
+    val playCount: Int = 0,
+    /**
+     * ReplayGain track gain in dB parsed from file tags (REPLAYGAIN_TRACK_GAIN), if present.
+     * Null when unknown. Applied as a volume multiplier when normalization is on.
+     */
+    val trackGainDb: Double? = null,
     /**
      * User starred “never compress” — skip size optimize + cold pack forever
      * (and keep thawed if currently cold).

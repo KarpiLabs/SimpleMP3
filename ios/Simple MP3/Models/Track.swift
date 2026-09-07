@@ -50,6 +50,11 @@ struct Track: Identifiable, Codable, Hashable, Sendable {
     var neverCompress: Bool
     /// User hid this track from Home/Library/Search/playlists/CarPlay (e.g. ringtone junk).
     var isHidden: Bool = false
+    /// Times playback has started — drives the Most Played smart playlist.
+    var playCount: Int = 0
+    /// ReplayGain track gain in dB parsed from file tags, if present. Applied as a
+    /// volume multiplier when normalization is on.
+    var trackGainDb: Double? = nil
 
     init(
         id: String = UUID().uuidString,
@@ -139,7 +144,7 @@ struct Track: Identifiable, Codable, Hashable, Sendable {
 
 extension Array where Element == Track {
     /// Live streams stay out of All Songs / Liked Songs so skip-next cannot land on one.
-    func excludingLiveStreams() -> [Track] {
+    nonisolated func excludingLiveStreams() -> [Track] {
         filter { $0.source != .stream }
     }
 }

@@ -65,19 +65,89 @@ interface TrackDao {
     )
     suspend fun searchTracksOnce(query: String): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE isHidden = 0 ORDER BY dateAdded DESC LIMIT :limit")
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND source != 'stream' ORDER BY dateAdded DESC LIMIT :limit")
     fun getRecentlyAdded(limit: Int = 30): Flow<List<TrackEntity>>
 
-    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND album = :album ORDER BY trackNumber ASC, title ASC")
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND source != 'stream' ORDER BY dateAdded DESC LIMIT :limit")
+    suspend fun getRecentlyAddedOnce(limit: Int = 30): List<TrackEntity>
+
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE isHidden = 0 AND source != 'stream' AND playCount > 0
+        ORDER BY playCount DESC, lastPlayedAt DESC
+        LIMIT :limit
+        """,
+    )
+    fun getMostPlayed(limit: Int = 100): Flow<List<TrackEntity>>
+
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE isHidden = 0 AND source != 'stream' AND playCount > 0
+        ORDER BY playCount DESC, lastPlayedAt DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun getMostPlayedOnce(limit: Int = 100): List<TrackEntity>
+
+    @Query("UPDATE tracks SET playCount = playCount + 1, lastPlayedAt = :playedAt WHERE id = :id")
+    suspend fun incrementPlayCount(
+        id: Long,
+        playedAt: Long = System.currentTimeMillis(),
+    )
+
+    @Query("UPDATE tracks SET trackGainDb = :gainDb WHERE id = :id")
+    suspend fun updateTrackGain(
+        id: Long,
+        gainDb: Double?,
+    )
+
+    @Query(
+        """
+        SELECT genre AS name,
+               '' AS subtitle,
+               COUNT(*) AS trackCount,
+               SUM(duration) AS totalDuration,
+               MIN(artworkUri) AS artworkUri,
+               0 AS albumId
+        FROM tracks
+        WHERE isHidden = 0 AND source != 'stream'
+          AND genre IS NOT NULL AND genre != ''
+        GROUP BY genre
+        ORDER BY genre COLLATE NOCASE ASC
+        """,
+    )
+    fun getGenres(): Flow<List<AlbumRow>>
+
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE isHidden = 0 AND source != 'stream' AND genre = :genre
+        ORDER BY artist COLLATE NOCASE ASC, album COLLATE NOCASE ASC, trackNumber ASC
+        """,
+    )
+    fun getTracksByGenre(genre: String): Flow<List<TrackEntity>>
+
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE isHidden = 0 AND source != 'stream' AND genre = :genre
+        ORDER BY artist COLLATE NOCASE ASC, album COLLATE NOCASE ASC, trackNumber ASC
+        """,
+    )
+    suspend fun getTracksByGenreOnce(genre: String): List<TrackEntity>
+
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND source != 'stream' AND album = :album ORDER BY trackNumber ASC, title ASC")
     fun getTracksByAlbum(album: String): Flow<List<TrackEntity>>
 
-    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND album = :album ORDER BY trackNumber ASC, title ASC")
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND source != 'stream' AND album = :album ORDER BY trackNumber ASC, title ASC")
     suspend fun getTracksByAlbumOnce(album: String): List<TrackEntity>
 
-    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND artist = :artist ORDER BY album ASC, trackNumber ASC")
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND source != 'stream' AND artist = :artist ORDER BY album ASC, trackNumber ASC")
     fun getTracksByArtist(artist: String): Flow<List<TrackEntity>>
 
-    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND artist = :artist ORDER BY album ASC, trackNumber ASC")
+    @Query("SELECT * FROM tracks WHERE isHidden = 0 AND source != 'stream' AND artist = :artist ORDER BY album ASC, trackNumber ASC")
     suspend fun getTracksByArtistOnce(artist: String): List<TrackEntity>
 
     @Query(
@@ -89,7 +159,7 @@ interface TrackDao {
                MIN(artworkUri) AS artworkUri,
                MIN(albumId) AS albumId
         FROM tracks
-        WHERE isHidden = 0
+        WHERE isHidden = 0 AND source != 'stream'
         GROUP BY album, artist
         ORDER BY album COLLATE NOCASE ASC
         """,
@@ -105,7 +175,7 @@ interface TrackDao {
                MIN(artworkUri) AS artworkUri,
                MIN(albumId) AS albumId
         FROM tracks
-        WHERE isHidden = 0
+        WHERE isHidden = 0 AND source != 'stream'
         GROUP BY album, artist
         ORDER BY album COLLATE NOCASE ASC
         """,
@@ -121,7 +191,7 @@ interface TrackDao {
                MIN(artworkUri) AS artworkUri,
                MIN(artistId) AS albumId
         FROM tracks
-        WHERE isHidden = 0
+        WHERE isHidden = 0 AND source != 'stream'
         GROUP BY artist
         ORDER BY artist COLLATE NOCASE ASC
         """,
@@ -137,7 +207,7 @@ interface TrackDao {
                MIN(artworkUri) AS artworkUri,
                MIN(artistId) AS albumId
         FROM tracks
-        WHERE isHidden = 0
+        WHERE isHidden = 0 AND source != 'stream'
         GROUP BY artist
         ORDER BY artist COLLATE NOCASE ASC
         """,
@@ -186,7 +256,7 @@ interface TrackDao {
     @Query(
         """
         SELECT DISTINCT folderPath FROM tracks
-        WHERE isHidden = 0 AND folderPath IS NOT NULL AND folderPath != ''
+        WHERE isHidden = 0 AND source != 'stream' AND folderPath IS NOT NULL AND folderPath != ''
         ORDER BY folderPath COLLATE NOCASE ASC
         """,
     )
@@ -195,7 +265,7 @@ interface TrackDao {
     @Query(
         """
         SELECT DISTINCT folderPath FROM tracks
-        WHERE isHidden = 0 AND folderPath IS NOT NULL AND folderPath != ''
+        WHERE isHidden = 0 AND source != 'stream' AND folderPath IS NOT NULL AND folderPath != ''
         ORDER BY folderPath COLLATE NOCASE ASC
         """,
     )
@@ -204,7 +274,7 @@ interface TrackDao {
     @Query(
         """
         SELECT * FROM tracks
-        WHERE isHidden = 0 AND folderPath = :folderPath
+        WHERE isHidden = 0 AND source != 'stream' AND folderPath = :folderPath
         ORDER BY title COLLATE NOCASE ASC
         """,
     )
@@ -213,7 +283,7 @@ interface TrackDao {
     @Query(
         """
         SELECT * FROM tracks
-        WHERE isHidden = 0 AND folderPath = :folderPath
+        WHERE isHidden = 0 AND source != 'stream' AND folderPath = :folderPath
         ORDER BY title COLLATE NOCASE ASC
         """,
     )

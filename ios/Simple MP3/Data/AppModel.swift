@@ -20,6 +20,7 @@ final class AppModel {
     let player: PlaybackManager
     let jellyfin: JellyfinService
     let quickConnect: QuickConnectServer
+    let scrobble: ScrobbleService
 
     var searchQuery: String = ""
     var searchResults: [Track] = []
@@ -39,12 +40,14 @@ final class AppModel {
         let prefs = AppPreferences()
         let repo = MusicRepository(preferences: prefs)
         let playback = PlaybackManager()
-        playback.attach(repository: repo, preferences: prefs)
+        let scrobbler = ScrobbleService(preferences: prefs)
+        playback.attach(repository: repo, preferences: prefs, scrobble: scrobbler)
         preferences = prefs
         repository = repo
         player = playback
         jellyfin = JellyfinService(preferences: prefs, repository: repo)
         quickConnect = QuickConnectServer(repository: repo)
+        scrobble = scrobbler
     }
 
     func bootstrap() async {

@@ -13,6 +13,8 @@ import io.karpilabs.simplemp3.data.prefs.BufferProfile
 import io.karpilabs.simplemp3.data.prefs.ResumeSnapshot
 import io.karpilabs.simplemp3.data.prefs.ThemeMode
 import io.karpilabs.simplemp3.data.repository.MusicRepository
+import io.karpilabs.simplemp3.data.scrobble.ScrobbleConfig
+import io.karpilabs.simplemp3.data.scrobble.ScrobbleManager
 import io.karpilabs.simplemp3.data.storage.LargeFileStorageManager
 import io.karpilabs.simplemp3.player.PlayerConnection
 import io.karpilabs.simplemp3.player.PlayerUiState
@@ -37,6 +39,7 @@ class MusicViewModel
         private val playerConnection: PlayerConnection,
         private val appPreferences: AppPreferences,
         private val storageManager: LargeFileStorageManager,
+        private val scrobbleManager: ScrobbleManager,
     ) : ViewModel() {
         val playerState: StateFlow<PlayerUiState> = playerConnection.state
 
@@ -67,6 +70,10 @@ class MusicViewModel
                 .stateIn(viewModelScope, share, emptyList())
         val artists: StateFlow<List<AlbumRow>> =
             repository.artists
+                .stateIn(viewModelScope, share, emptyList())
+
+        val genres: StateFlow<List<AlbumRow>> =
+            repository.genres
                 .stateIn(viewModelScope, share, emptyList())
 
         /** Top-level folders for the Library → Folders tab. */
@@ -136,6 +143,30 @@ class MusicViewModel
         val bufferProfile: StateFlow<BufferProfile> =
             appPreferences.bufferProfileFlow
                 .stateIn(viewModelScope, share, BufferProfile.BALANCED)
+
+        val normalizeVolume: StateFlow<Boolean> =
+            appPreferences.normalizeVolumeFlow
+                .stateIn(viewModelScope, share, false)
+
+        val normalizePreampDb: StateFlow<Int> =
+            appPreferences.normalizePreampDbFlow
+                .stateIn(viewModelScope, share, 0)
+
+        val scrobbleConfig: StateFlow<ScrobbleConfig> =
+            appPreferences.scrobbleConfigFlow
+                .stateIn(
+                    viewModelScope,
+                    share,
+                    ScrobbleConfig(
+                        provider = ScrobbleConfig.PROVIDER_NONE,
+                        enabled = false,
+                        listenBrainzToken = "",
+                        lastfmSessionKey = "",
+                        lastfmUsername = "",
+                        lastfmApiKey = "",
+                        lastfmApiSecret = "",
+                    ),
+                )
 
         private val _searchQuery = MutableStateFlow("")
         val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -217,6 +248,49 @@ class MusicViewModel
         fun setBufferProfile(profile: BufferProfile) {
             viewModelScope.launch {
                 appPreferences.setBufferProfile(profile)
+            }
+        }
+
+        fun setNormalizeVolume(enabled: Boolean) {
+            viewModelScope.launch {
+                appPreferences.setNormalizeVolume(enabled)
+            }
+        }
+
+        fun setNormalizePreampDb(db: Int) {
+            viewModelScope.launch {
+                appPreferences.setNormalizePreampDb(db)
+            }
+        }
+
+        // ── Scrobbling ─────────────────────────────────────────────
+        fun setScrobbleEnabled(enabled: Boolean) {
+            viewModelScope.launch { appPreferences.setScrobbleEnabled(enabled) }
+        }
+
+        fun setScrobbleProvider(provider: String) {
+            viewModelScope.launch { appPreferences.setScrobbleProvider(provider) }
+        }
+
+        fun setListenBrainzToken(token: String) {
+            viewModelScope.launch { appPreferences.setListenBrainzToken(token) }
+        }
+
+        fun logoutLastfm() {
+            viewModelScope.launch { appPreferences.clearLastfmSession() }
+        }
+
+        /** @param onResult true on a successful Last.fm session. */
+        fun loginLastfm(
+            apiKey: String,
+            apiSecret: String,
+            username: String,
+            password: String,
+            onResult: (Boolean) -> Unit,
+        ) {
+            viewModelScope.launch {
+                val ok = scrobbleManager.loginLastfm(apiKey, apiSecret, username, password)
+                onResult(ok)
             }
         }
 
@@ -428,6 +502,16 @@ class MusicViewModel
         fun folderTracks(folderPath: String): StateFlow<List<TrackEntity>> =
             repository
                 .getTracksByFolder(folderPath)
+                .stateIn(viewModelScope, share, emptyList())
+
+        fun smartTracks(smart: io.karpilabs.simplemp3.data.local.SmartPlaylist): StateFlow<List<TrackEntity>> =
+            repository
+                .getSmartTracks(smart)
+                .stateIn(viewModelScope, share, emptyList())
+
+        fun genreTracks(genre: String): StateFlow<List<TrackEntity>> =
+            repository
+                .getTracksByGenre(genre)
                 .stateIn(viewModelScope, share, emptyList())
 
         fun childFolders(folderPath: String): StateFlow<List<FolderBrowser.FolderEntry>> =

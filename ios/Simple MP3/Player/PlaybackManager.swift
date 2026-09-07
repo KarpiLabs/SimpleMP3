@@ -70,8 +70,11 @@ final class PlaybackManager {
     private var shuffleOrder: [Int] = []
     private var repository: MusicRepository?
     private var preferences: AppPreferences?
+    private var scrobble: ScrobbleService?
     private var lastRecordedTrackId: String?
     private var progressSaveTask: Task<Void, Never>?
+    /// ReplayGain (dB) for the current track, once known.
+    private var currentGainDb: Double?
 
     init() {
         configureSession()
@@ -132,9 +135,10 @@ final class PlaybackManager {
         }
     }
 
-    func attach(repository: MusicRepository, preferences: AppPreferences) {
+    func attach(repository: MusicRepository, preferences: AppPreferences, scrobble: ScrobbleService? = nil) {
         self.repository = repository
         self.preferences = preferences
+        self.scrobble = scrobble
     }
 
     private func configureSession() {
@@ -326,6 +330,12 @@ final class PlaybackManager {
         if forward > 0 {
             item.preferredForwardBufferDuration = forward
         }
+        // Loudness normalization: apply any known gain now, then refine from tags.
+        currentGainDb = track.trackGainDb
+        applyNormalizationVolume()
+        if !track.isRemoteStream {
+            parseGainIfNeeded(for: track, url: url)
+        }
         if track.isRemoteStream {
             // Prefer audio-only / lowest-resolution HLS variants so we don't pull video.
             item.preferredMaximumResolution = CGSize(width: 1, height: 1)
@@ -345,6 +355,7 @@ final class PlaybackManager {
         Task {
             await repository?.recordPlay(trackId: track.id)
         }
+        scrobble?.onTrackStarted(track)
         persistResume()
         NotificationCenter.default.post(name: .playbackDidChange, object: nil)
     }
@@ -360,6 +371,37 @@ final class PlaybackManager {
             return url
         }
         return nil
+    }
+
+    // MARK: - Loudness normalization
+
+    /// Re-apply the current track's normalized volume — call when the setting changes.
+    func refreshNormalization() {
+        applyNormalizationVolume()
+    }
+
+    private func applyNormalizationVolume() {
+        player.volume = VolumeNormalizer.linearVolume(
+            gainDb: currentGainDb,
+            preampDb: preferences?.normalizePreampDb ?? 0,
+            enabled: preferences?.normalizeVolume ?? false
+        )
+    }
+
+    /// Read ReplayGain tags off the main thread and cache them for next time.
+    private func parseGainIfNeeded(for track: Track, url: URL) {
+        guard preferences?.normalizeVolume == true, track.trackGainDb == nil else { return }
+        let trackId = track.id
+        Task { [weak self] in
+            let asset = AVURLAsset(url: url)
+            guard let gain = await VolumeNormalizer.trackGain(from: asset) else { return }
+            await self?.repository?.setTrackGain(trackId: trackId, gainDb: gain)
+            await MainActor.run { [weak self] in
+                guard let self, self.state.current?.id == trackId else { return }
+                self.currentGainDb = gain
+                self.applyNormalizationVolume()
+            }
+        }
     }
 
     private func nextIndex() -> Int? {
@@ -402,6 +444,9 @@ final class PlaybackManager {
         state.isPlaying = player.rate > 0
         // Reflect real buffering rather than a synchronous guess at load time.
         state.isBuffering = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
+        if state.isPlaying {
+            scrobble?.onProgress(positionMs: state.positionMs)
+        }
         updateStreamStats()
         updateNowPlayingPlayback()
     }

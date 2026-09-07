@@ -61,6 +61,27 @@ class MusicRepository
 
         val folderPaths: Flow<List<String>> = trackDao.getDistinctFolderPaths()
 
+        // ── Smart / auto playlists ─────────────────────────────────
+        val mostPlayed: Flow<List<TrackEntity>> = trackDao.getMostPlayed(100)
+        val genres: Flow<List<AlbumRow>> = trackDao.getGenres()
+
+        fun getTracksByGenre(genre: String): Flow<List<TrackEntity>> = trackDao.getTracksByGenre(genre)
+
+        /** On-demand contents for a [SmartPlaylist] — used for play-all / Auto browse. */
+        suspend fun getSmartTracksOnce(smart: io.karpilabs.simplemp3.data.local.SmartPlaylist): List<TrackEntity> =
+            when (smart) {
+                io.karpilabs.simplemp3.data.local.SmartPlaylist.MOST_PLAYED -> trackDao.getMostPlayedOnce(100)
+                io.karpilabs.simplemp3.data.local.SmartPlaylist.RECENTLY_ADDED -> trackDao.getRecentlyAddedOnce(100)
+            }
+
+        fun getSmartTracks(smart: io.karpilabs.simplemp3.data.local.SmartPlaylist): Flow<List<TrackEntity>> =
+            when (smart) {
+                io.karpilabs.simplemp3.data.local.SmartPlaylist.MOST_PLAYED -> trackDao.getMostPlayed(100)
+                io.karpilabs.simplemp3.data.local.SmartPlaylist.RECENTLY_ADDED -> trackDao.getRecentlyAdded(100)
+            }
+
+        suspend fun getTracksByGenreOnce(genre: String): List<TrackEntity> = trackDao.getTracksByGenreOnce(genre)
+
         val hiddenTracks: Flow<List<TrackEntity>> = trackDao.getHiddenTracks()
 
         suspend fun setHidden(
@@ -228,6 +249,14 @@ class MusicRepository
 
         suspend fun getTrack(id: Long): TrackEntity? = trackDao.getTrackById(id)
 
+        /** Persist a ReplayGain track gain (dB) parsed from stream metadata. */
+        suspend fun updateTrackGain(
+            id: Long,
+            gainDb: Double?,
+        ) {
+            trackDao.updateTrackGain(id, gainDb)
+        }
+
         suspend fun getTracksByIdsOrdered(ids: List<Long>): List<TrackEntity> {
             if (ids.isEmpty()) return emptyList()
             val map = trackDao.getTracksByIds(ids).associateBy { it.id }
@@ -357,6 +386,7 @@ class MusicRepository
             }
 
         suspend fun recordPlay(trackId: Long) {
+            trackDao.incrementPlayCount(trackId)
             ensureSystemPlaylists()
             val recent = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_RECENTLY_PLAYED) ?: return
             // Move to front: remove if present, insert at position 0 by reordering

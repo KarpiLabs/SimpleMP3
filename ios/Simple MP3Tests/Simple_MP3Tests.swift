@@ -58,4 +58,13 @@ struct Simple_MP3Tests {
         let prefs = AppPreferences()
         #expect(prefs.showCarPlayWeather == true)
     }
+
+    @Test func songQueuesExcludeLiveStreams() {
+        let song = Track(title: "Highway", uri: "file://song.mp3", source: .local)
+        let jellyfin = Track(title: "Offline", uri: "file://jf.mp3", source: .jellyfin)
+        let stream = Track(title: "Radio", uri: "https://radio.example/live", source: .stream)
+        let result = [song, jellyfin, stream].excludingLiveStreams()
+        #expect(result.map(\.id) == [song.id, jellyfin.id])
+        #expect(result.allSatisfy { $0.source != .stream })
+    }
 }

@@ -24,7 +24,10 @@ import androidx.compose.material.icons.rounded.Compress
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Storage
@@ -63,6 +66,8 @@ fun SettingsScreen(
     wifiOnlyDownloads: Boolean,
     largeFileOptimize: Boolean,
     largeFileColdPack: Boolean,
+    normalizeVolume: Boolean,
+    normalizePreampDb: Int,
     themeMode: ThemeMode,
     bufferProfile: BufferProfile,
     onBack: () -> Unit,
@@ -76,7 +81,10 @@ fun SettingsScreen(
     onLargeFileColdPackChange: (Boolean) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onBufferProfileChange: (BufferProfile) -> Unit,
+    onNormalizeVolumeChange: (Boolean) -> Unit,
+    onNormalizePreampChange: (Int) -> Unit,
     onOpenQuickConnect: () -> Unit = {},
+    onOpenScrobbling: () -> Unit = {},
     onOpenLibraryFolders: () -> Unit = {},
     onOpenHiddenSongs: () -> Unit = {},
 ) {
@@ -256,6 +264,52 @@ fun SettingsScreen(
                             }
                         onBufferProfileChange(next)
                     },
+                )
+            }
+            item {
+                SettingsSwitchRow(
+                    icon = Icons.Rounded.GraphicEq,
+                    title = "Volume normalization",
+                    subtitle =
+                        if (normalizeVolume) {
+                            "Even out loudness across tracks using ReplayGain tags"
+                        } else {
+                            "Play every track at its original volume"
+                        },
+                    checked = normalizeVolume,
+                    onCheckedChange = onNormalizeVolumeChange,
+                )
+            }
+            if (normalizeVolume) {
+                item {
+                    SettingsNavRow(
+                        icon = Icons.Rounded.Tune,
+                        title = "Normalization pre-amp",
+                        subtitle =
+                            "${if (normalizePreampDb >= 0) "+" else ""}$normalizePreampDb dB · " +
+                                "tap to adjust the extra gain applied on top of ReplayGain",
+                        onClick = {
+                            // Cycle -6 → -3 → 0 → +3 → +6 → -6
+                            val next =
+                                when {
+                                    normalizePreampDb >= 6 -> -6
+                                    else -> normalizePreampDb + 3
+                                }
+                            onNormalizePreampChange(next)
+                        },
+                    )
+                }
+            }
+
+            item {
+                SettingsSectionHeader("Scrobbling")
+            }
+            item {
+                SettingsNavRow(
+                    icon = Icons.Rounded.Sync,
+                    title = "Scrobbling",
+                    subtitle = "Send plays to Last.fm or ListenBrainz",
+                    onClick = onOpenScrobbling,
                 )
             }
 
