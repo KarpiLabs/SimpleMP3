@@ -212,14 +212,24 @@ final class MusicRepository {
     func deleteTrack(id: String) async {
         if let t = await store.track(id: id) {
             if t.isAppOwned, let url = t.fileURL, url.isFileURL {
-                try? FileManager.default.removeItem(at: url)
+                Self.deleteFileSafely(at: url)
             }
             if let art = t.artworkUri, let url = URL(string: art), url.isFileURL {
-                try? FileManager.default.removeItem(at: url)
+                Self.deleteFileSafely(at: url)
             }
         }
         await store.deleteTrack(id: id)
         await refresh()
+    }
+
+    /// Safely deletes a file after verifying its standardized, resolved path resides strictly within the app sandbox container.
+    static func deleteFileSafely(at url: URL) {
+        guard url.isFileURL else { return }
+        let resolved = url.standardizedFileURL.resolvingSymlinksInPath()
+        let homeDir = URL(fileURLWithPath: NSHomeDirectory()).standardizedFileURL.resolvingSymlinksInPath()
+        // Prevent path traversal outside the app container
+        guard resolved.path.hasPrefix(homeDir.path + "/") else { return }
+        try? FileManager.default.removeItem(at: resolved)
     }
 
     func mediaDirectory(for source: TrackSource) async -> URL {
