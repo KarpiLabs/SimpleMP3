@@ -105,12 +105,15 @@ final class AppModel {
     }
 
     func playTrack(_ track: Track, queue: [Track]? = nil) {
-        player.play(track, queue: queue)
+        let source = queue ?? [track]
+        let (list, index) = source.playbackQueue(start: track)
+        player.play(tracks: list, startIndex: index)
     }
 
     func playAll(_ tracks: [Track]) {
         guard !tracks.isEmpty else { return }
-        player.play(tracks: tracks, startIndex: 0)
+        let (list, index) = tracks.playbackQueue(start: tracks.first)
+        player.play(tracks: list, startIndex: index)
     }
 
     func hideTrack(_ track: Track) {

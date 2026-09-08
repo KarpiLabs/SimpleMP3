@@ -175,19 +175,21 @@ final class PlaybackManager {
 
     func play(tracks: [Track], startIndex: Int = 0, positionMs: Int64 = 0) {
         guard !tracks.isEmpty else { return }
-        let idx = min(max(0, startIndex), tracks.count - 1)
-        state.queue = tracks
+        let seed = tracks[min(max(0, startIndex), tracks.count - 1)]
+        let (queue, idx) = tracks.playbackQueue(start: seed)
+        guard !queue.isEmpty else { return }
+        state.queue = queue
         state.index = idx
         state.shuffle = false
-        order = Array(tracks.indices)
+        order = Array(queue.indices)
         shuffleOrder = order.shuffled()
         loadAndPlay(at: idx, positionMs: positionMs, autoPlay: true)
     }
 
     func play(_ track: Track, queue: [Track]? = nil) {
         let q = queue ?? [track]
-        let idx = q.firstIndex(where: { $0.id == track.id }) ?? 0
-        play(tracks: q, startIndex: idx)
+        let (list, idx) = q.playbackQueue(start: track)
+        play(tracks: list, startIndex: idx)
     }
 
     /// Play a live network stream URL (progressive or HLS `.m3u8`) directly — AVPlayer

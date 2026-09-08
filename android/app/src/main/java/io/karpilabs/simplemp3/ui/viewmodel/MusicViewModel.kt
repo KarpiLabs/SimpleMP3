@@ -8,6 +8,7 @@ import io.karpilabs.simplemp3.data.local.FolderBrowser
 import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.PlaylistWithMeta
 import io.karpilabs.simplemp3.data.local.TrackEntity
+import io.karpilabs.simplemp3.data.local.playbackQueue
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import io.karpilabs.simplemp3.data.prefs.BufferProfile
 import io.karpilabs.simplemp3.data.prefs.ResumeSnapshot
@@ -328,22 +329,32 @@ class MusicViewModel
             track: TrackEntity,
             queue: List<TrackEntity> = tracks.value,
         ) {
-            val list = if (queue.any { it.id == track.id }) queue else listOf(track)
-            playerConnection.playTrackInQueue(list, track.id)
+            val source = if (queue.any { it.id == track.id }) queue else listOf(track)
+            val (list, index) = source.playbackQueue(track)
+            playerConnection.playTracks(list, index)
         }
 
         fun playAll(
             tracks: List<TrackEntity>,
             startIndex: Int = 0,
         ) {
-            playerConnection.playTracks(tracks, startIndex)
+            val (list, index) = tracks.playbackQueue(tracks.getOrNull(startIndex))
+            playerConnection.playTracks(list, index)
         }
 
         fun playNext(track: TrackEntity) {
+            if (track.isStream) {
+                playerConnection.playTracks(listOf(track), 0)
+                return
+            }
             playerConnection.playNext(track)
         }
 
         fun addToQueue(track: TrackEntity) {
+            if (track.isStream) {
+                playerConnection.playTracks(listOf(track), 0)
+                return
+            }
             playerConnection.addToQueue(track)
         }
 
@@ -354,7 +365,9 @@ class MusicViewModel
         fun playPlaylist(playlistId: Long) {
             viewModelScope.launch {
                 val list = repository.getPlaylistTracksOnce(playlistId)
-                if (list.isNotEmpty()) playerConnection.playTracks(list, 0)
+                if (list.isEmpty()) return@launch
+                val (queue, index) = list.playbackQueue(list.first())
+                if (queue.isNotEmpty()) playerConnection.playTracks(queue, index)
             }
         }
 

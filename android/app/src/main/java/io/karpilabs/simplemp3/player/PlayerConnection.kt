@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.karpilabs.simplemp3.data.local.TrackEntity
+import io.karpilabs.simplemp3.data.local.playbackQueue
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import io.karpilabs.simplemp3.data.prefs.ResumeSnapshot
 import io.karpilabs.simplemp3.data.repository.MusicRepository
@@ -189,12 +190,15 @@ class PlayerConnection
         ) {
             if (tracks.isEmpty()) return
             val c = controller ?: return
-            lastQueueIds = tracks.map { it.id }
+            val seed = tracks.getOrNull(startIndex) ?: tracks.first()
+            val (queue, queueIndex) = tracks.playbackQueue(seed)
+            if (queue.isEmpty()) return
+            lastQueueIds = queue.map { it.id }
             scope.launch {
                 // Thaw cold large files before handing URIs to ExoPlayer
                 val ready =
                     withContext(Dispatchers.IO) {
-                        storageManager.ensurePlayable(tracks)
+                        storageManager.ensurePlayable(queue)
                     }
                 lastQueueIds = ready.map { it.id }
                 val items =
@@ -202,7 +206,7 @@ class PlayerConnection
                         MediaItemFactory.fromTracks(ready)
                     }
                 if (items.isEmpty()) return@launch
-                val idx = startIndex.coerceIn(0, items.lastIndex)
+                val idx = queueIndex.coerceIn(0, items.lastIndex)
                 c.setMediaItems(items, idx, startPositionMs.coerceAtLeast(0L))
                 c.prepare()
                 c.play()
@@ -442,12 +446,15 @@ class PlayerConnection
                 if (!snap.hasSession) return@launch
                 val tracks = musicRepository.getTracksByIdsOrdered(snap.trackIds)
                 if (tracks.isEmpty()) return@launch
+                val seed = tracks.getOrNull(snap.index.coerceIn(0, tracks.lastIndex))
+                val (queue, queueIndex) = tracks.playbackQueue(seed)
+                if (queue.isEmpty()) return@launch
                 val ready =
                     withContext(Dispatchers.IO) {
-                        storageManager.ensurePlayable(tracks)
+                        storageManager.ensurePlayable(queue)
                     }
                 if (ready.isEmpty()) return@launch
-                val idx = snap.index.coerceIn(0, ready.lastIndex)
+                val idx = queueIndex.coerceIn(0, ready.lastIndex)
                 lastQueueIds = ready.map { it.id }
                 val items =
                     withContext(Dispatchers.Default) {

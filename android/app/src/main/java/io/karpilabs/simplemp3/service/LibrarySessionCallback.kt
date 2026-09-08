@@ -18,6 +18,7 @@ import com.google.common.util.concurrent.SettableFuture
 import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.data.local.excludingLiveStreams
+import io.karpilabs.simplemp3.data.local.playbackQueue
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import io.karpilabs.simplemp3.data.repository.MusicRepository
 import io.karpilabs.simplemp3.data.storage.LargeFileStorageManager
@@ -33,8 +34,8 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Android Auto / media browser tree:
  *
- * Root → Continue · Liked · Streams · YouTube · Up Next · Playlists · Offline ·
- *        Albums · Artists · Songs · Recently Played
+ * Root → Continue · Liked · Favorite Streams · Streams · YouTube · Up Next ·
+ *        Playlists · Offline · Albums · Artists · Songs · Recently Played
  *
  * - Single-track plays expand into a full queue
  * - Search is fully wired (notify + results)
@@ -219,14 +220,17 @@ class LibrarySessionCallback(
                 repository.getTracksByIdsOrdered(snap.trackIds)
             }
         if (tracks.isEmpty()) return
+        val seed = tracks.getOrNull(snap.index.coerceIn(0, tracks.lastIndex))
+        val (queue, queueIndex) = tracks.playbackQueue(seed)
+        if (queue.isEmpty()) return
         val ready =
             withContext(Dispatchers.IO) {
-                storageManager.ensurePlayable(tracks)
+                storageManager.ensurePlayable(queue)
             }
         if (ready.isEmpty()) return
 
         lastAutoResumeAtMs = now
-        val idx = snap.index.coerceIn(0, ready.lastIndex)
+        val idx = queueIndex.coerceIn(0, ready.lastIndex)
         val items =
             withContext(Dispatchers.Default) {
                 MediaItemFactory.fromTracks(ready)
@@ -474,12 +478,14 @@ class LibrarySessionCallback(
                     return@launch
                 }
                 val tracks = repository.getTracksByIdsOrdered(snap.trackIds)
-                val items = MediaItemFactory.fromTracks(tracks)
+                val seed = tracks.getOrNull(snap.index.coerceIn(0, tracks.lastIndex.coerceAtLeast(0)))
+                val (queue, queueIndex) = tracks.playbackQueue(seed)
+                val items = MediaItemFactory.fromTracks(queue)
                 if (items.isEmpty()) {
                     future.set(MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L))
                     return@launch
                 }
-                val idx = snap.index.coerceIn(0, items.lastIndex)
+                val idx = queueIndex.coerceIn(0, items.lastIndex)
                 future.set(
                     MediaSession.MediaItemsWithStartPosition(
                         items,
@@ -545,17 +551,20 @@ class LibrarySessionCallback(
 
         // Folder / collection play
         if (!mediaId.startsWith(MediaIds.TRACK_PREFIX)) {
+            if (mediaId == MediaIds.CONTINUE) {
+                val tracks = repository.getContinueTracksOnce()
+                val snap = appPreferences.getResume()
+                val seed =
+                    snap?.index?.let { tracks.getOrNull(it.coerceIn(0, tracks.lastIndex.coerceAtLeast(0))) }
+                        ?: tracks.firstOrNull()
+                val (queue, idx) = tracks.playbackQueue(seed)
+                val items = MediaItemFactory.fromTracks(storageManager.ensurePlayable(queue))
+                return ResolvedQueue(items, idx)
+            }
             val list =
                 resolvePlayable(mediaId)
                     ?: listOfNotNull(only.takeIf { it.localConfiguration != null })
-            val start =
-                if (mediaId == MediaIds.CONTINUE) {
-                    val snap = appPreferences.getResume()
-                    snap?.index?.coerceIn(0, (list.size - 1).coerceAtLeast(0)) ?: 0
-                } else {
-                    0
-                }
-            return ResolvedQueue(list, start)
+            return ResolvedQueue(list, 0)
         }
 
         // Single track — expand into a continuous queue.
@@ -637,6 +646,9 @@ class LibrarySessionCallback(
                 storageManager.ensurePlayable(listOf(track)),
             )
 
+        // Live streams never join a song queue — skip-next would land on a station that never ends.
+        if (track.isStream) return single
+
         val parent = lastBrowseParentId
         if (parent != null) {
             val siblings = playableTracksFromParent(parent)
@@ -712,11 +724,13 @@ class LibrarySessionCallback(
                 parentId == MediaIds.SONGS -> repository.getAllTracksOnce().excludingLiveStreams()
 
                 parentId == MediaIds.RECENT || parentId == MediaIds.CONTINUE ->
-                    repository.getContinueTracksOnce()
+                    repository.getContinueTracksOnce().excludingLiveStreams()
 
                 parentId == MediaIds.LIKED -> repository.getLikedTracksOnce().excludingLiveStreams()
 
                 parentId == MediaIds.STREAMS -> repository.getStreamTracksOnce()
+
+                parentId == MediaIds.FAVORITE_STREAMS -> repository.getFavoriteStreamTracksOnce()
 
                 parentId == MediaIds.YOUTUBE -> repository.getYoutubeTracksOnce()
 
@@ -778,7 +792,9 @@ class LibrarySessionCallback(
                 val id = repository.getRecentlyPlayedPlaylistId()
                 val tracks =
                     if (id != null) {
-                        MediaItemFactory.fromTracks(repository.getPlaylistTracksOnce(id))
+                        MediaItemFactory.fromTracks(
+                            repository.getPlaylistTracksOnce(id).excludingLiveStreams(),
+                        )
                     } else {
                         emptyList()
                     }
@@ -786,7 +802,7 @@ class LibrarySessionCallback(
             }
 
             parentId == MediaIds.CONTINUE -> {
-                val tracks = MediaItemFactory.fromTracks(repository.getContinueTracksOnce())
+                val tracks = MediaItemFactory.fromTracks(repository.getContinueTracksOnce().excludingLiveStreams())
                 withShuffleHeader(MediaIds.CONTINUE, tracks)
             }
 
@@ -795,10 +811,11 @@ class LibrarySessionCallback(
                 withShuffleHeader(MediaIds.LIKED, tracks)
             }
 
-            parentId == MediaIds.STREAMS -> {
-                val tracks = MediaItemFactory.fromTracks(repository.getStreamTracksOnce())
-                withShuffleHeader(MediaIds.STREAMS, tracks)
-            }
+            parentId == MediaIds.STREAMS ->
+                MediaItemFactory.fromTracks(repository.getStreamTracksOnce())
+
+            parentId == MediaIds.FAVORITE_STREAMS ->
+                MediaItemFactory.fromTracks(repository.getFavoriteStreamTracksOnce())
 
             parentId == MediaIds.YOUTUBE -> {
                 val tracks = MediaItemFactory.fromTracks(repository.getYoutubeTracksOnce())
@@ -854,6 +871,7 @@ class LibrarySessionCallback(
     private suspend fun buildRootChildren(): List<MediaItem> {
         val continueTracks = repository.getContinueTracksOnce()
         val liked = repository.getLikedTracksOnce().excludingLiveStreams()
+        val favoriteStreams = repository.getFavoriteStreamTracksOnce()
         val streams = repository.getStreamTracksOnce()
         val youtube = repository.getYoutubeTracksOnce()
         val queueCount = withContext(Dispatchers.Main) { player.mediaItemCount }
@@ -888,6 +906,21 @@ class LibrarySessionCallback(
             )
             add(
                 MediaItemFactory.category(
+                    mediaId = MediaIds.FAVORITE_STREAMS,
+                    title = "Favorite Streams",
+                    subtitle =
+                        when (favoriteStreams.size) {
+                            0 -> "Heart a station to pin it here"
+                            1 -> "1 station"
+                            else -> "${favoriteStreams.size} stations"
+                        },
+                    isPlayable = false,
+                    artworkUri = favoriteStreams.firstOrNull()?.artworkUri,
+                    browsableHint = MediaItemFactory.CONTENT_STYLE_LIST,
+                ),
+            )
+            add(
+                MediaItemFactory.category(
                     mediaId = MediaIds.STREAMS,
                     title = "Streams",
                     subtitle =
@@ -896,7 +929,7 @@ class LibrarySessionCallback(
                             1 -> "1 station"
                             else -> "${streams.size} stations"
                         },
-                    isPlayable = streams.isNotEmpty(),
+                    isPlayable = false,
                     artworkUri = streams.firstOrNull()?.artworkUri,
                     browsableHint = MediaItemFactory.CONTENT_STYLE_LIST,
                 ),
@@ -962,11 +995,12 @@ class LibrarySessionCallback(
         return listOf(MediaItemFactory.shufflePlayAction(targetId)) + tracks
     }
 
-    /** Hide Jellyfin system playlist in Auto when integration is disabled. */
+    /** Hide Jellyfin / stream system playlists in Auto — streams have their own root tiles. */
     private suspend fun visiblePlaylists() =
         repository.getPlaylistsOnce().filter { pl ->
-            appPreferences.isJellyfinEnabled() ||
-                pl.systemType != PlaylistEntity.SYSTEM_JELLYFIN
+            pl.systemType != PlaylistEntity.SYSTEM_STREAMS &&
+                pl.systemType != PlaylistEntity.SYSTEM_FAVORITE_STREAMS &&
+                (appPreferences.isJellyfinEnabled() || pl.systemType != PlaylistEntity.SYSTEM_JELLYFIN)
         }
 
     private suspend fun buildSearchResults(query: String): List<MediaItem> {
@@ -1031,7 +1065,13 @@ class LibrarySessionCallback(
                 MediaItemFactory.category(
                     MediaIds.STREAMS,
                     "Streams",
-                    isPlayable = true,
+                    isPlayable = false,
+                )
+            mediaId == MediaIds.FAVORITE_STREAMS ->
+                MediaItemFactory.category(
+                    MediaIds.FAVORITE_STREAMS,
+                    "Favorite Streams",
+                    isPlayable = false,
                 )
             mediaId == MediaIds.YOUTUBE ->
                 MediaItemFactory.category(
@@ -1100,11 +1140,14 @@ class LibrarySessionCallback(
                 mediaId == MediaIds.SONGS -> repository.getAllTracksOnce().excludingLiveStreams()
                 mediaId == MediaIds.RECENT -> {
                     val id = repository.getRecentlyPlayedPlaylistId() ?: return emptyList()
-                    repository.getPlaylistTracksOnce(id)
+                    repository.getPlaylistTracksOnce(id).excludingLiveStreams()
                 }
-                mediaId == MediaIds.CONTINUE -> repository.getContinueTracksOnce()
+                mediaId == MediaIds.CONTINUE -> repository.getContinueTracksOnce().excludingLiveStreams()
                 mediaId == MediaIds.LIKED -> repository.getLikedTracksOnce().excludingLiveStreams()
-                mediaId == MediaIds.STREAMS -> repository.getStreamTracksOnce()
+                mediaId == MediaIds.STREAMS ->
+                    repository.getStreamTracksOnce().firstOrNull()?.let { listOf(it) }.orEmpty()
+                mediaId == MediaIds.FAVORITE_STREAMS ->
+                    repository.getFavoriteStreamTracksOnce().firstOrNull()?.let { listOf(it) }.orEmpty()
                 mediaId == MediaIds.YOUTUBE -> repository.getYoutubeTracksOnce()
                 mediaId == MediaIds.QUEUE -> return currentQueueItems()
                 mediaId == MediaIds.OFFLINE -> {

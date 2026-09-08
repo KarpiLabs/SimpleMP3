@@ -67,4 +67,21 @@ struct Simple_MP3Tests {
         #expect(result.map(\.id) == [song.id, jellyfin.id])
         #expect(result.allSatisfy { $0.source != .stream })
     }
+
+    @Test func playbackQueuePlaysALiveStreamAlone() {
+        let song = Track(title: "Highway", uri: "file://song.mp3", source: .local)
+        let stream = Track(title: "Radio", uri: "https://radio.example/live", source: .stream)
+        let result = [song, stream].playbackQueue(start: stream)
+        #expect(result.tracks.map(\.id) == [stream.id])
+        #expect(result.index == 0)
+    }
+
+    @Test func playbackQueueDropsStreamsWhenStartingOnASong() {
+        let song = Track(title: "Highway", uri: "file://song.mp3", source: .local)
+        let stream = Track(title: "Radio", uri: "https://radio.example/live", source: .stream)
+        let later = Track(title: "Night", uri: "file://night.mp3", source: .local)
+        let result = [song, stream, later].playbackQueue(start: later)
+        #expect(result.tracks.map(\.id) == [song.id, later.id])
+        #expect(result.index == 1)
+    }
 }

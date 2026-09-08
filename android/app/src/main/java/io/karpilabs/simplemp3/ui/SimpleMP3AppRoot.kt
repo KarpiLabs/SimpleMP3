@@ -404,6 +404,7 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                     val streamUi by streamVm.ui.collectAsStateWithLifecycle()
                     val streamProgress by streamVm.progress.collectAsStateWithLifecycle()
                     val savedStreams by streamVm.saved.collectAsStateWithLifecycle()
+                    val favoriteStreamIds by streamVm.favoriteIds.collectAsStateWithLifecycle()
 
                     StreamScreen(
                         ui = streamUi,
@@ -420,6 +421,8 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onSetTrackArtwork = streamVm::setTrackArtwork,
                         onPlayTrack = { track, queue -> viewModel.playTrack(track, queue) },
                         onRemove = streamVm::remove,
+                        favoriteIds = favoriteStreamIds,
+                        onToggleFavorite = streamVm::toggleFavorite,
                     )
                 }
                 composable(Routes.QUICK_CONNECT) {

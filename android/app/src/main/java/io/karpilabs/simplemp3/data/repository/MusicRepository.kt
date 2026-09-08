@@ -186,6 +186,28 @@ class MusicRepository
                     ),
                 )
             }
+            if (playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_FAVORITE_STREAMS) == null) {
+                playlistDao.insertPlaylist(
+                    PlaylistEntity(
+                        name = "Favorite Streams",
+                        description = "Stations you hearted",
+                        isSystem = true,
+                        systemType = PlaylistEntity.SYSTEM_FAVORITE_STREAMS,
+                    ),
+                )
+            }
+            migrateStreamHeartsToFavoriteStreams()
+        }
+
+        /** Hearted live streams used to land in Liked Songs — move them to Favorite Streams. */
+        private suspend fun migrateStreamHeartsToFavoriteStreams() {
+            val liked = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_FAVORITES) ?: return
+            val dest = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_FAVORITE_STREAMS) ?: return
+            val likedTracks = playlistDao.getTracksForPlaylistOnce(liked.id)
+            likedTracks.filter { it.isStream }.forEach { stream ->
+                playlistDao.addTrackToEnd(dest.id, stream.id)
+                playlistDao.removeTrackFromPlaylist(liked.id, stream.id)
+            }
         }
 
         /**
@@ -367,7 +389,14 @@ class MusicRepository
 
         suspend fun toggleFavorite(trackId: Long): Boolean {
             ensureSystemPlaylists()
-            val fav = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_FAVORITES) ?: return false
+            val track = trackDao.getTrackById(trackId) ?: return false
+            val type =
+                if (track.isStream) {
+                    PlaylistEntity.SYSTEM_FAVORITE_STREAMS
+                } else {
+                    PlaylistEntity.SYSTEM_FAVORITES
+                }
+            val fav = playlistDao.getSystemPlaylist(type) ?: return false
             return if (playlistDao.containsTrack(fav.id, trackId)) {
                 playlistDao.removeTrackFromPlaylist(fav.id, trackId)
                 playlistDao.touchPlaylist(fav.id)
@@ -379,13 +408,27 @@ class MusicRepository
         }
 
         suspend fun isFavorite(trackId: Long): Boolean {
-            val fav = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_FAVORITES) ?: return false
+            val track = trackDao.getTrackById(trackId) ?: return false
+            val type =
+                if (track.isStream) {
+                    PlaylistEntity.SYSTEM_FAVORITE_STREAMS
+                } else {
+                    PlaylistEntity.SYSTEM_FAVORITES
+                }
+            val fav = playlistDao.getSystemPlaylist(type) ?: return false
             return playlistDao.containsTrack(fav.id, trackId)
         }
 
         fun observeIsFavorite(trackId: Long): Flow<Boolean> =
             kotlinx.coroutines.flow.flow {
-                val favId = getFavoritesPlaylistId()
+                val track = trackDao.getTrackById(trackId)
+                val type =
+                    if (track?.isStream == true) {
+                        PlaylistEntity.SYSTEM_FAVORITE_STREAMS
+                    } else {
+                        PlaylistEntity.SYSTEM_FAVORITES
+                    }
+                val favId = playlistDao.getSystemPlaylist(type)?.id
                 if (favId == null) {
                     emit(false)
                 } else {
@@ -425,6 +468,9 @@ class MusicRepository
 
         suspend fun getFavoritesPlaylistId(): Long? = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_FAVORITES)?.id
 
+        suspend fun getFavoriteStreamsPlaylistId(): Long? =
+            playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_FAVORITE_STREAMS)?.id
+
         suspend fun getRecentlyPlayedPlaylistId(): Long? = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_RECENTLY_PLAYED)?.id
 
         suspend fun getYoutubePlaylistId(): Long? = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_YOUTUBE)?.id
@@ -443,6 +489,11 @@ class MusicRepository
 
         suspend fun getStreamTracksOnce(): List<TrackEntity> =
             trackDao.getTracksBySourceOnce(TrackEntity.SOURCE_STREAM).filter { !it.isHidden }
+
+        suspend fun getFavoriteStreamTracksOnce(): List<TrackEntity> {
+            val id = getFavoriteStreamsPlaylistId() ?: return emptyList()
+            return playlistDao.getTracksForPlaylistOnce(id).filter { !it.isHidden && it.isStream }
+        }
 
         /** Resume snapshot tracks in order, or recently played if no session. */
         suspend fun getContinueTracksOnce(): List<TrackEntity> {

@@ -24,6 +24,25 @@ class SongQueuesTest {
         assertEquals(onlySongs, onlySongs.excludingLiveStreams())
     }
 
+    @Test
+    fun playbackQueue_playsALiveStreamAlone() {
+        val song = track(id = 1, title = "Highway", source = TrackEntity.SOURCE_LOCAL)
+        val stream = track(id = 3, title = "Radio", source = TrackEntity.SOURCE_STREAM)
+        val (queue, index) = listOf(song, stream).playbackQueue(stream)
+        assertEquals(listOf(3L), queue.map { it.id })
+        assertEquals(0, index)
+    }
+
+    @Test
+    fun playbackQueue_dropsStreamsWhenStartingOnASong() {
+        val song = track(id = 1, title = "Highway", source = TrackEntity.SOURCE_LOCAL)
+        val stream = track(id = 3, title = "Radio", source = TrackEntity.SOURCE_STREAM)
+        val later = track(id = 4, title = "Night", source = TrackEntity.SOURCE_LOCAL)
+        val (queue, index) = listOf(song, stream, later).playbackQueue(later)
+        assertEquals(listOf(1L, 4L), queue.map { it.id })
+        assertEquals(1, index)
+    }
+
     private fun track(
         id: Long,
         title: String,

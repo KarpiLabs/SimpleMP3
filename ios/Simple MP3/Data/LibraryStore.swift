@@ -264,6 +264,24 @@ actor LibraryStore {
             }
         }
         persist()
+        migrateStreamHeartsToFavoriteStreams()
+    }
+
+    /// Hearted live streams used to land in Liked Songs — move them to Favorite Streams.
+    private func migrateStreamHeartsToFavoriteStreams() {
+        guard var liked = systemPlaylist(.favorites),
+              var dest = systemPlaylist(.favoriteStreams) else { return }
+        let streamIds = liked.trackIds.filter { tracks[$0]?.source == .stream }
+        guard !streamIds.isEmpty else { return }
+        for id in streamIds where !dest.trackIds.contains(id) {
+            dest.trackIds.append(id)
+        }
+        liked.trackIds.removeAll { streamIds.contains($0) }
+        liked.touch()
+        dest.touch()
+        playlists[liked.id] = liked
+        playlists[dest.id] = dest
+        persist()
     }
 
     func allPlaylists() -> [Playlist] {
@@ -380,7 +398,9 @@ actor LibraryStore {
     @discardableResult
     func toggleFavorite(trackId: String) -> Bool {
         ensureSystemPlaylists()
-        guard var fav = systemPlaylist(.favorites) else { return false }
+        let isStream = tracks[trackId]?.source == .stream
+        let type: SystemPlaylist = isStream ? .favoriteStreams : .favorites
+        guard var fav = systemPlaylist(type) else { return false }
         if let idx = fav.trackIds.firstIndex(of: trackId) {
             fav.trackIds.remove(at: idx)
             fav.touch()
@@ -397,7 +417,9 @@ actor LibraryStore {
     }
 
     func isFavorite(trackId: String) -> Bool {
-        systemPlaylist(.favorites)?.trackIds.contains(trackId) ?? false
+        let isStream = tracks[trackId]?.source == .stream
+        let type: SystemPlaylist = isStream ? .favoriteStreams : .favorites
+        return systemPlaylist(type)?.trackIds.contains(trackId) ?? false
     }
 
     func recordPlay(trackId: String) {

@@ -150,6 +150,18 @@ extension Array where Element == Track {
     nonisolated func excludingLiveStreams() -> [Track] {
         filter { $0.source != .stream }
     }
+
+    /// Queue used when starting playback at `start`. A live stream is always played
+    /// alone. Songs drop any live streams so skip-next cannot land on a station.
+    nonisolated func playbackQueue(start: Track? = nil) -> (tracks: [Track], index: Int) {
+        guard !isEmpty else { return ([], 0) }
+        let seed = start ?? first!
+        if seed.source == .stream { return ([seed], 0) }
+        let songs = excludingLiveStreams()
+        guard !songs.isEmpty else { return ([], 0) }
+        let idx = songs.firstIndex(where: { $0.id == seed.id }) ?? 0
+        return (songs, idx)
+    }
 }
 
 struct AlbumGroup: Identifiable, Hashable, Sendable {
@@ -188,6 +200,7 @@ nonisolated enum SystemPlaylist: String, CaseIterable, Sendable {
     case youtubeDownloads = "youtube_downloads"
     case lanImports = "lan_imports"
     case savedStreams = "saved_streams"
+    case favoriteStreams = "favorite_streams"
 
     var displayName: String {
         switch self {
@@ -197,6 +210,7 @@ nonisolated enum SystemPlaylist: String, CaseIterable, Sendable {
         case .youtubeDownloads: return "Imported Audio"
         case .lanImports: return "LAN Imports"
         case .savedStreams: return "Saved Streams"
+        case .favoriteStreams: return "Favorite Streams"
         }
     }
 
@@ -208,6 +222,7 @@ nonisolated enum SystemPlaylist: String, CaseIterable, Sendable {
         case .youtubeDownloads: return "Imported audio files"
         case .lanImports: return "Uploaded via Quick Connect"
         case .savedStreams: return "Live streams saved to a playlist"
+        case .favoriteStreams: return "Stations you hearted"
         }
     }
 }

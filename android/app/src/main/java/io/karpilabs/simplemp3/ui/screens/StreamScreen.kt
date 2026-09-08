@@ -28,6 +28,8 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.MoreVert
@@ -88,6 +90,8 @@ fun StreamScreen(
     onSetTrackArtwork: (Long, Uri) -> Unit,
     onPlayTrack: (TrackEntity, List<TrackEntity>) -> Unit,
     onRemove: (Long) -> Unit,
+    favoriteIds: Set<Long> = emptySet(),
+    onToggleFavorite: (Long) -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
     val clipboard = LocalClipboardManager.current
@@ -392,7 +396,7 @@ fun StreamScreen(
                     )
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = "Saved streams stay in the Saved Streams playlist and play live in Android Auto.",
+                        text = "Saved streams play live in Android Auto. Heart one to pin it in Favorite Streams.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = palette.textSecondary,
                     )
@@ -403,7 +407,9 @@ fun StreamScreen(
         items(saved, key = { it.id }) { track ->
             SavedStreamRow(
                 track = track,
+                isFavorite = track.id in favoriteIds,
                 onPlay = { onPlayTrack(track, saved) },
+                onToggleFavorite = { onToggleFavorite(track.id) },
                 onSetIcon = { pickIcon(track.id) },
                 onRemove = { onRemove(track.id) },
             )
@@ -414,7 +420,9 @@ fun StreamScreen(
 @Composable
 private fun SavedStreamRow(
     track: TrackEntity,
+    isFavorite: Boolean,
     onPlay: () -> Unit,
+    onToggleFavorite: () -> Unit,
     onSetIcon: () -> Unit,
     onRemove: () -> Unit,
 ) {
@@ -473,6 +481,13 @@ private fun SavedStreamRow(
                 color = palette.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+            )
+        }
+        IconButton(onClick = onToggleFavorite) {
+            Icon(
+                if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                contentDescription = if (isFavorite) "Remove from Favorite Streams" else "Add to Favorite Streams",
+                tint = if (isFavorite) AccentTeal else palette.textMuted,
             )
         }
         IconButton(onClick = onPlay) {

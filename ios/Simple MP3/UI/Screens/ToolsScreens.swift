@@ -604,7 +604,7 @@ struct StreamsScreen: View {
 
             Section {
                 if saved.isEmpty {
-                    Text("Saved streams stay in the Saved Streams playlist and play live on CarPlay.")
+                    Text("Saved streams play live on CarPlay. Heart one to pin it in Favorite Streams.")
                         .font(.caption)
                         .foregroundStyle(palette.textSecondary)
                 } else {
@@ -613,6 +613,7 @@ struct StreamsScreen: View {
                             track: track,
                             isPlaying: app.player.state.current?.id == track.id,
                             onTap: { app.playTrack(track, queue: saved) },
+                            onFavorite: { Task { await app.repository.toggleFavorite(trackId: track.id) } },
                             onMore: { app.addToPlaylistTrack = track },
                             onHide: { app.hideTrack(track) },
                             onSetIcon: {

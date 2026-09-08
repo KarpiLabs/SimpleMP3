@@ -111,6 +111,21 @@ data class TrackEntity(
 /** Live streams stay out of All Songs / Liked Songs so skip-next cannot land on one. */
 fun List<TrackEntity>.excludingLiveStreams(): List<TrackEntity> = filter { !it.isStream }
 
+/**
+ * Queue used when starting playback at [start].
+ * A live stream is always played alone. Songs drop any live streams so skip-next
+ * cannot land on a station.
+ */
+fun List<TrackEntity>.playbackQueue(start: TrackEntity? = firstOrNull()): Pair<List<TrackEntity>, Int> {
+    if (isEmpty()) return this to 0
+    val seed = start ?: first()
+    if (seed.isStream) return listOf(seed) to 0
+    val songs = excludingLiveStreams()
+    if (songs.isEmpty()) return emptyList<TrackEntity>() to 0
+    val idx = songs.indexOfFirst { it.id == seed.id }.let { if (it >= 0) it else 0 }
+    return songs to idx
+}
+
 /** Stable negative Long id from an external string id (never collides with MediaStore). */
 fun externalItemIdToTrackId(itemId: String): Long {
     var h = 0xcbf29ce484222325UL

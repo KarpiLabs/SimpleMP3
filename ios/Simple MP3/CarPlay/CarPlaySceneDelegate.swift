@@ -199,7 +199,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             sections.append(CPListSection(items: [row], header: greetingHeader, sectionIndexTitle: nil))
         }
 
-        let playlists = Array(app.visiblePlaylists.prefix(10))
+        let playlists = Array(carPlaylists.prefix(10))
         if !playlists.isEmpty {
             let headerText = sections.isEmpty ? greetingHeader : nil
             sections.append(CPListSection(
@@ -228,8 +228,30 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
 
     @MainActor
     private func buildStreamsTemplate() async -> CPListTemplate {
-        let tracks = await app.repository.tracks(source: .stream)
-        return trackListTemplate(title: "Streams", tracks: tracks)
+        let favorites = await app.repository.getFavoriteStreamTracks()
+        let saved = await app.repository.tracks(source: .stream)
+        let rest = saved.filter { fav in !favorites.contains(where: { $0.id == fav.id }) }
+
+        var sections: [CPListSection] = []
+        if !favorites.isEmpty {
+            sections.append(CPListSection(
+                items: streamItems(favorites),
+                header: "Favorite Streams",
+                sectionIndexTitle: nil
+            ))
+        }
+        if rest.isEmpty && favorites.isEmpty {
+            sections.append(CPListSection(items: [
+                CPListItem(text: "No streams yet", detailText: "Save a station on your iPhone"),
+            ]))
+        } else if !rest.isEmpty {
+            sections.append(CPListSection(
+                items: streamItems(rest),
+                header: favorites.isEmpty ? nil : "Saved",
+                sectionIndexTitle: nil
+            ))
+        }
+        return CPListTemplate(title: "Streams", sections: sections)
     }
 
     @MainActor
@@ -249,8 +271,9 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     private func buildLibraryTemplate() -> CPListTemplate {
         var items: [CPListItem] = []
         items.append(folderItem(title: "Streams", detail: "Live radio", id: "streams"))
+        items.append(folderItem(title: "Favorite Streams", detail: "Hearted stations", id: "favorite_streams"))
         items.append(folderItem(title: "Liked Songs", detail: "Favorites", id: "liked"))
-        items.append(folderItem(title: "Playlists", detail: "\(app.visiblePlaylists.count)", id: "playlists"))
+        items.append(folderItem(title: "Playlists", detail: "\(carPlaylists.count)", id: "playlists"))
         let nowDetail = app.player.state.current?.title ?? "Nothing playing"
         items.append(folderItem(title: "Now Playing", detail: nowDetail, id: "now"))
         attachSectionHandlers(items)
@@ -288,6 +311,9 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         case "streams":
             let tracks = await app.repository.tracks(source: .stream)
             pushTrackList(title: "Streams", tracks: tracks)
+        case "favorite_streams":
+            let tracks = await app.repository.getFavoriteStreamTracks()
+            pushTrackList(title: "Favorite Streams", tracks: tracks)
         case "playlists":
             pushPlaylists()
         case "jellyfin":
@@ -347,9 +373,17 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         return item
     }
 
+    /// Phone playlists minus Saved/Favorite Streams — those have their own car destinations.
+    private var carPlaylists: [PlaylistMeta] {
+        app.visiblePlaylists.filter {
+            $0.systemType != SystemPlaylist.savedStreams.rawValue &&
+                $0.systemType != SystemPlaylist.favoriteStreams.rawValue
+        }
+    }
+
     @MainActor
     private func pushPlaylists() {
-        let items = app.visiblePlaylists.map(playlistItem)
+        let items = carPlaylists.map(playlistItem)
         let safe = items.isEmpty
             ? [CPListItem(text: "No playlists", detailText: "Create one on your iPhone")]
             : items
@@ -410,8 +444,9 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     @MainActor
     private func trackListTemplate(title: String, tracks: [Track]) -> CPListTemplate {
         var items: [CPListItem] = []
+        let liveOnly = !tracks.isEmpty && tracks.allSatisfy { $0.source == .stream }
 
-        if !tracks.isEmpty {
+        if !tracks.isEmpty && !liveOnly {
             let playAll = CPListItem(text: "Play All", detailText: Formatters.trackCount(tracks.count))
             playAll.handler = { [weak self] _, completion in
                 Task { @MainActor in
@@ -433,27 +468,31 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             items.append(shuffle)
         }
 
-        for (index, track) in tracks.prefix(200).enumerated() {
-            let item = CPListItem(text: track.title, detailText: track.artist)
-            let playing = app.player.state.current?.id == track.id
-            if playing {
-                item.isPlaying = true
-            }
-            item.handler = { [weak self] _, completion in
-                Task { @MainActor in
-                    self?.app.player.play(tracks: tracks, startIndex: index)
-                    self?.presentSystemNowPlaying()
-                    completion()
-                }
-            }
-            items.append(item)
-        }
+        items.append(contentsOf: streamItems(Array(tracks.prefix(200))))
 
         if items.isEmpty {
             items.append(CPListItem(text: "No tracks", detailText: "Add music on your iPhone"))
         }
 
         return CPListTemplate(title: title, sections: [CPListSection(items: items)])
+    }
+
+    @MainActor
+    private func streamItems(_ tracks: [Track]) -> [CPListItem] {
+        tracks.map { track in
+            let item = CPListItem(text: track.title, detailText: track.artist)
+            if app.player.state.current?.id == track.id {
+                item.isPlaying = true
+            }
+            item.handler = { [weak self] _, completion in
+                Task { @MainActor in
+                    self?.app.playTrack(track, queue: tracks)
+                    self?.presentSystemNowPlaying()
+                    completion()
+                }
+            }
+            return item
+        }
     }
 
     @MainActor
