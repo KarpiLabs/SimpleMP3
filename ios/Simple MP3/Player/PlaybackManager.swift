@@ -421,6 +421,14 @@ final class PlaybackManager {
             item.preferredMaximumResolution = CGSize(width: 1, height: 1)
             item.preferredPeakBitRate = 512_000
         }
+        // Re-enable/disable already-loaded video tracks so toggling audio-only off
+        // restores video on the current item (bandwidth caps alone won't undo a
+        // previously disabled track).
+        if state.current?.isRemoteStream == true {
+            for track in item.tracks where track.assetTrack?.mediaType == .video {
+                track.isEnabled = allowVideo
+            }
+        }
     }
 
     // MARK: - Loudness normalization
@@ -511,10 +519,12 @@ final class PlaybackManager {
     private func updateStreamStats() {
         let item = player.currentItem
         // Only strip video when the user opted for audio-only (or CarPlay forces it).
+        // Toggle both ways so turning audio-only back off re-enables video on the
+        // current item without waiting for the next track to load.
         let stripVideo = currentAudioOnly || carConnected
-        if state.current?.isRemoteStream == true, stripVideo, let item {
+        if state.current?.isRemoteStream == true, let item {
             for track in item.tracks where track.assetTrack?.mediaType == .video {
-                track.isEnabled = false
+                track.isEnabled = !stripVideo
             }
         }
         let indefinite = item?.duration.isIndefinite == true

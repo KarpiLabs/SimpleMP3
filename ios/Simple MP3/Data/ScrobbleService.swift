@@ -136,6 +136,7 @@ final class ScrobbleService {
     private func flushQueue() async {
         let queue = decodeQueue()
         guard !queue.isEmpty else { return }
+        let submittedCount = queue.count
         let ok: Bool
         switch preferences.scrobbleProvider {
         case ScrobbleProvider.listenBrainz:
@@ -154,7 +155,17 @@ final class ScrobbleService {
         default:
             ok = false
         }
-        if ok { preferences.scrobbleQueueJSON = "" }
+        // Drop only the entries we actually submitted. New listens enqueued while
+        // the network request was in flight are appended after them, so re-read the
+        // queue and keep everything past the submitted prefix.
+        if ok {
+            let latest = decodeQueue()
+            if latest.count > submittedCount {
+                encodeQueue(Array(latest.suffix(latest.count - submittedCount)))
+            } else {
+                preferences.scrobbleQueueJSON = ""
+            }
+        }
     }
 
     private func decodeQueue() -> [PendingScrobble] {

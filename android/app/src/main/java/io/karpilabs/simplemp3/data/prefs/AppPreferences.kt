@@ -179,11 +179,11 @@ class AppPreferences
                 ScrobbleConfig(
                     provider = prefs[Keys.SCROBBLE_PROVIDER] ?: ScrobbleConfig.PROVIDER_NONE,
                     enabled = prefs[Keys.SCROBBLE_ENABLED] ?: false,
-                    listenBrainzToken = prefs[Keys.LISTENBRAINZ_TOKEN].orEmpty(),
-                    lastfmSessionKey = prefs[Keys.LASTFM_SESSION_KEY].orEmpty(),
+                    listenBrainzToken = SecretCipher.decrypt(prefs[Keys.LISTENBRAINZ_TOKEN].orEmpty()),
+                    lastfmSessionKey = SecretCipher.decrypt(prefs[Keys.LASTFM_SESSION_KEY].orEmpty()),
                     lastfmUsername = prefs[Keys.LASTFM_USERNAME].orEmpty(),
                     lastfmApiKey = prefs[Keys.LASTFM_API_KEY].orEmpty(),
-                    lastfmApiSecret = prefs[Keys.LASTFM_API_SECRET].orEmpty(),
+                    lastfmApiSecret = SecretCipher.decrypt(prefs[Keys.LASTFM_API_SECRET].orEmpty()),
                 )
             }
 
@@ -198,7 +198,7 @@ class AppPreferences
         }
 
         suspend fun setListenBrainzToken(token: String) {
-            context.appDataStore.edit { it[Keys.LISTENBRAINZ_TOKEN] = token.trim() }
+            context.appDataStore.edit { it[Keys.LISTENBRAINZ_TOKEN] = SecretCipher.encrypt(token.trim()) }
         }
 
         suspend fun setLastfmSession(
@@ -207,7 +207,7 @@ class AppPreferences
         ) {
             context.appDataStore.edit {
                 it[Keys.LASTFM_USERNAME] = username
-                it[Keys.LASTFM_SESSION_KEY] = sessionKey
+                it[Keys.LASTFM_SESSION_KEY] = SecretCipher.encrypt(sessionKey)
             }
         }
 
@@ -217,7 +217,7 @@ class AppPreferences
         ) {
             context.appDataStore.edit {
                 it[Keys.LASTFM_API_KEY] = apiKey.trim()
-                it[Keys.LASTFM_API_SECRET] = apiSecret.trim()
+                it[Keys.LASTFM_API_SECRET] = SecretCipher.encrypt(apiSecret.trim())
             }
         }
 

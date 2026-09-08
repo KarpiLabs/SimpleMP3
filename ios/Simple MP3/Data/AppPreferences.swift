@@ -120,11 +120,12 @@ final class AppPreferences {
     var scrobbleEnabled: Bool {
         didSet { defaults.set(scrobbleEnabled, forKey: Key.scrobbleEnabled) }
     }
+    // Credentials live in the Keychain, not plaintext UserDefaults.
     var listenBrainzToken: String {
-        didSet { defaults.set(listenBrainzToken, forKey: Key.listenBrainzToken) }
+        didSet { Keychain.set(listenBrainzToken, for: Key.listenBrainzToken) }
     }
     var lastfmSessionKey: String {
-        didSet { defaults.set(lastfmSessionKey, forKey: Key.lastfmSessionKey) }
+        didSet { Keychain.set(lastfmSessionKey, for: Key.lastfmSessionKey) }
     }
     var lastfmUsername: String {
         didSet { defaults.set(lastfmUsername, forKey: Key.lastfmUsername) }
@@ -133,7 +134,7 @@ final class AppPreferences {
         didSet { defaults.set(lastfmApiKey, forKey: Key.lastfmApiKey) }
     }
     var lastfmApiSecret: String {
-        didSet { defaults.set(lastfmApiSecret, forKey: Key.lastfmApiSecret) }
+        didSet { Keychain.set(lastfmApiSecret, for: Key.lastfmApiSecret) }
     }
 
     var jellyfinServerUrl: String {
@@ -180,11 +181,11 @@ final class AppPreferences {
         normalizePreampDb = min(12, max(-12, d.integer(forKey: Key.normalizePreampDb)))
         scrobbleProvider = d.string(forKey: Key.scrobbleProvider) ?? "none"
         scrobbleEnabled = d.bool(forKey: Key.scrobbleEnabled)
-        listenBrainzToken = d.string(forKey: Key.listenBrainzToken) ?? ""
-        lastfmSessionKey = d.string(forKey: Key.lastfmSessionKey) ?? ""
+        listenBrainzToken = Self.loadSecret(Key.listenBrainzToken, defaults: d)
+        lastfmSessionKey = Self.loadSecret(Key.lastfmSessionKey, defaults: d)
         lastfmUsername = d.string(forKey: Key.lastfmUsername) ?? ""
         lastfmApiKey = d.string(forKey: Key.lastfmApiKey) ?? ""
-        lastfmApiSecret = d.string(forKey: Key.lastfmApiSecret) ?? ""
+        lastfmApiSecret = Self.loadSecret(Key.lastfmApiSecret, defaults: d)
         jellyfinServerUrl = d.string(forKey: Key.jellyfinServerUrl) ?? ""
         jellyfinUser = d.string(forKey: Key.jellyfinUser) ?? ""
         jellyfinToken = d.string(forKey: Key.jellyfinToken) ?? ""
@@ -200,6 +201,18 @@ final class AppPreferences {
            let snap = try? JSONDecoder().decode(ResumeSnapshot.self, from: data) {
             resumeSnapshot = snap
         }
+    }
+
+    /// Read a credential from the Keychain, one-time migrating any legacy plaintext
+    /// value that was previously stored in UserDefaults.
+    private static func loadSecret(_ key: String, defaults d: UserDefaults) -> String {
+        if let value = Keychain.get(key) { return value }
+        if let legacy = d.string(forKey: key), !legacy.isEmpty {
+            Keychain.set(legacy, for: key)
+            d.removeObject(forKey: key)
+            return legacy
+        }
+        return ""
     }
 
     var isJellyfinLoggedIn: Bool {
