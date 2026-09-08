@@ -1,5 +1,7 @@
 package io.karpilabs.simplemp3.service
 
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class LibrarySessionCallbackTest {
@@ -16,5 +18,15 @@ class LibrarySessionCallbackTest {
 
         assert(shuffleCommand.customAction.isNotBlank())
         assert(repeatCommand.customAction.isNotBlank())
+    }
+
+    @Test
+    fun streamsIsADistinctTopLevelBrowseId() {
+        assertEquals("streams", MediaIds.STREAMS)
+        assertEquals("favorite_streams", MediaIds.FAVORITE_STREAMS)
+        assertFalse(MediaIds.STREAMS == MediaIds.SONGS)
+        assertFalse(MediaIds.STREAMS == MediaIds.LIKED)
+        assertFalse(MediaIds.FAVORITE_STREAMS == MediaIds.STREAMS)
+        assertFalse(MediaIds.FAVORITE_STREAMS == MediaIds.LIKED)
     }
 }

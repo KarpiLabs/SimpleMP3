@@ -15,10 +15,17 @@ object Routes {
     const val ALBUM_DETAIL = "album/{albumName}"
     const val ARTIST_DETAIL = "artist/{artistName}"
     const val FOLDER_DETAIL = "folder/{folderPath}"
+    const val SMART_DETAIL = "smart/{smartKey}"
+    const val GENRE_DETAIL = "genre/{genre}"
     const val LIBRARY_FOLDERS = "library_folders"
     const val HIDDEN_SONGS = "hidden_songs"
+    const val SCROBBLING = "scrobbling"
 
     fun playlistDetail(id: Long) = "playlist/$id"
+
+    fun smartDetail(key: String) = "smart/$key"
+
+    fun genreDetail(genre: String) = "genre/${android.net.Uri.encode(genre)}"
 
     fun albumDetail(name: String) = "album/${android.net.Uri.encode(name)}"
 

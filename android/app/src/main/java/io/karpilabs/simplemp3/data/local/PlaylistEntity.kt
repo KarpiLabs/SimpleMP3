@@ -26,5 +26,6 @@ data class PlaylistEntity(
         const val SYSTEM_YOUTUBE = "youtube_downloads"
         const val SYSTEM_LAN = "lan_imports"
         const val SYSTEM_STREAMS = "saved_streams"
+        const val SYSTEM_FAVORITE_STREAMS = "favorite_streams"
     }
 }

@@ -45,6 +45,10 @@ class MediaStoreScanner
                     )
                 // RELATIVE_PATH is the scoped-storage folder (e.g. "Music/Rock/").
                 projection += MediaStore.Audio.Media.RELATIVE_PATH
+                // GENRE column is only exposed on API 30+ — drives the Genres smart playlists.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    projection += MediaStore.Audio.Media.GENRE
+                }
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
                     @Suppress("DEPRECATION")
                     projection += MediaStore.Audio.Media.DATA
@@ -75,6 +79,12 @@ class MediaStoreScanner
                         val trackCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
                         val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
                         val relativeCol = cursor.getColumnIndex(MediaStore.Audio.Media.RELATIVE_PATH)
+                        val genreCol =
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                cursor.getColumnIndex(MediaStore.Audio.Media.GENRE)
+                            } else {
+                                -1
+                            }
 
                         @Suppress("DEPRECATION")
                         val dataCol = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
@@ -98,6 +108,13 @@ class MediaStoreScanner
                             val year = cursor.getInt(yearCol)
                             val trackNumber = cursor.getInt(trackCol) % 1000
                             val size = cursor.getLong(sizeCol)
+
+                            val genre =
+                                if (genreCol >= 0) {
+                                    cursor.getString(genreCol)?.takeIf { it.isNotBlank() }
+                                } else {
+                                    null
+                                }
 
                             val relative = if (relativeCol >= 0) cursor.getString(relativeCol) else null
                             val absolute = if (dataCol >= 0) cursor.getString(dataCol) else null
@@ -131,6 +148,7 @@ class MediaStoreScanner
                                     dateAdded = dateAdded,
                                     year = year,
                                     trackNumber = trackNumber,
+                                    genre = genre,
                                     folderPath = folderPath,
                                     size = size,
                                 )

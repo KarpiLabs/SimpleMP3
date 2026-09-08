@@ -50,6 +50,16 @@ final class AppPreferences {
         static let resumeEnabled = "resumeEnabled"
         static let themeMode = "themeMode"
         static let bufferProfile = "bufferProfile"
+        static let normalizeVolume = "normalizeVolume"
+        static let normalizePreampDb = "normalizePreampDb"
+        static let scrobbleProvider = "scrobbleProvider"
+        static let scrobbleEnabled = "scrobbleEnabled"
+        static let listenBrainzToken = "listenBrainzToken"
+        static let lastfmSessionKey = "lastfmSessionKey"
+        static let lastfmUsername = "lastfmUsername"
+        static let lastfmApiKey = "lastfmApiKey"
+        static let lastfmApiSecret = "lastfmApiSecret"
+        static let scrobbleQueue = "scrobbleQueue"
         static let lastLibraryScanMs = "lastLibraryScanMs"
         static let resumeSnapshot = "resumeSnapshot"
         static let jellyfinServerUrl = "jellyfinServerUrl"
@@ -95,6 +105,37 @@ final class AppPreferences {
     var bufferProfile: BufferProfile {
         didSet { defaults.set(bufferProfile.rawValue, forKey: Key.bufferProfile) }
     }
+    /// Even out loudness across tracks using ReplayGain tags.
+    var normalizeVolume: Bool {
+        didSet { defaults.set(normalizeVolume, forKey: Key.normalizeVolume) }
+    }
+    /// Extra gain (dB) on top of ReplayGain; clamped to [-12, 12].
+    var normalizePreampDb: Int {
+        didSet { defaults.set(normalizePreampDb, forKey: Key.normalizePreampDb) }
+    }
+    /// none | listenbrainz | lastfm
+    var scrobbleProvider: String {
+        didSet { defaults.set(scrobbleProvider, forKey: Key.scrobbleProvider) }
+    }
+    var scrobbleEnabled: Bool {
+        didSet { defaults.set(scrobbleEnabled, forKey: Key.scrobbleEnabled) }
+    }
+    // Credentials live in the Keychain, not plaintext UserDefaults.
+    var listenBrainzToken: String {
+        didSet { Keychain.set(listenBrainzToken, for: Key.listenBrainzToken) }
+    }
+    var lastfmSessionKey: String {
+        didSet { Keychain.set(lastfmSessionKey, for: Key.lastfmSessionKey) }
+    }
+    var lastfmUsername: String {
+        didSet { defaults.set(lastfmUsername, forKey: Key.lastfmUsername) }
+    }
+    var lastfmApiKey: String {
+        didSet { defaults.set(lastfmApiKey, forKey: Key.lastfmApiKey) }
+    }
+    var lastfmApiSecret: String {
+        didSet { Keychain.set(lastfmApiSecret, for: Key.lastfmApiSecret) }
+    }
 
     var jellyfinServerUrl: String {
         didSet { defaults.set(jellyfinServerUrl, forKey: Key.jellyfinServerUrl) }
@@ -136,6 +177,15 @@ final class AppPreferences {
         } else {
             bufferProfile = .balanced
         }
+        normalizeVolume = d.bool(forKey: Key.normalizeVolume)
+        normalizePreampDb = min(12, max(-12, d.integer(forKey: Key.normalizePreampDb)))
+        scrobbleProvider = d.string(forKey: Key.scrobbleProvider) ?? "none"
+        scrobbleEnabled = d.bool(forKey: Key.scrobbleEnabled)
+        listenBrainzToken = Self.loadSecret(Key.listenBrainzToken, defaults: d)
+        lastfmSessionKey = Self.loadSecret(Key.lastfmSessionKey, defaults: d)
+        lastfmUsername = d.string(forKey: Key.lastfmUsername) ?? ""
+        lastfmApiKey = d.string(forKey: Key.lastfmApiKey) ?? ""
+        lastfmApiSecret = Self.loadSecret(Key.lastfmApiSecret, defaults: d)
         jellyfinServerUrl = d.string(forKey: Key.jellyfinServerUrl) ?? ""
         jellyfinUser = d.string(forKey: Key.jellyfinUser) ?? ""
         jellyfinToken = d.string(forKey: Key.jellyfinToken) ?? ""
@@ -151,6 +201,18 @@ final class AppPreferences {
            let snap = try? JSONDecoder().decode(ResumeSnapshot.self, from: data) {
             resumeSnapshot = snap
         }
+    }
+
+    /// Read a credential from the Keychain, one-time migrating any legacy plaintext
+    /// value that was previously stored in UserDefaults.
+    private static func loadSecret(_ key: String, defaults d: UserDefaults) -> String {
+        if let value = Keychain.get(key) { return value }
+        if let legacy = d.string(forKey: key), !legacy.isEmpty {
+            Keychain.set(legacy, for: key)
+            d.removeObject(forKey: key)
+            return legacy
+        }
+        return ""
     }
 
     var isJellyfinLoggedIn: Bool {
@@ -179,5 +241,23 @@ final class AppPreferences {
     func clearJellyfinSession() {
         jellyfinToken = ""
         jellyfinUserId = ""
+    }
+
+    // MARK: - Scrobbling
+
+    var scrobbleQueueJSON: String {
+        get { defaults.string(forKey: Key.scrobbleQueue) ?? "" }
+        set {
+            if newValue.isEmpty {
+                defaults.removeObject(forKey: Key.scrobbleQueue)
+            } else {
+                defaults.set(newValue, forKey: Key.scrobbleQueue)
+            }
+        }
+    }
+
+    func clearLastfmSession() {
+        lastfmSessionKey = ""
+        lastfmUsername = ""
     }
 }

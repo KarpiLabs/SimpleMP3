@@ -16,6 +16,7 @@ final class MusicRepository {
     private(set) var playlists: [PlaylistMeta] = []
     private(set) var albums: [AlbumGroup] = []
     private(set) var artists: [AlbumGroup] = []
+    private(set) var genres: [AlbumGroup] = []
     private(set) var recentlyAdded: [Track] = []
     private(set) var continueListening: [Track] = []
     private(set) var trackCount: Int = 0
@@ -54,6 +55,7 @@ final class MusicRepository {
         playlists = await store.playlistMetas()
         albums = await store.albums()
         artists = await store.artists()
+        genres = await store.genres()
         recentlyAdded = await store.recentlyAdded(limit: 40)
         continueListening = await store.continueListening(limit: 20)
         trackCount = await store.trackCount()
@@ -61,11 +63,14 @@ final class MusicRepository {
         youtubeCount = await store.count(source: .youtube)
         folderPaths = await store.folderPaths()
         hiddenTracks = await store.hiddenTracks()
+        var hearts = Set<String>()
         if let fav = await store.systemPlaylist(.favorites) {
-            favoriteIds = Set(fav.trackIds)
-        } else {
-            favoriteIds = []
+            hearts.formUnion(fav.trackIds)
         }
+        if let streams = await store.systemPlaylist(.favoriteStreams) {
+            hearts.formUnion(streams.trackIds)
+        }
+        favoriteIds = hearts
         NotificationCenter.default.post(name: .libraryDidChange, object: nil)
     }
 
@@ -127,6 +132,14 @@ final class MusicRepository {
 
     func tracks(folderPath: String) async -> [Track] {
         await store.tracks(folderPath: folderPath)
+    }
+
+    func smartTracks(_ smart: SmartPlaylist) async -> [Track] {
+        await store.smartTracks(smart)
+    }
+
+    func tracks(genre: String) async -> [Track] {
+        await store.tracks(genre: genre)
     }
 
     func tracksForPlaylist(id: String) async -> [Track] {
@@ -199,6 +212,14 @@ final class MusicRepository {
         await refresh()
     }
 
+    func setTrackGain(trackId: String, gainDb: Double?) async {
+        await store.setTrackGain(id: trackId, gainDb: gainDb)
+    }
+
+    func setStreamAudioOnly(trackId: String, audioOnly: Bool) async {
+        await store.setAudioOnly(id: trackId, audioOnly: audioOnly)
+    }
+
     func upsertTrack(_ track: Track) async {
         await store.upsert(track)
         await refresh()
@@ -244,7 +265,12 @@ final class MusicRepository {
 
     func getLikedTracks() async -> [Track] {
         guard let p = await store.systemPlaylist(.favorites) else { return [] }
-        return await store.tracksForPlaylist(id: p.id)
+        return await store.tracksForPlaylist(id: p.id).excludingLiveStreams()
+    }
+
+    func getFavoriteStreamTracks() async -> [Track] {
+        guard let p = await store.systemPlaylist(.favoriteStreams) else { return [] }
+        return await store.tracksForPlaylist(id: p.id).filter { $0.source == .stream }
     }
 
     func getRecentlyPlayed(limit: Int = 40) async -> [Track] {

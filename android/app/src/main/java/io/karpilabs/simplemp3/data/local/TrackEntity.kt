@@ -15,6 +15,8 @@ import androidx.room.PrimaryKey
         Index(value = ["storageState"]),
         Index(value = ["size"]),
         Index(value = ["folderPath"]),
+        Index(value = ["playCount"]),
+        Index(value = ["genre"]),
     ],
 )
 data class TrackEntity(
@@ -53,6 +55,13 @@ data class TrackEntity(
     val isSizeOptimized: Boolean = false,
     /** Last time this track was prepared for playback (ms). */
     val lastPlayedAt: Long = 0L,
+    /** Number of times this track has started playback — drives the Most Played smart playlist. */
+    val playCount: Int = 0,
+    /**
+     * ReplayGain track gain in dB parsed from file tags (REPLAYGAIN_TRACK_GAIN), if present.
+     * Null when unknown. Applied as a volume multiplier when normalization is on.
+     */
+    val trackGainDb: Double? = null,
     /**
      * User starred “never compress” — skip size optimize + cold pack forever
      * (and keep thawed if currently cold).
@@ -60,6 +69,11 @@ data class TrackEntity(
     val neverCompress: Boolean = false,
     /** User hid this track from Songs/Albums/Artists/Search/playlists (e.g. ringtone junk). */
     val isHidden: Boolean = false,
+    /**
+     * For video-capable streams (e.g. HLS TV channels): play audio only to save
+     * bandwidth. Remembered per saved stream; ignored for tracks with no video.
+     */
+    val audioOnly: Boolean = false,
 ) {
     companion object {
         const val SOURCE_LOCAL = "local"
@@ -92,6 +106,24 @@ data class TrackEntity(
                 source == SOURCE_YOUTUBE ||
                 source == SOURCE_LAN ||
                 (source == SOURCE_STREAM && !isRemoteStream)
+}
+
+/** Live streams stay out of All Songs / Liked Songs so skip-next cannot land on one. */
+fun List<TrackEntity>.excludingLiveStreams(): List<TrackEntity> = filter { !it.isStream }
+
+/**
+ * Queue used when starting playback at [start].
+ * A live stream is always played alone. Songs drop any live streams so skip-next
+ * cannot land on a station.
+ */
+fun List<TrackEntity>.playbackQueue(start: TrackEntity? = firstOrNull()): Pair<List<TrackEntity>, Int> {
+    if (isEmpty()) return this to 0
+    val seed = start ?: first()
+    if (seed.isStream) return listOf(seed) to 0
+    val songs = excludingLiveStreams()
+    if (songs.isEmpty()) return emptyList<TrackEntity>() to 0
+    val idx = songs.indexOfFirst { it.id == seed.id }.let { if (it >= 0) it else 0 }
+    return songs to idx
 }
 
 /** Stable negative Long id from an external string id (never collides with MediaStore). */

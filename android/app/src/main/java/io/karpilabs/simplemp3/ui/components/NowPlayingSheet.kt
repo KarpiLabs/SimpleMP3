@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QueueMusic
@@ -32,11 +34,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -48,10 +53,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.media3.common.Player
+import androidx.media3.ui.PlayerView
 import io.karpilabs.simplemp3.player.PlayerUiState
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.DeepViolet
@@ -73,9 +83,13 @@ fun NowPlayingSheet(
     onRefreshPosition: () -> Unit,
     onOpenQueue: () -> Unit = {},
     onSleepTimer: (Int) -> Unit = {},
+    onAttachVideo: (PlayerView) -> Unit = {},
+    onDetachVideo: (PlayerView) -> Unit = {},
+    onToggleAudioOnly: (Boolean) -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var fullscreen by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.isPlaying) {
         while (true) {
@@ -175,17 +189,58 @@ fun NowPlayingSheet(
 
                 Spacer(Modifier.height(12.dp))
 
-                LargeAlbumArt(
-                    artworkUri = state.artworkUri,
-                    contentDescription = state.album,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth(0.88f)
-                            .aspectRatio(1f),
-                    cornerRadius = 18.dp,
-                )
-
-                Spacer(Modifier.height(32.dp))
+                if (state.hasVideo) {
+                    if (state.showVideo && !fullscreen) {
+                        VideoSurface(
+                            aspectRatio = state.videoAspectRatio,
+                            onAttach = onAttachVideo,
+                            onDetach = onDetachVideo,
+                            modifier = Modifier.fillMaxWidth(),
+                            trailing = {
+                                IconButton(onClick = { fullscreen = true }) {
+                                    Icon(
+                                        Icons.Rounded.Fullscreen,
+                                        contentDescription = "Fullscreen",
+                                        tint = Color.White,
+                                    )
+                                }
+                            },
+                        )
+                    } else {
+                        LargeAlbumArt(
+                            artworkUri = state.artworkUri,
+                            contentDescription = state.album,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth(0.88f)
+                                    .aspectRatio(1f),
+                            cornerRadius = 18.dp,
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    FilterChip(
+                        selected = state.audioOnly,
+                        onClick = { onToggleAudioOnly(!state.audioOnly) },
+                        label = { Text(if (state.audioOnly) "Audio only" else "Video on") },
+                        colors =
+                            FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = AccentTeal.copy(alpha = 0.25f),
+                                selectedLabelColor = AccentTeal,
+                            ),
+                    )
+                    Spacer(Modifier.height(20.dp))
+                } else {
+                    LargeAlbumArt(
+                        artworkUri = state.artworkUri,
+                        contentDescription = state.album,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth(0.88f)
+                                .aspectRatio(1f),
+                        cornerRadius = 18.dp,
+                    )
+                    Spacer(Modifier.height(32.dp))
+                }
 
                 Text(
                     text = state.title.ifBlank { "Nothing playing" },
@@ -360,6 +415,77 @@ fun NowPlayingSheet(
 
                 Spacer(Modifier.height(32.dp))
             }
+        }
+    }
+
+    if (fullscreen && state.showVideo) {
+        Dialog(
+            onDismissRequest = { fullscreen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(Color.Black),
+                contentAlignment = Alignment.Center,
+            ) {
+                VideoSurface(
+                    aspectRatio = state.videoAspectRatio,
+                    onAttach = onAttachVideo,
+                    onDetach = onDetachVideo,
+                    useController = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                IconButton(
+                    onClick = { fullscreen = false },
+                    modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(8.dp),
+                ) {
+                    Icon(
+                        Icons.Rounded.FullscreenExit,
+                        contentDescription = "Exit fullscreen",
+                        tint = Color.White,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Hosts a Media3 [PlayerView] bound to the shared player via [onAttach] / [onDetach].
+ * The surface is attached while composed and detached on dispose, which is what gates
+ * video decoding (bandwidth) in [io.karpilabs.simplemp3.player.PlayerConnection].
+ */
+@Composable
+private fun VideoSurface(
+    aspectRatio: Float,
+    onAttach: (PlayerView) -> Unit,
+    onDetach: (PlayerView) -> Unit,
+    modifier: Modifier = Modifier,
+    useController: Boolean = false,
+    trailing: @Composable (() -> Unit)? = null,
+) {
+    val context = LocalContext.current
+    val playerView =
+        remember {
+            PlayerView(context).apply {
+                this.useController = useController
+                resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                setBackgroundColor(android.graphics.Color.BLACK)
+            }
+        }
+    DisposableEffect(playerView) {
+        onAttach(playerView)
+        onDispose { onDetach(playerView) }
+    }
+    Box(
+        modifier =
+            modifier
+                .aspectRatio(aspectRatio.coerceIn(0.5f, 3f))
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                .background(Color.Black),
+    ) {
+        AndroidView(factory = { playerView }, modifier = Modifier.fillMaxSize())
+        if (trailing != null) {
+            Box(modifier = Modifier.align(Alignment.TopEnd)) { trailing() }
         }
     }
 }

@@ -7,6 +7,7 @@ import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.PlaylistWithMeta
 import io.karpilabs.simplemp3.data.local.TrackDao
 import io.karpilabs.simplemp3.data.local.TrackEntity
+import io.karpilabs.simplemp3.data.local.excludingLiveStreams
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import io.karpilabs.simplemp3.data.scanner.MediaStoreScanner
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -59,6 +60,27 @@ class MusicRepository
             trackDao.getTracksBySource(TrackEntity.SOURCE_STREAM)
 
         val folderPaths: Flow<List<String>> = trackDao.getDistinctFolderPaths()
+
+        // ── Smart / auto playlists ─────────────────────────────────
+        val mostPlayed: Flow<List<TrackEntity>> = trackDao.getMostPlayed(100)
+        val genres: Flow<List<AlbumRow>> = trackDao.getGenres()
+
+        fun getTracksByGenre(genre: String): Flow<List<TrackEntity>> = trackDao.getTracksByGenre(genre)
+
+        /** On-demand contents for a [SmartPlaylist] — used for play-all / Auto browse. */
+        suspend fun getSmartTracksOnce(smart: io.karpilabs.simplemp3.data.local.SmartPlaylist): List<TrackEntity> =
+            when (smart) {
+                io.karpilabs.simplemp3.data.local.SmartPlaylist.MOST_PLAYED -> trackDao.getMostPlayedOnce(100)
+                io.karpilabs.simplemp3.data.local.SmartPlaylist.RECENTLY_ADDED -> trackDao.getRecentlyAddedOnce(100)
+            }
+
+        fun getSmartTracks(smart: io.karpilabs.simplemp3.data.local.SmartPlaylist): Flow<List<TrackEntity>> =
+            when (smart) {
+                io.karpilabs.simplemp3.data.local.SmartPlaylist.MOST_PLAYED -> trackDao.getMostPlayed(100)
+                io.karpilabs.simplemp3.data.local.SmartPlaylist.RECENTLY_ADDED -> trackDao.getRecentlyAdded(100)
+            }
+
+        suspend fun getTracksByGenreOnce(genre: String): List<TrackEntity> = trackDao.getTracksByGenreOnce(genre)
 
         val hiddenTracks: Flow<List<TrackEntity>> = trackDao.getHiddenTracks()
 
@@ -164,6 +186,28 @@ class MusicRepository
                     ),
                 )
             }
+            if (playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_FAVORITE_STREAMS) == null) {
+                playlistDao.insertPlaylist(
+                    PlaylistEntity(
+                        name = "Favorite Streams",
+                        description = "Stations you hearted",
+                        isSystem = true,
+                        systemType = PlaylistEntity.SYSTEM_FAVORITE_STREAMS,
+                    ),
+                )
+            }
+            migrateStreamHeartsToFavoriteStreams()
+        }
+
+        /** Hearted live streams used to land in Liked Songs — move them to Favorite Streams. */
+        private suspend fun migrateStreamHeartsToFavoriteStreams() {
+            val liked = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_FAVORITES) ?: return
+            val dest = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_FAVORITE_STREAMS) ?: return
+            val likedTracks = playlistDao.getTracksForPlaylistOnce(liked.id)
+            likedTracks.filter { it.isStream }.forEach { stream ->
+                playlistDao.addTrackToEnd(dest.id, stream.id)
+                playlistDao.removeTrackFromPlaylist(liked.id, stream.id)
+            }
         }
 
         /**
@@ -227,6 +271,22 @@ class MusicRepository
 
         suspend fun getTrack(id: Long): TrackEntity? = trackDao.getTrackById(id)
 
+        /** Persist a ReplayGain track gain (dB) parsed from stream metadata. */
+        suspend fun updateTrackGain(
+            id: Long,
+            gainDb: Double?,
+        ) {
+            trackDao.updateTrackGain(id, gainDb)
+        }
+
+        /** Remember the audio-only choice for a (video-capable) saved stream. */
+        suspend fun setStreamAudioOnly(
+            id: Long,
+            audioOnly: Boolean,
+        ) {
+            trackDao.updateAudioOnly(id, audioOnly)
+        }
+
         suspend fun getTracksByIdsOrdered(ids: List<Long>): List<TrackEntity> {
             if (ids.isEmpty()) return emptyList()
             val map = trackDao.getTracksByIds(ids).associateBy { it.id }
@@ -254,9 +314,27 @@ class MusicRepository
 
         fun getPlaylist(id: Long): Flow<PlaylistEntity?> = playlistDao.getPlaylist(id)
 
-        fun getPlaylistTracks(playlistId: Long): Flow<List<TrackEntity>> = playlistDao.getTracksForPlaylist(playlistId)
+        fun getPlaylistTracks(playlistId: Long): Flow<List<TrackEntity>> =
+            combine(
+                playlistDao.getPlaylist(playlistId),
+                playlistDao.getTracksForPlaylist(playlistId),
+            ) { playlist, tracks ->
+                if (playlist?.systemType == PlaylistEntity.SYSTEM_FAVORITES) {
+                    tracks.excludingLiveStreams()
+                } else {
+                    tracks
+                }
+            }
 
-        suspend fun getPlaylistTracksOnce(playlistId: Long): List<TrackEntity> = playlistDao.getTracksForPlaylistOnce(playlistId)
+        suspend fun getPlaylistTracksOnce(playlistId: Long): List<TrackEntity> {
+            val tracks = playlistDao.getTracksForPlaylistOnce(playlistId)
+            val playlist = playlistDao.getPlaylistOnce(playlistId)
+            return if (playlist?.systemType == PlaylistEntity.SYSTEM_FAVORITES) {
+                tracks.excludingLiveStreams()
+            } else {
+                tracks
+            }
+        }
 
         suspend fun getPlaylistsOnce(): List<PlaylistWithMeta> = playlistDao.getPlaylistsWithMetaOnce()
 
@@ -311,7 +389,14 @@ class MusicRepository
 
         suspend fun toggleFavorite(trackId: Long): Boolean {
             ensureSystemPlaylists()
-            val fav = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_FAVORITES) ?: return false
+            val track = trackDao.getTrackById(trackId) ?: return false
+            val type =
+                if (track.isStream) {
+                    PlaylistEntity.SYSTEM_FAVORITE_STREAMS
+                } else {
+                    PlaylistEntity.SYSTEM_FAVORITES
+                }
+            val fav = playlistDao.getSystemPlaylist(type) ?: return false
             return if (playlistDao.containsTrack(fav.id, trackId)) {
                 playlistDao.removeTrackFromPlaylist(fav.id, trackId)
                 playlistDao.touchPlaylist(fav.id)
@@ -323,13 +408,27 @@ class MusicRepository
         }
 
         suspend fun isFavorite(trackId: Long): Boolean {
-            val fav = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_FAVORITES) ?: return false
+            val track = trackDao.getTrackById(trackId) ?: return false
+            val type =
+                if (track.isStream) {
+                    PlaylistEntity.SYSTEM_FAVORITE_STREAMS
+                } else {
+                    PlaylistEntity.SYSTEM_FAVORITES
+                }
+            val fav = playlistDao.getSystemPlaylist(type) ?: return false
             return playlistDao.containsTrack(fav.id, trackId)
         }
 
         fun observeIsFavorite(trackId: Long): Flow<Boolean> =
             kotlinx.coroutines.flow.flow {
-                val favId = getFavoritesPlaylistId()
+                val track = trackDao.getTrackById(trackId)
+                val type =
+                    if (track?.isStream == true) {
+                        PlaylistEntity.SYSTEM_FAVORITE_STREAMS
+                    } else {
+                        PlaylistEntity.SYSTEM_FAVORITES
+                    }
+                val favId = playlistDao.getSystemPlaylist(type)?.id
                 if (favId == null) {
                     emit(false)
                 } else {
@@ -338,6 +437,7 @@ class MusicRepository
             }
 
         suspend fun recordPlay(trackId: Long) {
+            trackDao.incrementPlayCount(trackId)
             ensureSystemPlaylists()
             val recent = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_RECENTLY_PLAYED) ?: return
             // Move to front: remove if present, insert at position 0 by reordering
@@ -368,6 +468,9 @@ class MusicRepository
 
         suspend fun getFavoritesPlaylistId(): Long? = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_FAVORITES)?.id
 
+        suspend fun getFavoriteStreamsPlaylistId(): Long? =
+            playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_FAVORITE_STREAMS)?.id
+
         suspend fun getRecentlyPlayedPlaylistId(): Long? = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_RECENTLY_PLAYED)?.id
 
         suspend fun getYoutubePlaylistId(): Long? = playlistDao.getSystemPlaylist(PlaylistEntity.SYSTEM_YOUTUBE)?.id
@@ -383,6 +486,14 @@ class MusicRepository
         }
 
         suspend fun getYoutubeTracksOnce(): List<TrackEntity> = trackDao.getTracksBySourceOnce(TrackEntity.SOURCE_YOUTUBE)
+
+        suspend fun getStreamTracksOnce(): List<TrackEntity> =
+            trackDao.getTracksBySourceOnce(TrackEntity.SOURCE_STREAM).filter { !it.isHidden }
+
+        suspend fun getFavoriteStreamTracksOnce(): List<TrackEntity> {
+            val id = getFavoriteStreamsPlaylistId() ?: return emptyList()
+            return playlistDao.getTracksForPlaylistOnce(id).filter { !it.isHidden && it.isStream }
+        }
 
         /** Resume snapshot tracks in order, or recently played if no session. */
         suspend fun getContinueTracksOnce(): List<TrackEntity> {

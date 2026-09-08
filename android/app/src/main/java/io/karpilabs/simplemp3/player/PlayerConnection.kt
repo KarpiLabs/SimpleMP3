@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.karpilabs.simplemp3.data.local.TrackEntity
+import io.karpilabs.simplemp3.data.local.playbackQueue
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import io.karpilabs.simplemp3.data.prefs.ResumeSnapshot
 import io.karpilabs.simplemp3.data.repository.MusicRepository
@@ -58,9 +59,21 @@ data class PlayerUiState(
     val isLive: Boolean = false,
     val bitrateBps: Int = 0,
     val throughputBps: Long = 0L,
+    /** Current item exposes a video track (e.g. an HLS TV channel). */
+    val hasVideo: Boolean = false,
+    /** User chose audio-only for this (video-capable) stream. */
+    val audioOnly: Boolean = false,
+    val videoWidth: Int = 0,
+    val videoHeight: Int = 0,
 ) {
     val streamRateLabel: String?
         get() = StreamPlayback.dataRateLabel(isLive, bitrateBps, throughputBps)
+
+    /** Show the video surface only when there is video and the user hasn't opted out. */
+    val showVideo: Boolean get() = hasVideo && !audioOnly
+
+    val videoAspectRatio: Float
+        get() = if (videoWidth > 0 && videoHeight > 0) videoWidth.toFloat() / videoHeight else 16f / 9f
 }
 
 @Singleton
@@ -71,6 +84,7 @@ class PlayerConnection
         private val appPreferences: AppPreferences,
         private val musicRepository: MusicRepository,
         private val storageManager: LargeFileStorageManager,
+        private val trackSelector: androidx.media3.exoplayer.trackselection.DefaultTrackSelector,
     ) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         private var controllerFuture: ListenableFuture<MediaController>? = null
@@ -83,6 +97,16 @@ class PlayerConnection
         /** Last full queue of track IDs we loaded (for resume). */
         private var lastQueueIds: List<Long> = emptyList()
 
+        // ── Video ──────────────────────────────────────────────────
+        /** An on-screen PlayerView surface is currently attached. */
+        private var surfaceActive = false
+
+        /** Audio-only choice for the current item (persisted per saved stream). */
+        private var currentAudioOnly = false
+
+        /** Media id we last resolved [currentAudioOnly] for. */
+        private var audioOnlyForMediaId: String? = null
+
         private val _state = MutableStateFlow(PlayerUiState())
         val state: StateFlow<PlayerUiState> = _state.asStateFlow()
 
@@ -92,6 +116,9 @@ class PlayerConnection
                     player: Player,
                     events: Player.Events,
                 ) {
+                    if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) {
+                        refreshAudioOnlyForCurrent(player)
+                    }
                     publish(player)
                     if (events.contains(Player.EVENT_IS_PLAYING_CHANGED) ||
                         events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION) ||
@@ -163,12 +190,15 @@ class PlayerConnection
         ) {
             if (tracks.isEmpty()) return
             val c = controller ?: return
-            lastQueueIds = tracks.map { it.id }
+            val seed = tracks.getOrNull(startIndex) ?: tracks.first()
+            val (queue, queueIndex) = tracks.playbackQueue(seed)
+            if (queue.isEmpty()) return
+            lastQueueIds = queue.map { it.id }
             scope.launch {
                 // Thaw cold large files before handing URIs to ExoPlayer
                 val ready =
                     withContext(Dispatchers.IO) {
-                        storageManager.ensurePlayable(tracks)
+                        storageManager.ensurePlayable(queue)
                     }
                 lastQueueIds = ready.map { it.id }
                 val items =
@@ -176,7 +206,7 @@ class PlayerConnection
                         MediaItemFactory.fromTracks(ready)
                     }
                 if (items.isEmpty()) return@launch
-                val idx = startIndex.coerceIn(0, items.lastIndex)
+                val idx = queueIndex.coerceIn(0, items.lastIndex)
                 c.setMediaItems(items, idx, startPositionMs.coerceAtLeast(0L))
                 c.prepare()
                 c.play()
@@ -250,6 +280,64 @@ class PlayerConnection
                 }
                 schedulePersist()
             }
+        }
+
+        // ── Video surface + audio-only control ─────────────────────
+
+        /**
+         * Bind an on-screen [androidx.media3.ui.PlayerView] to the shared player and
+         * enable video decoding (unless the stream is audio-only). Call from the UI when
+         * the Now Playing / fullscreen surface appears.
+         */
+        fun attachVideoSurface(view: androidx.media3.ui.PlayerView) {
+            view.player = controller
+            surfaceActive = true
+            applyVideoSelection()
+        }
+
+        /** Detach the surface and drop back to audio-only decoding to save bandwidth. */
+        fun detachVideoSurface(view: androidx.media3.ui.PlayerView) {
+            if (view.player != null) view.player = null
+            surfaceActive = false
+            applyVideoSelection()
+        }
+
+        /** Toggle audio-only for the current stream; persisted for saved streams. */
+        fun setAudioOnly(audioOnly: Boolean) {
+            currentAudioOnly = audioOnly
+            applyVideoSelection()
+            _state.update { it.copy(audioOnly = audioOnly) }
+            val trackId = controller?.currentMediaItem?.mediaId?.let { MediaIds.parseTrackId(it) } ?: return
+            scope.launch {
+                withContext(Dispatchers.IO) { musicRepository.setStreamAudioOnly(trackId, audioOnly) }
+            }
+        }
+
+        private fun refreshAudioOnlyForCurrent(player: Player) {
+            val mediaId = player.currentMediaItem?.mediaId
+            if (mediaId == audioOnlyForMediaId) return
+            audioOnlyForMediaId = mediaId
+            val trackId = mediaId?.let { MediaIds.parseTrackId(it) }
+            if (trackId == null) {
+                currentAudioOnly = false
+                applyVideoSelection()
+                return
+            }
+            scope.launch {
+                val stored = withContext(Dispatchers.IO) { musicRepository.getTrack(trackId)?.audioOnly ?: false }
+                currentAudioOnly = stored
+                applyVideoSelection()
+                _state.update { it.copy(audioOnly = stored) }
+            }
+        }
+
+        private fun applyVideoSelection() {
+            val enable = surfaceActive && !currentAudioOnly
+            trackSelector.setParameters(
+                trackSelector
+                    .buildUponParameters()
+                    .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, !enable),
+            )
         }
 
         private fun scheduleStorageMaintenance() {
@@ -358,12 +446,15 @@ class PlayerConnection
                 if (!snap.hasSession) return@launch
                 val tracks = musicRepository.getTracksByIdsOrdered(snap.trackIds)
                 if (tracks.isEmpty()) return@launch
+                val seed = tracks.getOrNull(snap.index.coerceIn(0, tracks.lastIndex))
+                val (queue, queueIndex) = tracks.playbackQueue(seed)
+                if (queue.isEmpty()) return@launch
                 val ready =
                     withContext(Dispatchers.IO) {
-                        storageManager.ensurePlayable(tracks)
+                        storageManager.ensurePlayable(queue)
                     }
                 if (ready.isEmpty()) return@launch
-                val idx = snap.index.coerceIn(0, ready.lastIndex)
+                val idx = queueIndex.coerceIn(0, ready.lastIndex)
                 lastQueueIds = ready.map { it.id }
                 val items =
                     withContext(Dispatchers.Default) {
@@ -438,6 +529,8 @@ class PlayerConnection
             val bitrate =
                 extras?.getInt(StreamPlayback.EXTRA_BITRATE_BPS)?.takeIf { it > 0 }
                     ?: StreamPlayback.selectedAudioBitrateBps(player)
+            val hasVideo = hasVideoTrack(player)
+            val videoSize = player.videoSize
             _state.update {
                 it.copy(
                     isConnected = true,
@@ -462,8 +555,20 @@ class PlayerConnection
                     isLive = live,
                     bitrateBps = bitrate,
                     throughputBps = extras?.getLong(StreamPlayback.EXTRA_THROUGHPUT_BPS) ?: 0L,
+                    hasVideo = hasVideo,
+                    audioOnly = currentAudioOnly,
+                    videoWidth = videoSize.width,
+                    videoHeight = videoSize.height,
                 )
             }
+        }
+
+        private fun hasVideoTrack(player: Player): Boolean {
+            val groups = player.currentTracks.groups
+            for (i in groups.indices) {
+                if (groups[i].type == androidx.media3.common.C.TRACK_TYPE_VIDEO) return true
+            }
+            return false
         }
 
         private fun buildQueueSnapshot(player: Player): List<QueueItemUi> {

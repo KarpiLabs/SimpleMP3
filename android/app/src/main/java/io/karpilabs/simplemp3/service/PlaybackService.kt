@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.media3.common.Metadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -16,10 +17,21 @@ import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import dagger.hilt.android.AndroidEntryPoint
 import io.karpilabs.simplemp3.MainActivity
+import io.karpilabs.simplemp3.data.normalization.VolumeNormalizer
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import io.karpilabs.simplemp3.data.repository.MusicRepository
+import io.karpilabs.simplemp3.data.scrobble.ScrobbleManager
 import io.karpilabs.simplemp3.data.storage.LargeFileStorageManager
 import io.karpilabs.simplemp3.widget.PlayerWidgetUpdater
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @OptIn(UnstableApi::class)
@@ -41,10 +53,20 @@ class PlaybackService : MediaLibraryService() {
     @Inject
     lateinit var storageManager: LargeFileStorageManager
 
+    @Inject
+    lateinit var scrobbleManager: ScrobbleManager
+
     private var librarySession: MediaLibrarySession? = null
     private var callback: LibrarySessionCallback? = null
     private var lastThroughputBps: Long = 0L
     private var lastStatsPublishMs: Long = 0L
+
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    // ── ReplayGain / loudness normalization ────────────────────────
+    private var normalizeEnabled: Boolean = false
+    private var normalizePreampDb: Int = 0
+    private var currentTrackGainDb: Double? = null
 
     private val playerListener =
         object : Player.Listener {
@@ -64,6 +86,7 @@ class PlaybackService : MediaLibraryService() {
                     callback?.recordPlayForCurrent()
                 }
                 lastThroughputBps = 0L
+                refreshGainForCurrentTrack()
                 PlayerWidgetUpdater.publishFromPlayer(this@PlaybackService, player)
                 publishStreamStats(force = true)
             }
@@ -145,6 +168,29 @@ class PlaybackService : MediaLibraryService() {
         updateCustomLayout()
         PlayerWidgetUpdater.publishFromPlayer(this, player)
         publishStreamStats(force = true)
+
+        // Track normalization settings; re-apply the current track's volume on change.
+        serviceScope.launch {
+            combine(
+                appPreferences.normalizeVolumeFlow,
+                appPreferences.normalizePreampDbFlow,
+            ) { enabled, preamp -> enabled to preamp }
+                .collect { (enabled, preamp) ->
+                    normalizeEnabled = enabled
+                    normalizePreampDb = preamp
+                    applyNormalizationVolume()
+                }
+        }
+
+        // Poll playback position so a track scrobbles once it crosses the threshold.
+        serviceScope.launch {
+            while (isActive) {
+                if (player.isPlaying) {
+                    scrobbleManager.onProgress(player.currentPosition)
+                }
+                delay(15_000)
+            }
+        }
     }
 
     private val streamStatsListener =
@@ -158,7 +204,55 @@ class PlaybackService : MediaLibraryService() {
                 lastThroughputBps = bitrateEstimate
                 publishStreamStats(force = false)
             }
+
+            override fun onMetadata(
+                eventTime: AnalyticsListener.EventTime,
+                metadata: Metadata,
+            ) {
+                val gain = VolumeNormalizer.trackGainFromMetadata(metadata) ?: return
+                if (gain == currentTrackGainDb) return
+                currentTrackGainDb = gain
+                applyNormalizationVolume()
+                // Persist so the gain is known before the extractor emits it next time.
+                val trackId = MediaIds.parseTrackId(player.currentMediaItem?.mediaId ?: return) ?: return
+                serviceScope.launch {
+                    withContext(Dispatchers.IO) { repository.updateTrackGain(trackId, gain) }
+                }
+            }
         }
+
+    /** Look up the now-current track once to seed normalization + scrobbling. */
+    private fun refreshGainForCurrentTrack() {
+        val mediaId = player.currentMediaItem?.mediaId
+        val trackId = mediaId?.let { MediaIds.parseTrackId(it) }
+        if (trackId == null) {
+            currentTrackGainDb = null
+            applyNormalizationVolume()
+            return
+        }
+        serviceScope.launch {
+            val track = withContext(Dispatchers.IO) { repository.getTrack(trackId) }
+            currentTrackGainDb = track?.trackGainDb
+            applyNormalizationVolume()
+            if (track != null) {
+                scrobbleManager.onTrackStarted(
+                    artist = track.artist,
+                    track = track.title,
+                    album = track.album,
+                    durationMs = track.duration,
+                )
+            }
+        }
+    }
+
+    private fun applyNormalizationVolume() {
+        player.volume =
+            VolumeNormalizer.linearVolume(
+                gainDb = currentTrackGainDb,
+                preampDb = normalizePreampDb,
+                enabled = normalizeEnabled,
+            )
+    }
 
     private fun publishStreamStats(force: Boolean) {
         val session = librarySession ?: return
@@ -226,6 +320,7 @@ class PlaybackService : MediaLibraryService() {
     }
 
     override fun onDestroy() {
+        serviceScope.cancel()
         player.removeListener(playerListener)
         player.removeAnalyticsListener(streamStatsListener)
         librarySession?.run {

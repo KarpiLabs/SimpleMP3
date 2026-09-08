@@ -16,6 +16,35 @@ struct PlaylistsScreen: View {
 
     var body: some View {
         List {
+            Section("Smart playlists") {
+                ForEach(SmartPlaylist.allCases) { smart in
+                    NavigationLink {
+                        SmartCollectionScreen(kind: .smart(smart))
+                    } label: {
+                        smartRow(icon: smart.systemImage, title: smart.displayName, subtitle: smart.detail)
+                    }
+                    .listRowBackground(Color.clear)
+                }
+            }
+
+            if !app.repository.genres.isEmpty {
+                Section("Genres") {
+                    ForEach(app.repository.genres) { genre in
+                        NavigationLink {
+                            SmartCollectionScreen(kind: .genre(genre.name))
+                        } label: {
+                            smartRow(
+                                icon: "guitars",
+                                title: genre.name,
+                                subtitle: Formatters.trackCount(genre.trackCount)
+                            )
+                        }
+                        .listRowBackground(Color.clear)
+                    }
+                }
+            }
+
+            Section("Your playlists") {
             ForEach(app.visiblePlaylists) { pl in
                 NavigationLink {
                     PlaylistDetailScreen(playlistId: pl.id)
@@ -55,6 +84,7 @@ struct PlaylistsScreen: View {
                     }
                 }
             }
+            }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -86,6 +116,111 @@ struct PlaylistsScreen: View {
                 Task { await app.repository.renamePlaylist(id: id, name: name) }
             }
             Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    @ViewBuilder
+    private func smartRow(icon: String, title: String, subtitle: String) -> some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(palette.card)
+                .frame(width: 56, height: 56)
+                .overlay(
+                    Image(systemName: icon)
+                        .font(.system(size: 24))
+                        .foregroundStyle(palette.accent)
+                )
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(palette.textPrimary)
+                    .lineLimit(1)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(palette.textSecondary)
+                    .lineLimit(1)
+            }
+        }
+    }
+}
+
+/// Read-only track list for a smart playlist or a genre. Contents are computed on
+/// appear so they always reflect the current library.
+struct SmartCollectionScreen: View {
+    enum Kind: Hashable {
+        case smart(SmartPlaylist)
+        case genre(String)
+
+        var title: String {
+            switch self {
+            case .smart(let s): return s.displayName
+            case .genre(let g): return g
+            }
+        }
+
+        var subtitle: String {
+            switch self {
+            case .smart(let s): return s.detail
+            case .genre: return "Genre"
+            }
+        }
+    }
+
+    let kind: Kind
+    @Environment(AppModel.self) private var app
+    @Environment(\.appPalette) private var palette
+    @State private var tracks: [Track] = []
+
+    var body: some View {
+        List {
+            if !tracks.isEmpty {
+                Text(kind.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(palette.textSecondary)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+            ForEach(tracks) { track in
+                TrackRowView(
+                    track: track,
+                    isPlaying: app.player.state.current?.id == track.id,
+                    onTap: { app.playTrack(track, queue: tracks) },
+                    onFavorite: { Task { await app.repository.toggleFavorite(trackId: track.id) } },
+                    onMore: { app.addToPlaylistTrack = track },
+                    onHide: { app.hideTrack(track) }
+                )
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .navigationTitle(kind.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack(spacing: 14) {
+                    Button {
+                        app.player.play(tracks: tracks.shuffled(), startIndex: 0)
+                    } label: {
+                        Image(systemName: "shuffle")
+                    }
+                    .foregroundStyle(palette.accent)
+                    .disabled(tracks.isEmpty)
+                    .accessibilityLabel("Shuffle")
+                    Button("Play all") { app.playAll(tracks) }
+                        .foregroundStyle(palette.accent)
+                        .disabled(tracks.isEmpty)
+                }
+            }
+        }
+        .task { await reload() }
+    }
+
+    private func reload() async {
+        switch kind {
+        case .smart(let s): tracks = await app.repository.smartTracks(s)
+        case .genre(let g): tracks = await app.repository.tracks(genre: g)
         }
     }
 }

@@ -252,6 +252,8 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                 composable(Routes.SETTINGS) {
                     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
                     val bufferProfile by viewModel.bufferProfile.collectAsStateWithLifecycle()
+                    val normalizeVolume by viewModel.normalizeVolume.collectAsStateWithLifecycle()
+                    val normalizePreampDb by viewModel.normalizePreampDb.collectAsStateWithLifecycle()
                     SettingsScreen(
                         jellyfinEnabled = jellyfinEnabled,
                         autoDriveModeOnCar = autoDriveModeOnCar,
@@ -261,6 +263,8 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         wifiOnlyDownloads = wifiOnlyDownloads,
                         largeFileOptimize = largeFileOptimize,
                         largeFileColdPack = largeFileColdPack,
+                        normalizeVolume = normalizeVolume,
+                        normalizePreampDb = normalizePreampDb,
                         themeMode = themeMode,
                         bufferProfile = bufferProfile,
                         onBack = { navController.popBackStack() },
@@ -274,9 +278,26 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onLargeFileColdPackChange = viewModel::setLargeFileColdPack,
                         onThemeModeChange = viewModel::setThemeMode,
                         onBufferProfileChange = viewModel::setBufferProfile,
+                        onNormalizeVolumeChange = viewModel::setNormalizeVolume,
+                        onNormalizePreampChange = viewModel::setNormalizePreampDb,
                         onOpenQuickConnect = { navController.navigate(Routes.QUICK_CONNECT) },
+                        onOpenScrobbling = { navController.navigate(Routes.SCROBBLING) },
                         onOpenLibraryFolders = { navController.navigate(Routes.LIBRARY_FOLDERS) },
                         onOpenHiddenSongs = { navController.navigate(Routes.HIDDEN_SONGS) },
+                    )
+                }
+                composable(Routes.SCROBBLING) {
+                    val scrobbleConfig by viewModel.scrobbleConfig.collectAsStateWithLifecycle()
+                    io.karpilabs.simplemp3.ui.screens.ScrobblingScreen(
+                        config = scrobbleConfig,
+                        onBack = { navController.popBackStack() },
+                        onEnabledChange = viewModel::setScrobbleEnabled,
+                        onProviderChange = viewModel::setScrobbleProvider,
+                        onSaveListenBrainzToken = viewModel::setListenBrainzToken,
+                        onLoginLastfm = { apiKey, apiSecret, username, password, onResult ->
+                            viewModel.loginLastfm(apiKey, apiSecret, username, password, onResult)
+                        },
+                        onLogoutLastfm = viewModel::logoutLastfm,
                     )
                 }
                 composable(Routes.HIDDEN_SONGS) {
@@ -383,6 +404,7 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                     val streamUi by streamVm.ui.collectAsStateWithLifecycle()
                     val streamProgress by streamVm.progress.collectAsStateWithLifecycle()
                     val savedStreams by streamVm.saved.collectAsStateWithLifecycle()
+                    val favoriteStreamIds by streamVm.favoriteIds.collectAsStateWithLifecycle()
 
                     StreamScreen(
                         ui = streamUi,
@@ -399,6 +421,8 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onSetTrackArtwork = streamVm::setTrackArtwork,
                         onPlayTrack = { track, queue -> viewModel.playTrack(track, queue) },
                         onRemove = streamVm::remove,
+                        favoriteIds = favoriteStreamIds,
+                        onToggleFavorite = streamVm::toggleFavorite,
                     )
                 }
                 composable(Routes.QUICK_CONNECT) {
@@ -450,10 +474,56 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                     )
                 }
                 composable(Routes.PLAYLISTS) {
+                    val genres by viewModel.genres.collectAsStateWithLifecycle()
                     PlaylistsScreen(
                         playlists = visiblePlaylists,
+                        genres = genres,
                         onOpenPlaylist = { navController.navigate(Routes.playlistDetail(it)) },
+                        onOpenSmart = { navController.navigate(Routes.smartDetail(it.key)) },
+                        onOpenGenre = { navController.navigate(Routes.genreDetail(it)) },
                         onCreatePlaylist = { viewModel.createPlaylist(it) },
+                    )
+                }
+                composable(
+                    route = Routes.SMART_DETAIL,
+                    arguments = listOf(navArgument("smartKey") { type = NavType.StringType }),
+                ) { entry ->
+                    val key = entry.arguments?.getString("smartKey").orEmpty()
+                    val smart =
+                        io.karpilabs.simplemp3.data.local.SmartPlaylist.fromKey(key)
+                            ?: return@composable
+                    val smartTracks by remember(key) { viewModel.smartTracks(smart) }
+                        .collectAsStateWithLifecycle()
+                    CollectionDetailScreen(
+                        title = smart.displayName,
+                        subtitle = smart.description,
+                        tracks = smartTracks,
+                        playerState = playerState,
+                        onBack = { navController.popBackStack() },
+                        onPlayAll = { viewModel.playAll(smartTracks) },
+                        onShuffle = { viewModel.playAll(smartTracks.shuffled()) },
+                        onPlayTrack = { viewModel.playTrack(it, smartTracks) },
+                        onToggleFavorite = viewModel::toggleFavorite,
+                    )
+                }
+                composable(
+                    route = Routes.GENRE_DETAIL,
+                    arguments = listOf(navArgument("genre") { type = NavType.StringType }),
+                ) { entry ->
+                    val genre =
+                        android.net.Uri.decode(entry.arguments?.getString("genre").orEmpty())
+                    val genreTracks by remember(genre) { viewModel.genreTracks(genre) }
+                        .collectAsStateWithLifecycle()
+                    CollectionDetailScreen(
+                        title = genre,
+                        subtitle = "Genre",
+                        tracks = genreTracks,
+                        playerState = playerState,
+                        onBack = { navController.popBackStack() },
+                        onPlayAll = { viewModel.playAll(genreTracks) },
+                        onShuffle = { viewModel.playAll(genreTracks.shuffled()) },
+                        onPlayTrack = { viewModel.playTrack(it, genreTracks) },
+                        onToggleFavorite = viewModel::toggleFavorite,
                     )
                 }
                 composable(
@@ -594,6 +664,9 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                 showQueue = true
             },
             onSleepTimer = viewModel::setSleepTimer,
+            onAttachVideo = viewModel::attachVideoSurface,
+            onDetachVideo = viewModel::detachVideoSurface,
+            onToggleAudioOnly = viewModel::setStreamAudioOnly,
         )
     }
 

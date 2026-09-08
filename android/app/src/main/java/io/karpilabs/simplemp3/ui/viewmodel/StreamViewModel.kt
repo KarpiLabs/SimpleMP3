@@ -4,15 +4,20 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.data.repository.MusicRepository
 import io.karpilabs.simplemp3.data.stream.StreamSaveManager
 import io.karpilabs.simplemp3.data.stream.StreamSaveProgress
 import io.karpilabs.simplemp3.player.PlayerConnection
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,7 +34,7 @@ class StreamViewModel
     constructor(
         private val saveManager: StreamSaveManager,
         private val playerConnection: PlayerConnection,
-        repository: MusicRepository,
+        private val repository: MusicRepository,
     ) : ViewModel() {
         private val share = SharingStarted.WhileSubscribed(5_000)
 
@@ -37,6 +42,19 @@ class StreamViewModel
 
         val saved: StateFlow<List<TrackEntity>> =
             repository.streamTracks.stateIn(viewModelScope, share, emptyList())
+
+        @OptIn(ExperimentalCoroutinesApi::class)
+        val favoriteIds: StateFlow<Set<Long>> =
+            repository.playlists
+                .flatMapLatest { lists ->
+                    val id =
+                        lists.firstOrNull { it.systemType == PlaylistEntity.SYSTEM_FAVORITE_STREAMS }?.id
+                    if (id == null) {
+                        flowOf(emptySet())
+                    } else {
+                        repository.getPlaylistTracks(id).map { tracks -> tracks.map { it.id }.toSet() }
+                    }
+                }.stateIn(viewModelScope, share, emptySet())
 
         private val _ui = MutableStateFlow(StreamUiState())
         val ui: StateFlow<StreamUiState> = _ui.asStateFlow()
@@ -95,5 +113,9 @@ class StreamViewModel
 
         fun remove(trackId: Long) {
             viewModelScope.launch { saveManager.removeSaved(trackId) }
+        }
+
+        fun toggleFavorite(trackId: Long) {
+            viewModelScope.launch { repository.toggleFavorite(trackId) }
         }
     }

@@ -22,9 +22,29 @@ object ServiceModule {
     @OptIn(UnstableApi::class)
     @Provides
     @Singleton
+    fun provideTrackSelector(
+        @ApplicationContext context: Context,
+    ): DefaultTrackSelector {
+        // Audio player by default: never auto-select video/image. Video is enabled
+        // on demand by PlayerConnection when an on-screen surface is attached to a
+        // video-capable stream, so idle / background / car playback stays audio-only.
+        val trackSelector = DefaultTrackSelector(context)
+        trackSelector.setParameters(
+            trackSelector
+                .buildUponParameters()
+                .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
+                .setTrackTypeDisabled(C.TRACK_TYPE_IMAGE, true),
+        )
+        return trackSelector
+    }
+
+    @OptIn(UnstableApi::class)
+    @Provides
+    @Singleton
     fun provideExoPlayer(
         @ApplicationContext context: Context,
         appPreferences: AppPreferences,
+        trackSelector: DefaultTrackSelector,
     ): ExoPlayer {
         val audioAttributes =
             AudioAttributes
@@ -47,17 +67,6 @@ object ServiceModule {
                 ).setPrioritizeTimeOverSizeThresholds(true)
                 .setBackBuffer(/* backBufferDurationMs */ 60_000, /* retainBackBufferFromKeyframe */ true)
                 .build()
-
-        // This is an audio player: never select video/image tracks. For HLS that
-        // advertises audio-only renditions, ExoPlayer will use those instead of
-        // downloading a video variant.
-        val trackSelector = DefaultTrackSelector(context)
-        trackSelector.setParameters(
-            trackSelector
-                .buildUponParameters()
-                .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
-                .setTrackTypeDisabled(C.TRACK_TYPE_IMAGE, true),
-        )
 
         return ExoPlayer
             .Builder(context)

@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -71,6 +72,8 @@ fun PlaylistCard(
                     imageVector =
                         when (playlist.systemType) {
                             PlaylistEntity.SYSTEM_FAVORITES -> Icons.Rounded.Favorite
+                            PlaylistEntity.SYSTEM_FAVORITE_STREAMS -> Icons.Rounded.Podcasts
+                            PlaylistEntity.SYSTEM_STREAMS -> Icons.Rounded.Podcasts
                             PlaylistEntity.SYSTEM_RECENTLY_PLAYED -> Icons.Rounded.History
                             else -> Icons.Rounded.QueueMusic
                         },
@@ -133,6 +136,8 @@ fun PlaylistListRow(
                     imageVector =
                         when (playlist.systemType) {
                             PlaylistEntity.SYSTEM_FAVORITES -> Icons.Rounded.Favorite
+                            PlaylistEntity.SYSTEM_FAVORITE_STREAMS -> Icons.Rounded.Podcasts
+                            PlaylistEntity.SYSTEM_STREAMS -> Icons.Rounded.Podcasts
                             PlaylistEntity.SYSTEM_RECENTLY_PLAYED -> Icons.Rounded.History
                             else -> Icons.Rounded.QueueMusic
                         },
@@ -176,6 +181,14 @@ private fun playlistGradient(
     PlaylistEntity.SYSTEM_FAVORITES ->
         Brush.linearGradient(
             listOf(AccentCoral.copy(alpha = 0.55f), elevated),
+        )
+    PlaylistEntity.SYSTEM_FAVORITE_STREAMS ->
+        Brush.linearGradient(
+            listOf(AccentCoral.copy(alpha = 0.45f), AccentTeal.copy(alpha = 0.3f), elevated),
+        )
+    PlaylistEntity.SYSTEM_STREAMS ->
+        Brush.linearGradient(
+            listOf(AccentViolet.copy(alpha = 0.45f), AccentTeal.copy(alpha = 0.25f), elevated),
         )
     PlaylistEntity.SYSTEM_RECENTLY_PLAYED ->
         Brush.linearGradient(

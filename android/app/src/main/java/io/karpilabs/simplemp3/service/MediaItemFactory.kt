@@ -28,6 +28,12 @@ object MediaIds {
     /** YouTube → MP3 downloads */
     const val YOUTUBE = "youtube"
 
+    /** Saved live streams / radio */
+    const val STREAMS = "streams"
+
+    /** Hearted live streams */
+    const val FAVORITE_STREAMS = "favorite_streams"
+
     /** Current player queue (Up Next) */
     const val QUEUE = "queue"
 

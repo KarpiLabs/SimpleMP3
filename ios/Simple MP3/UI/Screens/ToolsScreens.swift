@@ -334,6 +334,36 @@ struct SettingsScreen: View {
                 Text("Larger buffers rebuffer less on flaky networks (e.g. streams over cellular) at the cost of a longer initial load. Applies to the next track.")
             }
 
+            Section {
+                Toggle("Volume normalization", isOn: $prefs.normalizeVolume)
+                    .onChange(of: prefs.normalizeVolume) { _, _ in
+                        app.player.refreshNormalization()
+                    }
+                if prefs.normalizeVolume {
+                    Stepper(
+                        "Pre-amp: \(prefs.normalizePreampDb >= 0 ? "+" : "")\(prefs.normalizePreampDb) dB",
+                        value: $prefs.normalizePreampDb,
+                        in: -12...12,
+                        step: 3
+                    )
+                    .onChange(of: prefs.normalizePreampDb) { _, _ in
+                        app.player.refreshNormalization()
+                    }
+                }
+            } header: {
+                Text("Loudness")
+            } footer: {
+                Text("Evens out loudness across tracks using ReplayGain tags. Tracks without tags play at their original level.")
+            }
+
+            Section("Scrobbling") {
+                NavigationLink {
+                    ScrobblingScreen()
+                } label: {
+                    Text("Last.fm / ListenBrainz")
+                }
+            }
+
             Section("CarPlay & Drive") {
                 Toggle("Drive Mode", isOn: $prefs.driveMode)
                 Toggle("Show weather in CarPlay", isOn: $prefs.showCarPlayWeather)
@@ -379,6 +409,111 @@ struct SettingsScreen: View {
         let shortVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
         let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
         return "\(shortVersion) (\(build))"
+    }
+}
+
+struct ScrobblingScreen: View {
+    @Environment(AppModel.self) private var app
+    @Environment(\.appPalette) private var palette
+    @State private var lfUsername = ""
+    @State private var lfPassword = ""
+    @State private var busy = false
+    @State private var status: String?
+
+    var body: some View {
+        @Bindable var prefs = app.preferences
+        List {
+            Section {
+                Toggle("Enable scrobbling", isOn: $prefs.scrobbleEnabled)
+            } footer: {
+                Text("Send the tracks you play to your listening history.")
+            }
+
+            if prefs.scrobbleEnabled {
+                Section("Provider") {
+                    Picker("Provider", selection: $prefs.scrobbleProvider) {
+                        Text("ListenBrainz").tag(ScrobbleProvider.listenBrainz)
+                        Text("Last.fm").tag(ScrobbleProvider.lastfm)
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                if prefs.scrobbleProvider == ScrobbleProvider.listenBrainz {
+                    Section {
+                        SecureField("User token", text: $prefs.listenBrainzToken)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                    } header: {
+                        Text("ListenBrainz")
+                    } footer: {
+                        Text("Paste your user token from listenbrainz.org → Settings.")
+                    }
+                }
+
+                if prefs.scrobbleProvider == ScrobbleProvider.lastfm {
+                    lastfmSection
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .navigationTitle("Scrobbling")
+    }
+
+    @ViewBuilder
+    private var lastfmSection: some View {
+        @Bindable var prefs = app.preferences
+        if !prefs.lastfmSessionKey.isEmpty {
+            Section("Last.fm") {
+                LabeledContent("Logged in", value: prefs.lastfmUsername)
+                Button("Log out", role: .destructive) {
+                    app.preferences.clearLastfmSession()
+                }
+            }
+        } else {
+            Section {
+                TextField("API key", text: $prefs.lastfmApiKey)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                SecureField("Shared secret", text: $prefs.lastfmApiSecret)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                TextField("Username", text: $lfUsername)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                SecureField("Password", text: $lfPassword)
+                Button(busy ? "Logging in…" : "Log in") {
+                    Task { await login() }
+                }
+                .disabled(busy
+                    || prefs.lastfmApiKey.isEmpty
+                    || prefs.lastfmApiSecret.isEmpty
+                    || lfUsername.isEmpty
+                    || lfPassword.isEmpty)
+                if let status {
+                    Text(status)
+                        .font(.caption)
+                        .foregroundStyle(palette.textSecondary)
+                }
+            } header: {
+                Text("Last.fm")
+            } footer: {
+                Text("Create an API account at last.fm/api, paste the key + secret, then log in.")
+            }
+        }
+    }
+
+    private func login() async {
+        busy = true
+        status = nil
+        let ok = await app.scrobble.loginLastfm(
+            apiKey: app.preferences.lastfmApiKey.trimmingCharacters(in: .whitespaces),
+            apiSecret: app.preferences.lastfmApiSecret.trimmingCharacters(in: .whitespaces),
+            username: lfUsername.trimmingCharacters(in: .whitespaces),
+            password: lfPassword
+        )
+        busy = false
+        status = ok ? "Logged in" : "Login failed — check credentials"
+        if ok { lfPassword = "" }
     }
 }
 
@@ -469,7 +604,7 @@ struct StreamsScreen: View {
 
             Section {
                 if saved.isEmpty {
-                    Text("Saved streams stay in the Saved Streams playlist and play live on CarPlay.")
+                    Text("Saved streams play live on CarPlay. Heart one to pin it in Favorite Streams.")
                         .font(.caption)
                         .foregroundStyle(palette.textSecondary)
                 } else {
@@ -478,6 +613,7 @@ struct StreamsScreen: View {
                             track: track,
                             isPlaying: app.player.state.current?.id == track.id,
                             onTap: { app.playTrack(track, queue: saved) },
+                            onFavorite: { Task { await app.repository.toggleFavorite(trackId: track.id) } },
                             onMore: { app.addToPlaylistTrack = track },
                             onHide: { app.hideTrack(track) },
                             onSetIcon: {

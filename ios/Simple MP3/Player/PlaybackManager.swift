@@ -26,8 +26,21 @@ struct PlayerUiState: Equatable {
     var bitrateBps: Int64 = 0
     /// Observed network throughput from the access log.
     var throughputBps: Int64 = 0
+    /// Current item exposes a video track (e.g. an HLS TV channel).
+    var hasVideo: Bool = false
+    /// User chose audio-only for this (video-capable) stream.
+    var audioOnly: Bool = false
+    var videoWidth: Int = 0
+    var videoHeight: Int = 0
 
     var hasTrack: Bool { current != nil }
+
+    /// Show the video surface only when there is video and the user hasn't opted out.
+    var showVideo: Bool { hasVideo && !audioOnly }
+
+    var videoAspectRatio: Double {
+        (videoWidth > 0 && videoHeight > 0) ? Double(videoWidth) / Double(videoHeight) : 16.0 / 9.0
+    }
     var progress: Double {
         guard durationMs > 0 else { return 0 }
         return min(1, Double(positionMs) / Double(durationMs))
@@ -70,8 +83,18 @@ final class PlaybackManager {
     private var shuffleOrder: [Int] = []
     private var repository: MusicRepository?
     private var preferences: AppPreferences?
+    private var scrobble: ScrobbleService?
     private var lastRecordedTrackId: String?
     private var progressSaveTask: Task<Void, Never>?
+    /// ReplayGain (dB) for the current track, once known.
+    private var currentGainDb: Double?
+    /// Audio-only choice for the current stream (persisted per saved stream).
+    private var currentAudioOnly = false
+    /// CarPlay forces audio-only regardless of the per-stream toggle.
+    private var carConnected = false
+
+    /// The underlying AVPlayer, for binding a video layer in the UI.
+    var avPlayer: AVPlayer { player }
 
     init() {
         configureSession()
@@ -132,9 +155,10 @@ final class PlaybackManager {
         }
     }
 
-    func attach(repository: MusicRepository, preferences: AppPreferences) {
+    func attach(repository: MusicRepository, preferences: AppPreferences, scrobble: ScrobbleService? = nil) {
         self.repository = repository
         self.preferences = preferences
+        self.scrobble = scrobble
     }
 
     private func configureSession() {
@@ -151,19 +175,21 @@ final class PlaybackManager {
 
     func play(tracks: [Track], startIndex: Int = 0, positionMs: Int64 = 0) {
         guard !tracks.isEmpty else { return }
-        let idx = min(max(0, startIndex), tracks.count - 1)
-        state.queue = tracks
+        let seed = tracks[min(max(0, startIndex), tracks.count - 1)]
+        let (queue, idx) = tracks.playbackQueue(start: seed)
+        guard !queue.isEmpty else { return }
+        state.queue = queue
         state.index = idx
         state.shuffle = false
-        order = Array(tracks.indices)
+        order = Array(queue.indices)
         shuffleOrder = order.shuffled()
         loadAndPlay(at: idx, positionMs: positionMs, autoPlay: true)
     }
 
     func play(_ track: Track, queue: [Track]? = nil) {
         let q = queue ?? [track]
-        let idx = q.firstIndex(where: { $0.id == track.id }) ?? 0
-        play(tracks: q, startIndex: idx)
+        let (list, idx) = q.playbackQueue(start: track)
+        play(tracks: list, startIndex: idx)
     }
 
     /// Play a live network stream URL (progressive or HLS `.m3u8`) directly — AVPlayer
@@ -326,11 +352,18 @@ final class PlaybackManager {
         if forward > 0 {
             item.preferredForwardBufferDuration = forward
         }
-        if track.isRemoteStream {
-            // Prefer audio-only / lowest-resolution HLS variants so we don't pull video.
-            item.preferredMaximumResolution = CGSize(width: 1, height: 1)
-            item.preferredPeakBitRate = 512_000
+        // Loudness normalization: apply any known gain now, then refine from tags.
+        currentGainDb = track.trackGainDb
+        applyNormalizationVolume()
+        if !track.isRemoteStream {
+            parseGainIfNeeded(for: track, url: url)
         }
+        currentAudioOnly = track.audioOnly
+        state.audioOnly = track.audioOnly
+        state.hasVideo = false
+        state.videoWidth = 0
+        state.videoHeight = 0
+        applyVideoBandwidth(to: item)
         player.automaticallyWaitsToMinimizeStalling = true
         player.replaceCurrentItem(with: item)
         if positionMs > 0 {
@@ -345,6 +378,7 @@ final class PlaybackManager {
         Task {
             await repository?.recordPlay(trackId: track.id)
         }
+        scrobble?.onTrackStarted(track)
         persistResume()
         NotificationCenter.default.post(name: .playbackDidChange, object: nil)
     }
@@ -360,6 +394,72 @@ final class PlaybackManager {
             return url
         }
         return nil
+    }
+
+    // MARK: - Video streams
+
+    /// Toggle audio-only for the current stream; persisted for saved streams.
+    func setStreamAudioOnly(_ audioOnly: Bool) {
+        currentAudioOnly = audioOnly
+        state.audioOnly = audioOnly
+        applyVideoBandwidth(to: player.currentItem)
+        if let id = state.current?.id {
+            Task { await repository?.setStreamAudioOnly(trackId: id, audioOnly: audioOnly) }
+        }
+    }
+
+    /// Constrain HLS variant selection: full quality when video is allowed, otherwise a
+    /// 1×1 / low-bitrate cap so AVPlayer picks an audio-only rendition (saves bandwidth).
+    /// CarPlay always forces audio-only.
+    private func applyVideoBandwidth(to item: AVPlayerItem?) {
+        guard let item else { return }
+        let allowVideo = (state.current?.isRemoteStream ?? false) && !currentAudioOnly && !carConnected
+        if allowVideo {
+            item.preferredMaximumResolution = .zero
+            item.preferredPeakBitRate = 0
+        } else if state.current?.isRemoteStream == true {
+            item.preferredMaximumResolution = CGSize(width: 1, height: 1)
+            item.preferredPeakBitRate = 512_000
+        }
+        // Re-enable/disable already-loaded video tracks so toggling audio-only off
+        // restores video on the current item (bandwidth caps alone won't undo a
+        // previously disabled track).
+        if state.current?.isRemoteStream == true {
+            for track in item.tracks where track.assetTrack?.mediaType == .video {
+                track.isEnabled = allowVideo
+            }
+        }
+    }
+
+    // MARK: - Loudness normalization
+
+    /// Re-apply the current track's normalized volume — call when the setting changes.
+    func refreshNormalization() {
+        applyNormalizationVolume()
+    }
+
+    private func applyNormalizationVolume() {
+        player.volume = VolumeNormalizer.linearVolume(
+            gainDb: currentGainDb,
+            preampDb: preferences?.normalizePreampDb ?? 0,
+            enabled: preferences?.normalizeVolume ?? false
+        )
+    }
+
+    /// Read ReplayGain tags off the main thread and cache them for next time.
+    private func parseGainIfNeeded(for track: Track, url: URL) {
+        guard preferences?.normalizeVolume == true, track.trackGainDb == nil else { return }
+        let trackId = track.id
+        Task { [weak self] in
+            let asset = AVURLAsset(url: url)
+            guard let gain = await VolumeNormalizer.trackGain(from: asset) else { return }
+            await self?.repository?.setTrackGain(trackId: trackId, gainDb: gain)
+            await MainActor.run { [weak self] in
+                guard let self, self.state.current?.id == trackId else { return }
+                self.currentGainDb = gain
+                self.applyNormalizationVolume()
+            }
+        }
     }
 
     private func nextIndex() -> Int? {
@@ -402,6 +502,14 @@ final class PlaybackManager {
         state.isPlaying = player.rate > 0
         // Reflect real buffering rather than a synchronous guess at load time.
         state.isBuffering = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
+        if state.isPlaying {
+            scrobble?.onProgress(positionMs: state.positionMs)
+        }
+        if let size = player.currentItem?.presentationSize, size.width > 0, size.height > 0 {
+            state.hasVideo = true
+            state.videoWidth = Int(size.width)
+            state.videoHeight = Int(size.height)
+        }
         updateStreamStats()
         updateNowPlayingPlayback()
     }
@@ -410,9 +518,13 @@ final class PlaybackManager {
     /// and read indicated/observed bitrate from the access log.
     private func updateStreamStats() {
         let item = player.currentItem
+        // Only strip video when the user opted for audio-only (or CarPlay forces it).
+        // Toggle both ways so turning audio-only back off re-enables video on the
+        // current item without waiting for the next track to load.
+        let stripVideo = currentAudioOnly || carConnected
         if state.current?.isRemoteStream == true, let item {
             for track in item.tracks where track.assetTrack?.mediaType == .video {
-                track.isEnabled = false
+                track.isEnabled = !stripVideo
             }
         }
         let indefinite = item?.duration.isIndefinite == true
@@ -537,6 +649,8 @@ final class PlaybackManager {
 
     /// Called when CarPlay connects.
     func handleCarConnect() {
+        carConnected = true
+        applyVideoBandwidth(to: player.currentItem)
         guard let preferences else { return }
         if preferences.autoDriveModeOnCar {
             preferences.driveMode = true
@@ -553,6 +667,8 @@ final class PlaybackManager {
 
     /// Called when CarPlay disconnects.
     func handleCarDisconnect() {
+        carConnected = false
+        applyVideoBandwidth(to: player.currentItem)
         guard let preferences else { return }
         if preferences.pauseOnCarDisconnect && state.isPlaying {
             pause()
