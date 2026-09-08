@@ -661,6 +661,9 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                 showQueue = true
             },
             onSleepTimer = viewModel::setSleepTimer,
+            onAttachVideo = viewModel::attachVideoSurface,
+            onDetachVideo = viewModel::detachVideoSurface,
+            onToggleAudioOnly = viewModel::setStreamAudioOnly,
         )
     }
 

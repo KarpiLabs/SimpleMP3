@@ -55,6 +55,9 @@ struct Track: Identifiable, Codable, Hashable, Sendable {
     /// ReplayGain track gain in dB parsed from file tags, if present. Applied as a
     /// volume multiplier when normalization is on.
     var trackGainDb: Double? = nil
+    /// For video-capable streams (e.g. HLS TV channels): play audio only to save
+    /// bandwidth. Remembered per saved stream; ignored for tracks with no video.
+    var audioOnly: Bool = false
 
     init(
         id: String = UUID().uuidString,

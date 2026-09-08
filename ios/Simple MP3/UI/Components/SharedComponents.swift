@@ -3,7 +3,31 @@
 //  Simple MP3
 //
 
+import AVFoundation
+import AVKit
 import SwiftUI
+
+/// Renders an AVPlayer's video into an AVPlayerLayer (no built-in controls).
+struct VideoLayerView: UIViewRepresentable {
+    let player: AVPlayer
+
+    func makeUIView(context: Context) -> PlayerLayerUIView {
+        let view = PlayerLayerUIView()
+        view.playerLayer.player = player
+        view.playerLayer.videoGravity = .resizeAspect
+        view.backgroundColor = .black
+        return view
+    }
+
+    func updateUIView(_ uiView: PlayerLayerUIView, context: Context) {
+        uiView.playerLayer.player = player
+    }
+}
+
+final class PlayerLayerUIView: UIView {
+    override class var layerClass: AnyClass { AVPlayerLayer.self }
+    var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+}
 
 struct AlbumArtView: View {
     var artworkUri: String?
@@ -263,6 +287,7 @@ struct NowPlayingSheet: View {
     @Environment(AppModel.self) private var app
     @Environment(\.appPalette) private var palette
     @Environment(\.dismiss) private var dismiss
+    @State private var fullscreen = false
 
     var body: some View {
         let state = app.player.state
@@ -273,23 +298,41 @@ struct NowPlayingSheet: View {
                     .frame(width: 40, height: 5)
                     .padding(.top, 8)
 
-                AlbumArtView(
-                    artworkUri: state.current?.artworkUri,
-                    trackId: state.current?.id,
-                    size: 280,
-                    cornerRadius: 20
-                )
-                    .shadow(color: palette.accent.opacity(0.2), radius: 30)
-                    .gesture(
-                        DragGesture(minimumDistance: 40)
-                            .onEnded { value in
-                                if value.translation.width < -50 {
-                                    app.player.skipNext()
-                                } else if value.translation.width > 50 {
-                                    app.player.skipPrevious()
-                                }
-                            }
+                if state.showVideo {
+                    ZStack(alignment: .topTrailing) {
+                        VideoLayerView(player: app.player.avPlayer)
+                            .aspectRatio(state.videoAspectRatio, contentMode: .fit)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.black)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        Button { fullscreen = true } label: {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .padding(8)
+                                .background(.black.opacity(0.5), in: Circle())
+                                .foregroundStyle(.white)
+                        }
+                        .padding(8)
+                    }
+                    .padding(.horizontal, 12)
+                } else {
+                    AlbumArtView(
+                        artworkUri: state.current?.artworkUri,
+                        trackId: state.current?.id,
+                        size: 280,
+                        cornerRadius: 20
                     )
+                        .shadow(color: palette.accent.opacity(0.2), radius: 30)
+                        .gesture(
+                            DragGesture(minimumDistance: 40)
+                                .onEnded { value in
+                                    if value.translation.width < -50 {
+                                        app.player.skipNext()
+                                    } else if value.translation.width > 50 {
+                                        app.player.skipPrevious()
+                                    }
+                                }
+                        )
+                }
 
                 VStack(spacing: 6) {
                     Text(state.current?.title ?? "Nothing playing")
@@ -303,6 +346,26 @@ struct NowPlayingSheet: View {
                         Text(rate)
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(palette.accent)
+                    }
+                    if state.hasVideo {
+                        Button {
+                            app.player.setStreamAudioOnly(!state.audioOnly)
+                        } label: {
+                            Label(
+                                state.audioOnly ? "Audio only" : "Video on",
+                                systemImage: state.audioOnly ? "speaker.wave.2.fill" : "play.rectangle.fill"
+                            )
+                            .font(.system(size: 13, weight: .semibold))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule().fill(state.audioOnly
+                                    ? palette.accent.opacity(0.25)
+                                    : palette.card)
+                            )
+                            .foregroundStyle(state.audioOnly ? palette.accent : palette.textSecondary)
+                        }
+                        .padding(.top, 2)
                     }
                 }
                 .padding(.horizontal)
@@ -370,6 +433,30 @@ struct NowPlayingSheet: View {
                         .foregroundStyle(palette.textSecondary)
                 }
             }
+            .fullScreenCover(isPresented: $fullscreen) {
+                FullscreenVideoView(player: app.player.avPlayer)
+            }
+        }
+    }
+}
+
+/// Native fullscreen video with AVKit controls (supports rotation + PiP).
+struct FullscreenVideoView: View {
+    let player: AVPlayer
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            Color.black.ignoresSafeArea()
+            VideoPlayer(player: player)
+                .ignoresSafeArea()
+            Button { dismiss() } label: {
+                Image(systemName: "xmark")
+                    .padding(10)
+                    .background(.black.opacity(0.5), in: Circle())
+                    .foregroundStyle(.white)
+            }
+            .padding()
         }
     }
 }

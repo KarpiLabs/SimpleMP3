@@ -103,6 +103,12 @@ interface TrackDao {
         gainDb: Double?,
     )
 
+    @Query("UPDATE tracks SET audioOnly = :audioOnly WHERE id = :id")
+    suspend fun updateAudioOnly(
+        id: Long,
+        audioOnly: Boolean,
+    )
+
     @Query(
         """
         SELECT genre AS name,

@@ -257,6 +257,14 @@ class MusicRepository
             trackDao.updateTrackGain(id, gainDb)
         }
 
+        /** Remember the audio-only choice for a (video-capable) saved stream. */
+        suspend fun setStreamAudioOnly(
+            id: Long,
+            audioOnly: Boolean,
+        ) {
+            trackDao.updateAudioOnly(id, audioOnly)
+        }
+
         suspend fun getTracksByIdsOrdered(ids: List<Long>): List<TrackEntity> {
             if (ids.isEmpty()) return emptyList()
             val map = trackDao.getTracksByIds(ids).associateBy { it.id }

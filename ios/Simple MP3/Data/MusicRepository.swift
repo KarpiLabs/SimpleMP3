@@ -213,6 +213,10 @@ final class MusicRepository {
         await store.setTrackGain(id: trackId, gainDb: gainDb)
     }
 
+    func setStreamAudioOnly(trackId: String, audioOnly: Bool) async {
+        await store.setAudioOnly(id: trackId, audioOnly: audioOnly)
+    }
+
     func upsertTrack(_ track: Track) async {
         await store.upsert(track)
         await refresh()

@@ -69,6 +69,11 @@ data class TrackEntity(
     val neverCompress: Boolean = false,
     /** User hid this track from Songs/Albums/Artists/Search/playlists (e.g. ringtone junk). */
     val isHidden: Boolean = false,
+    /**
+     * For video-capable streams (e.g. HLS TV channels): play audio only to save
+     * bandwidth. Remembered per saved stream; ignored for tracks with no video.
+     */
+    val audioOnly: Boolean = false,
 ) {
     companion object {
         const val SOURCE_LOCAL = "local"

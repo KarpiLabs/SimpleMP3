@@ -95,6 +95,14 @@ actor LibraryStore {
         persist()
     }
 
+    /// Remember the audio-only choice for a (video-capable) saved stream.
+    func setAudioOnly(id: String, audioOnly: Bool) {
+        guard var t = tracks[id] else { return }
+        t.audioOnly = audioOnly
+        tracks[id] = t
+        persist()
+    }
+
     func tracks(ids: [String]) -> [Track] {
         ids.compactMap { tracks[$0] }
     }

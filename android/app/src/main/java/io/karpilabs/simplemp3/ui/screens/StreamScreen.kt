@@ -175,14 +175,14 @@ fun StreamScreen(
                         )
                         Spacer(Modifier.width(10.dp))
                         Text(
-                            text = "HLS & direct audio streams",
+                            text = "HLS video & direct audio streams",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Paste an .m3u8 (HLS) or direct audio URL. Play it live, or save the stream to the Saved Streams playlist — the live URL is kept, nothing is downloaded. We'll grab a thumbnail when we can, or you can set a custom icon.",
+                        text = "Paste an .m3u8 (HLS) or direct audio URL. Play it live, or save the stream to the Saved Streams playlist — the live URL is kept, nothing is downloaded. Video streams show a player in Now Playing (with an audio-only switch to save data); audio streams grab a thumbnail, or set a custom icon.",
                         style = MaterialTheme.typography.bodySmall,
                         color = palette.textSecondary,
                     )

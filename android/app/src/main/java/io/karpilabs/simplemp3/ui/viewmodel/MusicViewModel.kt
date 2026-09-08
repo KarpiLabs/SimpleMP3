@@ -378,6 +378,19 @@ class MusicViewModel
             playerConnection.setSleepTimer(minutes)
         }
 
+        // ── Video streams ──────────────────────────────────────────
+        fun attachVideoSurface(view: androidx.media3.ui.PlayerView) {
+            playerConnection.attachVideoSurface(view)
+        }
+
+        fun detachVideoSurface(view: androidx.media3.ui.PlayerView) {
+            playerConnection.detachVideoSurface(view)
+        }
+
+        fun setStreamAudioOnly(audioOnly: Boolean) {
+            playerConnection.setAudioOnly(audioOnly)
+        }
+
         fun createPlaylist(
             name: String,
             onCreated: (Long) -> Unit = {},

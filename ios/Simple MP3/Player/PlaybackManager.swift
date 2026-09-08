@@ -26,8 +26,21 @@ struct PlayerUiState: Equatable {
     var bitrateBps: Int64 = 0
     /// Observed network throughput from the access log.
     var throughputBps: Int64 = 0
+    /// Current item exposes a video track (e.g. an HLS TV channel).
+    var hasVideo: Bool = false
+    /// User chose audio-only for this (video-capable) stream.
+    var audioOnly: Bool = false
+    var videoWidth: Int = 0
+    var videoHeight: Int = 0
 
     var hasTrack: Bool { current != nil }
+
+    /// Show the video surface only when there is video and the user hasn't opted out.
+    var showVideo: Bool { hasVideo && !audioOnly }
+
+    var videoAspectRatio: Double {
+        (videoWidth > 0 && videoHeight > 0) ? Double(videoWidth) / Double(videoHeight) : 16.0 / 9.0
+    }
     var progress: Double {
         guard durationMs > 0 else { return 0 }
         return min(1, Double(positionMs) / Double(durationMs))
@@ -75,6 +88,13 @@ final class PlaybackManager {
     private var progressSaveTask: Task<Void, Never>?
     /// ReplayGain (dB) for the current track, once known.
     private var currentGainDb: Double?
+    /// Audio-only choice for the current stream (persisted per saved stream).
+    private var currentAudioOnly = false
+    /// CarPlay forces audio-only regardless of the per-stream toggle.
+    private var carConnected = false
+
+    /// The underlying AVPlayer, for binding a video layer in the UI.
+    var avPlayer: AVPlayer { player }
 
     init() {
         configureSession()
@@ -336,11 +356,12 @@ final class PlaybackManager {
         if !track.isRemoteStream {
             parseGainIfNeeded(for: track, url: url)
         }
-        if track.isRemoteStream {
-            // Prefer audio-only / lowest-resolution HLS variants so we don't pull video.
-            item.preferredMaximumResolution = CGSize(width: 1, height: 1)
-            item.preferredPeakBitRate = 512_000
-        }
+        currentAudioOnly = track.audioOnly
+        state.audioOnly = track.audioOnly
+        state.hasVideo = false
+        state.videoWidth = 0
+        state.videoHeight = 0
+        applyVideoBandwidth(to: item)
         player.automaticallyWaitsToMinimizeStalling = true
         player.replaceCurrentItem(with: item)
         if positionMs > 0 {
@@ -371,6 +392,33 @@ final class PlaybackManager {
             return url
         }
         return nil
+    }
+
+    // MARK: - Video streams
+
+    /// Toggle audio-only for the current stream; persisted for saved streams.
+    func setStreamAudioOnly(_ audioOnly: Bool) {
+        currentAudioOnly = audioOnly
+        state.audioOnly = audioOnly
+        applyVideoBandwidth(to: player.currentItem)
+        if let id = state.current?.id {
+            Task { await repository?.setStreamAudioOnly(trackId: id, audioOnly: audioOnly) }
+        }
+    }
+
+    /// Constrain HLS variant selection: full quality when video is allowed, otherwise a
+    /// 1×1 / low-bitrate cap so AVPlayer picks an audio-only rendition (saves bandwidth).
+    /// CarPlay always forces audio-only.
+    private func applyVideoBandwidth(to item: AVPlayerItem?) {
+        guard let item else { return }
+        let allowVideo = (state.current?.isRemoteStream ?? false) && !currentAudioOnly && !carConnected
+        if allowVideo {
+            item.preferredMaximumResolution = .zero
+            item.preferredPeakBitRate = 0
+        } else if state.current?.isRemoteStream == true {
+            item.preferredMaximumResolution = CGSize(width: 1, height: 1)
+            item.preferredPeakBitRate = 512_000
+        }
     }
 
     // MARK: - Loudness normalization
@@ -447,6 +495,11 @@ final class PlaybackManager {
         if state.isPlaying {
             scrobble?.onProgress(positionMs: state.positionMs)
         }
+        if let size = player.currentItem?.presentationSize, size.width > 0, size.height > 0 {
+            state.hasVideo = true
+            state.videoWidth = Int(size.width)
+            state.videoHeight = Int(size.height)
+        }
         updateStreamStats()
         updateNowPlayingPlayback()
     }
@@ -455,7 +508,9 @@ final class PlaybackManager {
     /// and read indicated/observed bitrate from the access log.
     private func updateStreamStats() {
         let item = player.currentItem
-        if state.current?.isRemoteStream == true, let item {
+        // Only strip video when the user opted for audio-only (or CarPlay forces it).
+        let stripVideo = currentAudioOnly || carConnected
+        if state.current?.isRemoteStream == true, stripVideo, let item {
             for track in item.tracks where track.assetTrack?.mediaType == .video {
                 track.isEnabled = false
             }
@@ -582,6 +637,8 @@ final class PlaybackManager {
 
     /// Called when CarPlay connects.
     func handleCarConnect() {
+        carConnected = true
+        applyVideoBandwidth(to: player.currentItem)
         guard let preferences else { return }
         if preferences.autoDriveModeOnCar {
             preferences.driveMode = true
@@ -598,6 +655,8 @@ final class PlaybackManager {
 
     /// Called when CarPlay disconnects.
     func handleCarDisconnect() {
+        carConnected = false
+        applyVideoBandwidth(to: player.currentItem)
         guard let preferences else { return }
         if preferences.pauseOnCarDisconnect && state.isPlaying {
             pause()
