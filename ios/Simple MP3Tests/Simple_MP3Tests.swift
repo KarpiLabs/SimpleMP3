@@ -84,4 +84,12 @@ struct Simple_MP3Tests {
         #expect(result.tracks.map(\.id) == [song.id, later.id])
         #expect(result.index == 1)
     }
+
+    @Test func jellyfinErrorFormattingDoesNotLeakDetails() {
+        let loginError = JellyfinError.loginFailed("Login failed (401)")
+        #expect(loginError.errorDescription == "Login failed (401)")
+
+        let httpError = JellyfinError.http(500, "")
+        #expect(httpError.errorDescription == "HTTP 500")
+    }
 }
