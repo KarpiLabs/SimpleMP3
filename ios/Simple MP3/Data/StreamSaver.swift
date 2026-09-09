@@ -12,10 +12,12 @@ import UIKit
 
 enum StreamSaveError: LocalizedError {
     case invalidURL
+    case invalidDestinationPath
 
     var errorDescription: String? {
         switch self {
         case .invalidURL: return "That doesn't look like a valid stream URL."
+        case .invalidDestinationPath: return "Destination path is outside the allowed app directory."
         }
     }
 }
@@ -67,6 +69,14 @@ enum StreamSaver {
     }
 
     static func persistArtwork(_ data: Data, to destination: URL) throws -> URL {
+        guard destination.isFileURL else {
+            throw StreamSaveError.invalidDestinationPath
+        }
+        let resolved = destination.standardizedFileURL.resolvingSymlinksInPath()
+        let homeDir = URL(fileURLWithPath: NSHomeDirectory()).standardizedFileURL.resolvingSymlinksInPath()
+        guard resolved.path.hasPrefix(homeDir.path + "/") else {
+            throw StreamSaveError.invalidDestinationPath
+        }
         try? FileManager.default.removeItem(at: destination)
         try data.write(to: destination, options: [.atomic])
         return destination

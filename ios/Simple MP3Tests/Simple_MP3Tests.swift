@@ -92,4 +92,22 @@ struct Simple_MP3Tests {
         let httpError = JellyfinError.http(500, "")
         #expect(httpError.errorDescription == "HTTP 500")
     }
+
+    @Test func persistArtworkPreventsPathTraversalOutsideSandbox() throws {
+        let testData = Data("test-image".utf8)
+        let homeDir = URL(fileURLWithPath: NSHomeDirectory())
+        let validDestination = homeDir.appendingPathComponent("tmp_artwork.img")
+
+        // Valid destination inside NSHomeDirectory should succeed
+        let savedURL = try StreamSaver.persistArtwork(testData, to: validDestination)
+        #expect(savedURL == validDestination)
+        #expect(FileManager.default.fileExists(atPath: validDestination.path))
+        try? FileManager.default.removeItem(at: validDestination)
+
+        // Invalid destination outside NSHomeDirectory should throw StreamSaveError.invalidDestinationPath
+        let invalidDestination = URL(fileURLWithPath: "/tmp/malicious_artwork.img")
+        #expect(throws: StreamSaveError.self) {
+            try StreamSaver.persistArtwork(testData, to: invalidDestination)
+        }
+    }
 }
