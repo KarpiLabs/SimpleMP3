@@ -18,7 +18,7 @@ enum JellyfinError: LocalizedError {
         case .invalidURL: return "Invalid server URL"
         case .loginFailed(let m): return m
         case .notAuthenticated: return "Not signed in to Jellyfin"
-        case .http(let c, let m): return "HTTP \(c): \(m)"
+        case .http(let c, let m): return m.isEmpty ? "HTTP \(c)" : "HTTP \(c): \(m)"
         case .decode: return "Could not parse server response"
         case .downloadFailed: return "Download failed"
         }
@@ -73,8 +73,8 @@ actor JellyfinClient {
         let (data, response) = try await session.data(for: req)
         guard let http = response as? HTTPURLResponse else { throw JellyfinError.loginFailed("No response") }
         if !(200..<300).contains(http.statusCode) {
-            let msg = String(data: data, encoding: .utf8)?.prefix(200) ?? ""
-            throw JellyfinError.loginFailed("Login failed (\(http.statusCode)): \(msg)")
+            // Do not leak raw response body details in exception messages
+            throw JellyfinError.loginFailed("Login failed (\(http.statusCode))")
         }
         let parsed = try JSONDecoder().decode(AuthenticationResult.self, from: data)
         guard let token = parsed.AccessToken, let user = parsed.User else {
@@ -200,8 +200,8 @@ actor JellyfinClient {
         req.setValue(authHeader(deviceId: jf.deviceId, token: jf.accessToken), forHTTPHeaderField: "X-Emby-Authorization")
         let (data, response) = try await session.data(for: req)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-            let msg = String(data: data, encoding: .utf8)?.prefix(120) ?? ""
-            throw JellyfinError.http(http.statusCode, String(msg))
+            // Do not leak raw response body details in exception messages
+            throw JellyfinError.http(http.statusCode, "")
         }
         do {
             return try JSONDecoder().decode(T.self, from: data)
