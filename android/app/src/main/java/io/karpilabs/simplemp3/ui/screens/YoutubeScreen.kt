@@ -40,11 +40,12 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,6 +59,7 @@ import io.karpilabs.simplemp3.ui.theme.AccentViolet
 import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatDuration
 import io.karpilabs.simplemp3.ui.viewmodel.YoutubeUiState
+import kotlinx.coroutines.launch
 
 @Composable
 fun YoutubeScreen(
@@ -74,7 +76,8 @@ fun YoutubeScreen(
     onClearAll: () -> Unit,
 ) {
     val palette = LocalSimpleMP3Palette.current
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val clipboardScope = rememberCoroutineScope()
 
     LazyColumn(
         modifier =
@@ -169,7 +172,15 @@ fun YoutubeScreen(
                     trailingIcon = {
                         IconButton(
                             onClick = {
-                                clipboard.getText()?.text?.let { onPaste(it) }
+                                clipboardScope.launch {
+                                    clipboard.getClipEntry()
+                                        ?.clipData
+                                        ?.takeIf { it.itemCount > 0 }
+                                        ?.getItemAt(0)
+                                        ?.text
+                                        ?.toString()
+                                        ?.let { onPaste(it) }
+                                }
                             },
                         ) {
                             Icon(

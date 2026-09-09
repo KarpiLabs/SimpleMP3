@@ -201,7 +201,7 @@ fun PlaylistDetailScreen(
                         )
                         if (!playlist?.description.isNullOrBlank()) {
                             Text(
-                                text = playlist!!.description,
+                                text = playlist.description,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = palette.textSecondary,
                             )

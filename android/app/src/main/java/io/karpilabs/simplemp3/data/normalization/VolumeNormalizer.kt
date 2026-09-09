@@ -42,7 +42,7 @@ object VolumeNormalizer {
             when (val entry = metadata.get(i)) {
                 is TextInformationFrame -> {
                     if (entry.description.equals(RG_TRACK_GAIN_KEY, ignoreCase = true)) {
-                        val value = entry.values.firstOrNull() ?: entry.value
+                        val value = entry.values.firstOrNull()
                         parseGainDb(value)?.let { return it }
                     }
                 }

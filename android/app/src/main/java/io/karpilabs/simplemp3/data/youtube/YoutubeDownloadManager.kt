@@ -423,7 +423,7 @@ class YoutubeDownloadManager
                 if (!response.isSuccessful) {
                     throw IllegalStateException("Download failed (${response.code})")
                 }
-                val body = response.body ?: throw IllegalStateException("Empty response body")
+                val body = response.body
                 val total = body.contentLength().takeIf { it > 0 }
                 dest.parentFile?.mkdirs()
                 val tmp = File(dest.absolutePath + ".part")

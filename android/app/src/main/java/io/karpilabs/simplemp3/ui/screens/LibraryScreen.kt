@@ -23,10 +23,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -156,14 +155,14 @@ fun LibraryScreen(
                 ),
         )
 
-        ScrollableTabRow(
+        SecondaryScrollableTabRow(
             selectedTabIndex = tab,
             containerColor = MaterialTheme.colorScheme.background,
             contentColor = AccentTeal,
             edgePadding = 16.dp,
-            indicator = { positions ->
+            indicator = {
                 SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(positions[tab]),
+                    modifier = Modifier.tabIndicatorOffset(tab),
                     color = AccentTeal,
                 )
             },

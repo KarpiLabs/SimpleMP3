@@ -54,12 +54,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,6 +74,7 @@ import io.karpilabs.simplemp3.ui.theme.AccentViolet
 import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatDuration
 import io.karpilabs.simplemp3.ui.viewmodel.StreamUiState
+import kotlinx.coroutines.launch
 
 @Composable
 fun StreamScreen(
@@ -94,7 +96,8 @@ fun StreamScreen(
     onToggleFavorite: (Long) -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val clipboardScope = rememberCoroutineScope()
     var iconTargetId by remember { mutableStateOf<Long?>(null) }
     val imagePicker =
         rememberLauncherForActivityResult(
@@ -207,7 +210,17 @@ fun StreamScreen(
                     },
                     trailingIcon = {
                         IconButton(
-                            onClick = { clipboard.getText()?.text?.let { onPasteUrl(it) } },
+                            onClick = {
+                                clipboardScope.launch {
+                                    clipboard.getClipEntry()
+                                        ?.clipData
+                                        ?.takeIf { it.itemCount > 0 }
+                                        ?.getItemAt(0)
+                                        ?.text
+                                        ?.toString()
+                                        ?.let { onPasteUrl(it) }
+                                }
+                            },
                         ) {
                             Icon(Icons.Rounded.ContentPaste, contentDescription = "Paste", tint = AccentTeal)
                         }

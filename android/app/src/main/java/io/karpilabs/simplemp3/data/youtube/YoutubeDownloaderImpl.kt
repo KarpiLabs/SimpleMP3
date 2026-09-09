@@ -41,7 +41,7 @@ class YoutubeDownloaderImpl(
             if (response.code == 429) {
                 throw ReCaptchaException("reCaptcha Challenge requested", request.url())
             }
-            val responseBody = response.body?.string()
+            val responseBody = response.body.string()
             return Response(
                 response.code,
                 response.message,

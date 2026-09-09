@@ -60,6 +60,10 @@ kotlin {
     // Moved out of the removed android.kotlinOptions DSL (AGP 9 built-in Kotlin).
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_11)
+        // Opt into the Kotlin 2.x default: annotations on constructor params (e.g. Moshi
+        // @Json, @Inject) also propagate to the generated property/field, silencing the
+        // "currently applied to the value parameter only" migration warning.
+        freeCompilerArgs.add("-Xannotation-default-target=param-property")
     }
 }
 

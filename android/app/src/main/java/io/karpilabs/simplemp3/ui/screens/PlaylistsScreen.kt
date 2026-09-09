@@ -18,7 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.TrendingUp
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -96,7 +96,7 @@ fun PlaylistsScreen(
                         subtitle = smart.description,
                         icon =
                             when (smart) {
-                                SmartPlaylist.MOST_PLAYED -> Icons.Rounded.TrendingUp
+                                SmartPlaylist.MOST_PLAYED -> Icons.AutoMirrored.Rounded.TrendingUp
                                 SmartPlaylist.RECENTLY_ADDED -> Icons.Rounded.History
                             },
                         onClick = { onOpenSmart(smart) },

@@ -16,7 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Podcasts
-import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -75,7 +75,7 @@ fun PlaylistCard(
                             PlaylistEntity.SYSTEM_FAVORITE_STREAMS -> Icons.Rounded.Podcasts
                             PlaylistEntity.SYSTEM_STREAMS -> Icons.Rounded.Podcasts
                             PlaylistEntity.SYSTEM_RECENTLY_PLAYED -> Icons.Rounded.History
-                            else -> Icons.Rounded.QueueMusic
+                            else -> Icons.AutoMirrored.Rounded.QueueMusic
                         },
                     contentDescription = null,
                     tint = AccentTeal,
@@ -139,7 +139,7 @@ fun PlaylistListRow(
                             PlaylistEntity.SYSTEM_FAVORITE_STREAMS -> Icons.Rounded.Podcasts
                             PlaylistEntity.SYSTEM_STREAMS -> Icons.Rounded.Podcasts
                             PlaylistEntity.SYSTEM_RECENTLY_PLAYED -> Icons.Rounded.History
-                            else -> Icons.Rounded.QueueMusic
+                            else -> Icons.AutoMirrored.Rounded.QueueMusic
                         },
                     contentDescription = null,
                     tint = AccentTeal,
