@@ -1,6 +1,8 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
+    // AGP 9 provides built-in Kotlin support; kotlin-android is no longer applied.
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.dagger.hilt.android)
     alias(libs.plugins.google.devtools.ksp)
@@ -8,12 +10,12 @@ plugins {
 
 android {
     namespace = "io.karpilabs.simplemp3"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "io.karpilabs.simplemp3"
         minSdk = 29
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 5
         versionName = "1.2"
 
@@ -39,9 +41,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
     buildFeatures {
         compose = true
     }
@@ -54,6 +53,13 @@ android {
                 "META-INF/*.kotlin_module"
             )
         }
+    }
+}
+
+kotlin {
+    // Moved out of the removed android.kotlinOptions DSL (AGP 9 built-in Kotlin).
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_11)
     }
 }
 
