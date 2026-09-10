@@ -8,6 +8,7 @@
 import Foundation
 import Network
 import Observation
+import Security
 
 @Observable
 @MainActor
@@ -74,7 +75,7 @@ final class QuickConnectServer {
     func start(port: UInt16 = 8765) {
         stop()
         self.port = port
-        accessCode = String(format: "%06d", Int.random(in: 0...999_999))
+        accessCode = Self.generateSecureAccessCode()
         sessionToken = UUID().uuidString.replacingOccurrences(of: "-", with: "")
         failedAttempts = 0
         lockedUntil = nil
@@ -320,6 +321,17 @@ final class QuickConnectServer {
             base = String(base.prefix(180))
         }
         return base.isEmpty ? "upload.mp3" : base
+    }
+
+    /// Generates a 6-digit access code using Security framework's CSPRNG (SecRandomCopyBytes).
+    private static func generateSecureAccessCode() -> String {
+        var value: UInt32 = 0
+        let status = SecRandomCopyBytes(kSecRandomDefault, MemoryLayout<UInt32>.size, &value)
+        if status == errSecSuccess {
+            return String(format: "%06d", value % 1_000_000)
+        }
+        var generator = SystemRandomNumberGenerator()
+        return String(format: "%06d", Int.random(in: 0...999_999, using: &generator))
     }
 
     private static func constantTimeEquals(_ a: String, _ b: String) -> Bool {
