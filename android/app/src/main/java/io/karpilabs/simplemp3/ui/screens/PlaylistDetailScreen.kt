@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
@@ -62,8 +63,10 @@ import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.player.PlayerUiState
 import io.karpilabs.simplemp3.ui.components.AddSongsToPlaylistSheet
+import io.karpilabs.simplemp3.ui.components.SelectionBar
 import io.karpilabs.simplemp3.ui.components.TrackActionsMenu
 import io.karpilabs.simplemp3.ui.components.TrackRow
+import io.karpilabs.simplemp3.ui.components.rememberTrackSelection
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatDuration
@@ -91,11 +94,17 @@ fun PlaylistDetailScreen(
     onHide: (TrackEntity) -> Unit = {},
     libraryTracks: List<TrackEntity> = emptyList(),
     onAddTracks: (List<Long>) -> Unit = {},
+    onQueueTracks: (List<TrackEntity>) -> Unit = {},
+    onPlayNextTracks: (List<TrackEntity>) -> Unit = {},
+    onAddTracksToPlaylist: (List<TrackEntity>) -> Unit = {},
+    onHideTracks: (List<TrackEntity>) -> Unit = {},
+    onExportM3u: () -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
     var menuOpen by remember { mutableStateOf(false) }
     var actionTrack by remember { mutableStateOf<TrackEntity?>(null) }
     var showAddSongs by remember { mutableStateOf(false) }
+    val selection = rememberTrackSelection()
     var localTracks by remember { mutableStateOf(tracks) }
     LaunchedEffect(tracks) { localTracks = tracks }
     val canAddSongs = playlist.canAddSongs()
@@ -120,12 +129,24 @@ fun PlaylistDetailScreen(
                             Icon(Icons.Rounded.Add, contentDescription = "Add songs")
                         }
                     }
-                    if (playlist != null && !playlist.isSystem) {
-                        Box {
-                            IconButton(onClick = { menuOpen = true }) {
-                                Icon(Icons.Rounded.MoreVert, contentDescription = "More")
+                    Box {
+                        IconButton(onClick = { menuOpen = true }) {
+                            Icon(Icons.Rounded.MoreVert, contentDescription = "More")
+                        }
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            if (localTracks.isNotEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text("Export M3U") },
+                                    onClick = {
+                                        menuOpen = false
+                                        onExportM3u()
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Rounded.IosShare, contentDescription = null)
+                                    },
+                                )
                             }
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            if (playlist != null && !playlist.isSystem) {
                                 DropdownMenuItem(
                                     text = { Text("Delete playlist") },
                                     onClick = {
@@ -148,7 +169,8 @@ fun PlaylistDetailScreen(
 
             LazyColumn(
                 state = listState,
-                contentPadding = PaddingValues(bottom = 120.dp),
+                contentPadding =
+                    PaddingValues(bottom = if (selection.isSelecting) 180.dp else 120.dp),
             ) {
                 item {
                     Column(
@@ -321,10 +343,18 @@ fun PlaylistDetailScreen(
                             TrackRow(
                                 track = track,
                                 isPlaying = playerState.currentMediaId == "track:${track.id}",
-                                onClick = { onPlayTrack(track) },
+                                selected = selection.selected(track.id),
+                                selectionMode = selection.isSelecting,
+                                onClick = {
+                                    if (selection.isSelecting) {
+                                        selection.toggle(track.id)
+                                    } else {
+                                        onPlayTrack(track)
+                                    }
+                                },
                                 onFavoriteClick = { onToggleFavorite(track.id) },
                                 onMoreClick = { actionTrack = track },
-                                onLongClick = { actionTrack = track },
+                                onLongClick = { selection.enter(track.id) },
                             )
                             TrackActionsMenu(
                                 expanded = actionTrack?.id == track.id,
@@ -382,6 +412,34 @@ fun PlaylistDetailScreen(
                     }
                 }
             }
+        }
+
+        if (selection.isSelecting) {
+            SelectionBar(
+                count = selection.count,
+                onQueue = {
+                    onQueueTracks(selection.selectedTracks(localTracks))
+                    selection.clear()
+                },
+                onPlayNext = {
+                    onPlayNextTracks(selection.selectedTracks(localTracks))
+                    selection.clear()
+                },
+                onAddToPlaylist = {
+                    onAddTracksToPlaylist(selection.selectedTracks(localTracks))
+                    selection.clear()
+                },
+                onHide = {
+                    onHideTracks(selection.selectedTracks(localTracks))
+                    selection.clear()
+                },
+                onSelectAll = { selection.selectAll(localTracks) },
+                onClear = { selection.clear() },
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 8.dp),
+            )
         }
 
         if (showAddSongs) {

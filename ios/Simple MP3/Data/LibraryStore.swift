@@ -123,11 +123,17 @@ actor LibraryStore {
     func search(_ query: String) -> [Track] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return [] }
-        return visibleTracks().filter {
-            $0.title.localizedCaseInsensitiveContains(q)
-                || $0.artist.localizedCaseInsensitiveContains(q)
-                || $0.album.localizedCaseInsensitiveContains(q)
-        }
+        return visibleTracks().filter { LibrarySearch.trackMatches($0, q) }
+    }
+
+    func searchLibrary(_ query: String) -> LibrarySearchResults {
+        LibrarySearch.query(
+            query,
+            tracks: librarySongs(),
+            albums: albums(),
+            artists: artists(),
+            playlists: playlistMetas()
+        )
     }
 
     func upsert(_ track: Track) {
@@ -142,9 +148,23 @@ actor LibraryStore {
 
     func replaceLocalTracks(_ list: [Track]) {
         // Keep non-local sources intact (Jellyfin / YouTube / LAN).
+        let existingLocal = tracks.filter { $0.value.source == .local }
         let keep = tracks.values.filter { $0.source != .local }
         tracks = Dictionary(uniqueKeysWithValues: keep.map { ($0.id, $0) })
-        for t in list { tracks[t.id] = t }
+        for t in list {
+            if let old = existingLocal[t.id] {
+                var merged = t
+                merged.playCount = old.playCount
+                merged.lastPlayedAt = old.lastPlayedAt
+                merged.isHidden = old.isHidden
+                merged.neverCompress = old.neverCompress
+                merged.trackGainDb = t.trackGainDb ?? old.trackGainDb
+                merged.audioOnly = old.audioOnly
+                tracks[t.id] = merged
+            } else {
+                tracks[t.id] = t
+            }
+        }
         persist()
     }
 
@@ -454,10 +474,79 @@ actor LibraryStore {
             .map { $0 }
     }
 
+    func neverPlayed(limit: Int = 500) -> [Track] {
+        librarySongs()
+            .filter { $0.playCount == 0 }
+            .sorted { $0.dateAdded > $1.dateAdded }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    func notRecentlyPlayed(limit: Int = 200) -> [Track] {
+        let cutoff = Int64(Date().timeIntervalSince1970 * 1000) - SmartPlaylist.notRecentlyWindowMs
+        return librarySongs()
+            .filter { $0.playCount > 0 && $0.lastPlayedAt > 0 && $0.lastPlayedAt < cutoff }
+            .sorted { $0.lastPlayedAt < $1.lastPlayedAt }
+            .prefix(limit)
+            .map { $0 }
+    }
+
     func smartTracks(_ smart: SmartPlaylist, limit: Int = 100) -> [Track] {
         switch smart {
         case .mostPlayed: return mostPlayed(limit: limit)
         case .recentlyAdded: return recentlyAdded(limit: limit)
+        case .neverPlayed: return neverPlayed(limit: max(limit, 500))
+        case .notRecently: return notRecentlyPlayed(limit: max(limit, 200))
+        }
+    }
+
+    func duplicateGroups() -> [DuplicateDetector.Group] {
+        DuplicateDetector.findGroups(librarySongs())
+    }
+
+    func hideTracks(_ ids: [String], hidden: Bool) {
+        for id in ids {
+            guard var t = tracks[id] else { continue }
+            t.isHidden = hidden
+            tracks[id] = t
+        }
+        persist()
+    }
+
+    func mergeDuplicateGroup(_ group: DuplicateDetector.Group, keepId: String? = nil) {
+        let keep = keepId ?? group.keepId
+        let extras = group.tracks.filter { $0.id != keep }
+        for extra in extras {
+            for (pid, playlist) in playlists {
+                guard playlist.trackIds.contains(extra.id) else { continue }
+                var p = playlist
+                if !p.trackIds.contains(keep) {
+                    if let idx = p.trackIds.firstIndex(of: extra.id) {
+                        p.trackIds[idx] = keep
+                    } else {
+                        p.trackIds.append(keep)
+                    }
+                } else {
+                    p.trackIds.removeAll { $0 == extra.id }
+                }
+                p.touch()
+                playlists[pid] = p
+            }
+        }
+        hideTracks(extras.map(\.id), hidden: true)
+    }
+
+    func addTracksToPlaylist(playlistId: String, trackIds: [String]) {
+        guard var p = playlists[playlistId] else { return }
+        var changed = false
+        for id in trackIds where tracks[id] != nil && !p.trackIds.contains(id) {
+            p.trackIds.append(id)
+            changed = true
+        }
+        if changed {
+            p.touch()
+            playlists[playlistId] = p
+            persist()
         }
     }
 

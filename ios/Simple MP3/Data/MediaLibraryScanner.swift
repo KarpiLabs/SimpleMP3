@@ -39,6 +39,28 @@ enum MediaLibraryScanner {
         }
     }
 
+    static func scanBookmarks(_ bookmarks: [Data]) async -> [Track] {
+        var out: [Track] = []
+        for data in bookmarks {
+            var stale = false
+            guard let url = try? URL(
+                resolvingBookmarkData: data,
+                options: [.withoutUI],
+                relativeTo: nil,
+                bookmarkDataIsStale: &stale
+            ) else { continue }
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+            let files = collectAudioFiles(in: url)
+            for file in files {
+                if let track = await metadataTrack(from: file) {
+                    out.append(track)
+                }
+            }
+        }
+        return out
+    }
+
     static func scan(forceDocuments: Bool = true) async -> [Track] {
         var result: [Track] = []
 
@@ -217,7 +239,11 @@ enum MediaLibraryScanner {
             let rel = String(path.dropFirst(media.path.count)).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             return rel.isEmpty ? "Media" : rel
         }
-        return "Media"
+        if path.hasPrefix(docs.path) {
+            let rel = String(path.dropFirst(docs.path.count)).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            return rel.isEmpty ? "Documents" : rel
+        }
+        return url.deletingLastPathComponent().lastPathComponent
     }
 
     private static func stableFileId(url: URL, externalId: String?, source: TrackSource) -> String {

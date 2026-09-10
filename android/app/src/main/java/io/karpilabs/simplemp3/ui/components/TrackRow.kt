@@ -16,6 +16,8 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +38,8 @@ fun TrackRow(
     isPlaying: Boolean = false,
     isFavorite: Boolean = false,
     showArtwork: Boolean = true,
+    selected: Boolean = false,
+    selectionMode: Boolean = false,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     onMoreClick: (() -> Unit)? = null,
@@ -53,6 +57,18 @@ fun TrackRow(
                 ).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (selectionMode) {
+            Checkbox(
+                checked = selected,
+                onCheckedChange = { onClick() },
+                colors =
+                    CheckboxDefaults.colors(
+                        checkedColor = palette.accent,
+                        uncheckedColor = palette.textMuted,
+                    ),
+            )
+            Spacer(Modifier.width(4.dp))
+        }
         if (showArtwork) {
             AlbumArt(
                 artworkUri = track.artworkUri,
@@ -112,7 +128,7 @@ fun TrackRow(
             }
         }
 
-        if (onFavoriteClick != null) {
+        if (!selectionMode && onFavoriteClick != null) {
             IconButton(onClick = onFavoriteClick, modifier = Modifier.size(40.dp)) {
                 Icon(
                     imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
@@ -122,7 +138,7 @@ fun TrackRow(
             }
         }
 
-        if (onMoreClick != null) {
+        if (!selectionMode && onMoreClick != null) {
             IconButton(onClick = onMoreClick, modifier = Modifier.size(40.dp)) {
                 Icon(
                     imageVector = Icons.Rounded.MoreVert,

@@ -19,6 +19,7 @@ object Routes {
     const val GENRE_DETAIL = "genre/{genre}"
     const val LIBRARY_FOLDERS = "library_folders"
     const val HIDDEN_SONGS = "hidden_songs"
+    const val DUPLICATES = "duplicates"
     const val SCROBBLING = "scrobbling"
 
     fun playlistDetail(id: Long) = "playlist/$id"

@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiTethering
@@ -87,6 +88,7 @@ fun SettingsScreen(
     onOpenScrobbling: () -> Unit = {},
     onOpenLibraryFolders: () -> Unit = {},
     onOpenHiddenSongs: () -> Unit = {},
+    onOpenDuplicates: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val versionLabel =
@@ -192,6 +194,14 @@ fun SettingsScreen(
                     title = "Quick Connect",
                     subtitle = "Host a temporary LAN portal to upload & manage playlists",
                     onClick = onOpenQuickConnect,
+                )
+            }
+            item {
+                SettingsNavRow(
+                    icon = Icons.Rounded.ContentCopy,
+                    title = "Duplicates",
+                    subtitle = "Same song in two folders · hide extras or merge playlists",
+                    onClick = onOpenDuplicates,
                 )
             }
             item {

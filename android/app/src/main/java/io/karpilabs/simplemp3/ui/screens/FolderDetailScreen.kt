@@ -43,8 +43,10 @@ import androidx.compose.ui.unit.dp
 import io.karpilabs.simplemp3.data.local.FolderBrowser
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.player.PlayerUiState
+import io.karpilabs.simplemp3.ui.components.SelectionBar
 import io.karpilabs.simplemp3.ui.components.TrackActionsMenu
 import io.karpilabs.simplemp3.ui.components.TrackRow
+import io.karpilabs.simplemp3.ui.components.rememberTrackSelection
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatTrackCount
@@ -66,9 +68,14 @@ fun FolderDetailScreen(
     onPlayNext: (TrackEntity) -> Unit = {},
     onAddToQueue: (TrackEntity) -> Unit = {},
     onHide: (TrackEntity) -> Unit = {},
+    onQueueTracks: (List<TrackEntity>) -> Unit = {},
+    onPlayNextTracks: (List<TrackEntity>) -> Unit = {},
+    onAddTracksToPlaylist: (List<TrackEntity>) -> Unit = {},
+    onHideTracks: (List<TrackEntity>) -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
     var actionTrack by remember { mutableStateOf<TrackEntity?>(null) }
+    val selection = rememberTrackSelection()
     val title = FolderBrowser.displayName(folderPath).ifBlank { "Folders" }
     val subtitle = folderPath.ifBlank { "Browse by path" }
 
@@ -127,9 +134,11 @@ fun FolderDetailScreen(
             }
         }
 
+        Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 120.dp),
+            contentPadding =
+                PaddingValues(bottom = if (selection.isSelecting) 180.dp else 120.dp),
         ) {
             if (subfolders.isNotEmpty()) {
                 item {
@@ -163,9 +172,18 @@ fun FolderDetailScreen(
                         TrackRow(
                             track = track,
                             isPlaying = playerState.currentMediaId == "track:${track.id}",
-                            onClick = { onPlayTrack(track) },
-                            onLongClick = { actionTrack = track },
+                            selected = selection.selected(track.id),
+                            selectionMode = selection.isSelecting,
+                            onClick = {
+                                if (selection.isSelecting) {
+                                    selection.toggle(track.id)
+                                } else {
+                                    onPlayTrack(track)
+                                }
+                            },
+                            onLongClick = { selection.enter(track.id) },
                             onFavoriteClick = { onToggleFavorite(track.id) },
+                            onMoreClick = { actionTrack = track },
                         )
                         TrackActionsMenu(
                             expanded = actionTrack?.id == track.id,
@@ -192,6 +210,31 @@ fun FolderDetailScreen(
                     )
                 }
             }
+        }
+        if (selection.isSelecting) {
+            SelectionBar(
+                count = selection.count,
+                onQueue = {
+                    onQueueTracks(selection.selectedTracks(tracks))
+                    selection.clear()
+                },
+                onPlayNext = {
+                    onPlayNextTracks(selection.selectedTracks(tracks))
+                    selection.clear()
+                },
+                onAddToPlaylist = {
+                    onAddTracksToPlaylist(selection.selectedTracks(tracks))
+                    selection.clear()
+                },
+                onHide = {
+                    onHideTracks(selection.selectedTracks(tracks))
+                    selection.clear()
+                },
+                onSelectAll = { selection.selectAll(tracks) },
+                onClear = { selection.clear() },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
         }
     }
 }

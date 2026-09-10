@@ -39,7 +39,7 @@ data class TrackEntity(
      */
     val folderPath: String = "",
     val size: Long = 0L,
-    /** local | jellyfin | youtube | lan */
+    /** local | jellyfin | youtube | lan | saf | stream */
     val source: String = SOURCE_LOCAL,
     /** Jellyfin item GUID or YouTube video id (source-discriminated). */
     val jellyfinId: String? = null,
@@ -83,6 +83,9 @@ data class TrackEntity(
         /** Uploaded via Quick Connect LAN portal */
         const val SOURCE_LAN = "lan"
 
+        /** Picked via Storage Access Framework (SD card / USB / folder the MediaStore missed). */
+        const val SOURCE_SAF = "saf"
+
         /** Bookmarked live network stream (e.g. .m3u8 / HLS) via the Streams tool */
         const val SOURCE_STREAM = "stream"
 
@@ -93,7 +96,11 @@ data class TrackEntity(
     val isJellyfin: Boolean get() = source == SOURCE_JELLYFIN
     val isYoutube: Boolean get() = source == SOURCE_YOUTUBE
     val isLan: Boolean get() = source == SOURCE_LAN
+    val isSaf: Boolean get() = source == SOURCE_SAF
     val isStream: Boolean get() = source == SOURCE_STREAM
+
+    /** Tree URI for [SOURCE_SAF] tracks (stored in [jellyfinId], source-discriminated). */
+    val safTreeUri: String? get() = jellyfinId.takeIf { isSaf }
     val isCold: Boolean get() = storageState == STORAGE_COLD
     val isRemoteStream: Boolean
         get() =
@@ -106,6 +113,25 @@ data class TrackEntity(
                 source == SOURCE_YOUTUBE ||
                 source == SOURCE_LAN ||
                 (source == SOURCE_STREAM && !isRemoteStream)
+
+    /**
+     * Keep user-owned fields when a scanner re-inserts the same id (play counts,
+     * hidden flag, compression prefs). Incoming metadata (title, uri, size) wins.
+     */
+    fun preservingUserState(existing: TrackEntity?): TrackEntity {
+        if (existing == null || existing.id != id) return this
+        return copy(
+            playCount = existing.playCount,
+            lastPlayedAt = existing.lastPlayedAt,
+            isHidden = existing.isHidden,
+            neverCompress = existing.neverCompress,
+            trackGainDb = trackGainDb ?: existing.trackGainDb,
+            audioOnly = existing.audioOnly,
+            storageState = existing.storageState,
+            coldUri = existing.coldUri,
+            isSizeOptimized = existing.isSizeOptimized,
+        )
+    }
 }
 
 /** Live streams stay out of All Songs / Liked Songs so skip-next cannot land on one. */

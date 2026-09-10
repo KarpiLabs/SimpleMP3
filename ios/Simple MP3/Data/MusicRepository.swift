@@ -85,6 +85,7 @@ final class MusicRepository {
         let scanned = await MediaLibraryScanner.scan()
         let mediaPlayerTracks = scanned.filter { $0.id.hasPrefix("mp-") }
         let documentTracks = scanned.filter { !$0.id.hasPrefix("mp-") && $0.source == .local }
+        let bookmarked = await MediaLibraryScanner.scanBookmarks(preferences.importedFolderBookmarks)
 
         let existing = await store.allTracks()
         let keepLocalFiles = existing.filter {
@@ -100,7 +101,7 @@ final class MusicRepository {
         }
 
         // Replaces local sources only; Jellyfin / YouTube / LAN rows are preserved.
-        await store.replaceLocalTracks(mediaPlayerTracks + Array(docById.values))
+        await store.replaceLocalTracks(mediaPlayerTracks + Array(docById.values) + bookmarked)
 
         preferences.setLastLibraryScanMs()
         await refresh()
@@ -108,6 +109,10 @@ final class MusicRepository {
 
     func search(_ query: String) async -> [Track] {
         await store.search(query)
+    }
+
+    func searchLibrary(_ query: String) async -> LibrarySearchResults {
+        await store.searchLibrary(query)
     }
 
     func track(id: String) async -> Track? {
@@ -174,6 +179,62 @@ final class MusicRepository {
     func addToPlaylist(playlistId: String, trackId: String) async {
         await store.addToPlaylist(playlistId: playlistId, trackId: trackId)
         await refresh()
+    }
+
+    func addToPlaylist(playlistId: String, trackIds: [String]) async {
+        await store.addTracksToPlaylist(playlistId: playlistId, trackIds: trackIds)
+        await refresh()
+    }
+
+    func hideTracks(_ ids: [String], hidden: Bool = true) async {
+        await store.hideTracks(ids, hidden: hidden)
+        await refresh()
+    }
+
+    func importM3u(text: String, defaultName: String) async -> M3uPlaylist.MatchResult {
+        let (name, entries) = M3uPlaylist.parse(text, defaultName: defaultName)
+        let match = M3uPlaylist.match(entries: entries, library: tracks, playlistName: name)
+        if !match.matched.isEmpty {
+            let playlist = await store.createPlaylist(name: match.playlistName)
+            await store.addTracksToPlaylist(playlistId: playlist.id, trackIds: match.matched.map(\.id))
+            await refresh()
+        }
+        return match
+    }
+
+    func exportM3u(name: String, tracks: [Track]) -> String {
+        M3uPlaylist.write(name: name, tracks: tracks)
+    }
+
+    func duplicateGroups() async -> [DuplicateDetector.Group] {
+        await store.duplicateGroups()
+    }
+
+    func hideDuplicateExtras(_ group: DuplicateDetector.Group) async {
+        await store.hideTracks(group.extras.map(\.id), hidden: true)
+        await refresh()
+    }
+
+    func mergeDuplicateGroup(_ group: DuplicateDetector.Group) async {
+        await store.mergeDuplicateGroup(group)
+        await refresh()
+    }
+
+    func addImportedFolder(url: URL) async {
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+        guard let data = try? url.bookmarkData(
+            options: [],
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        ) else { return }
+        preferences.addImportedFolderBookmark(data)
+        await scanLibrary(force: true)
+    }
+
+    func removeImportedFolder(at index: Int) async {
+        preferences.removeImportedFolderBookmark(at: index)
+        await scanLibrary(force: true)
     }
 
     func removeFromPlaylist(playlistId: String, trackId: String) async {

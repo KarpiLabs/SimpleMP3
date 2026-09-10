@@ -67,6 +67,7 @@ final class AppPreferences {
         static let jellyfinToken = "jellyfinToken"
         static let jellyfinUserId = "jellyfinUserId"
         static let jellyfinDeviceId = "jellyfinDeviceId"
+        static let importedFolderBookmarks = "importedFolderBookmarks"
     }
 
     var driveMode: Bool {
@@ -155,6 +156,11 @@ final class AppPreferences {
 
     var resumeSnapshot: ResumeSnapshot?
 
+    /// Security-scoped bookmarks for extra folders (Files / USB / SD).
+    var importedFolderBookmarks: [Data] {
+        didSet { defaults.set(importedFolderBookmarks, forKey: Key.importedFolderBookmarks) }
+    }
+
     init() {
         let d = UserDefaults.standard
         driveMode = d.bool(forKey: Key.driveMode)
@@ -201,6 +207,18 @@ final class AppPreferences {
            let snap = try? JSONDecoder().decode(ResumeSnapshot.self, from: data) {
             resumeSnapshot = snap
         }
+        importedFolderBookmarks = d.array(forKey: Key.importedFolderBookmarks) as? [Data] ?? []
+    }
+
+    func addImportedFolderBookmark(_ data: Data) {
+        if !importedFolderBookmarks.contains(data) {
+            importedFolderBookmarks.append(data)
+        }
+    }
+
+    func removeImportedFolderBookmark(at index: Int) {
+        guard importedFolderBookmarks.indices.contains(index) else { return }
+        importedFolderBookmarks.remove(at: index)
     }
 
     /// Read a credential from the Keychain, one-time migrating any legacy plaintext

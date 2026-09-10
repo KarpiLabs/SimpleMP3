@@ -310,6 +310,7 @@ struct QuickConnectScreen: View {
 struct SettingsScreen: View {
     @Environment(AppModel.self) private var app
     @Environment(\.appPalette) private var palette
+    @State private var showFolderPicker = false
 
     var body: some View {
         @Bindable var prefs = app.preferences
@@ -388,6 +389,14 @@ struct SettingsScreen: View {
                 } label: {
                     LabeledContent("Hidden songs", value: "\(app.repository.hiddenTracks.count)")
                 }
+                NavigationLink {
+                    DuplicatesScreen()
+                } label: {
+                    Text("Duplicates")
+                }
+                Button("Add folder from Files") {
+                    showFolderPicker = true
+                }
             }
 
             Section("About") {
@@ -402,6 +411,14 @@ struct SettingsScreen: View {
         }
         .scrollContentBackground(.hidden)
         .navigationTitle("Settings")
+        .fileImporter(
+            isPresented: $showFolderPicker,
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            guard let url = try? result.get().first else { return }
+            Task { await app.repository.addImportedFolder(url: url) }
+        }
     }
 
     private var appVersion: String {

@@ -23,6 +23,12 @@ interface TrackDao {
         hidden: Boolean,
     )
 
+    @Query("UPDATE tracks SET isHidden = :hidden WHERE id IN (:ids)")
+    suspend fun setHiddenMany(
+        ids: List<Long>,
+        hidden: Boolean,
+    )
+
     @Query("SELECT * FROM tracks WHERE source = :source ORDER BY title COLLATE NOCASE ASC")
     fun getTracksBySource(source: String): Flow<List<TrackEntity>>
 
@@ -90,6 +96,54 @@ interface TrackDao {
         """,
     )
     suspend fun getMostPlayedOnce(limit: Int = 100): List<TrackEntity>
+
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE isHidden = 0 AND source != 'stream' AND playCount = 0
+        ORDER BY dateAdded DESC, title COLLATE NOCASE ASC
+        LIMIT :limit
+        """,
+    )
+    fun getNeverPlayed(limit: Int = 500): Flow<List<TrackEntity>>
+
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE isHidden = 0 AND source != 'stream' AND playCount = 0
+        ORDER BY dateAdded DESC, title COLLATE NOCASE ASC
+        LIMIT :limit
+        """,
+    )
+    suspend fun getNeverPlayedOnce(limit: Int = 500): List<TrackEntity>
+
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE isHidden = 0 AND source != 'stream'
+          AND playCount > 0 AND lastPlayedAt > 0 AND lastPlayedAt < :cutoffMs
+        ORDER BY lastPlayedAt ASC
+        LIMIT :limit
+        """,
+    )
+    fun getNotRecentlyPlayed(
+        cutoffMs: Long,
+        limit: Int = 200,
+    ): Flow<List<TrackEntity>>
+
+    @Query(
+        """
+        SELECT * FROM tracks
+        WHERE isHidden = 0 AND source != 'stream'
+          AND playCount > 0 AND lastPlayedAt > 0 AND lastPlayedAt < :cutoffMs
+        ORDER BY lastPlayedAt ASC
+        LIMIT :limit
+        """,
+    )
+    suspend fun getNotRecentlyPlayedOnce(
+        cutoffMs: Long,
+        limit: Int = 200,
+    ): List<TrackEntity>
 
     @Query("UPDATE tracks SET playCount = playCount + 1, lastPlayedAt = :playedAt WHERE id = :id")
     suspend fun incrementPlayCount(
@@ -231,6 +285,18 @@ interface TrackDao {
 
     @Query("DELETE FROM tracks WHERE source = :source")
     suspend fun deleteBySource(source: String)
+
+    @Query("DELETE FROM tracks WHERE source = :source AND jellyfinId = :treeUri")
+    suspend fun deleteBySourceAndExternalId(
+        source: String,
+        treeUri: String,
+    )
+
+    @Query("SELECT id FROM tracks WHERE source = :source AND jellyfinId = :treeUri")
+    suspend fun getTrackIdsBySourceAndExternalId(
+        source: String,
+        treeUri: String,
+    ): List<Long>
 
     @Query("DELETE FROM tracks WHERE id IN (:ids)")
     suspend fun deleteTracksByIds(ids: List<Long>)

@@ -99,6 +99,12 @@ class AppPreferences
              */
             val LIBRARY_FOLDER_ROOTS = stringPreferencesKey("library_folder_roots")
 
+            /**
+             * Persistable SAF tree URIs (SD card / USB / extra folders MediaStore missed).
+             * Unit-separator joined.
+             */
+            val SAF_TREE_URIS = stringPreferencesKey("saf_tree_uris")
+
             /** SYSTEM / LIGHT / DARK — see [ThemeMode]. */
             val THEME_MODE = stringPreferencesKey("theme_mode")
 
@@ -439,6 +445,51 @@ class AppPreferences
         }
 
         suspend fun clearLibraryFolderRoots() = setLibraryFolderRoots(emptySet())
+
+        val safTreeUrisFlow: Flow<List<String>> =
+            context.appDataStore.data.map { prefs ->
+                parseSafTreeUris(prefs[Keys.SAF_TREE_URIS])
+            }
+
+        suspend fun getSafTreeUris(): List<String> = safTreeUrisFlow.first()
+
+        suspend fun setSafTreeUris(uris: List<String>) {
+            val cleaned =
+                uris
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+                    .distinct()
+            context.appDataStore.edit { prefs ->
+                if (cleaned.isEmpty()) {
+                    prefs.remove(Keys.SAF_TREE_URIS)
+                } else {
+                    prefs[Keys.SAF_TREE_URIS] = cleaned.joinToString("\u001e")
+                }
+            }
+        }
+
+        suspend fun addSafTreeUri(uri: String) {
+            val trimmed = uri.trim()
+            if (trimmed.isEmpty()) return
+            val current = getSafTreeUris()
+            if (current.any { it == trimmed }) return
+            setSafTreeUris(current + trimmed)
+        }
+
+        suspend fun removeSafTreeUri(uri: String) {
+            setSafTreeUris(getSafTreeUris().filter { it != uri })
+        }
+
+        private fun parseSafTreeUris(raw: String?): List<String> {
+            if (raw.isNullOrBlank()) return emptyList()
+            val parts =
+                if (raw.contains('\u001e')) {
+                    raw.split('\u001e')
+                } else {
+                    raw.split(',')
+                }
+            return parts.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        }
 
         private fun parseFolderRoots(raw: String?): Set<String> {
             if (raw.isNullOrBlank()) return emptySet()

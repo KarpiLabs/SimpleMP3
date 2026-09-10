@@ -3,7 +3,9 @@
 //  Simple MP3
 //
 
+import CoreTransferable
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct PlaylistsScreen: View {
     @Environment(AppModel.self) private var app
@@ -13,6 +15,8 @@ struct PlaylistsScreen: View {
     @State private var showRename = false
     @State private var renameText = ""
     @State private var renameTarget: PlaylistMeta?
+    @State private var showImport = false
+    @State private var importMessage: String?
 
     var body: some View {
         List {
@@ -90,14 +94,55 @@ struct PlaylistsScreen: View {
         .scrollContentBackground(.hidden)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    newName = ""
-                    showCreate = true
-                } label: {
-                    Image(systemName: "plus")
-                        .foregroundStyle(palette.accent)
+                HStack(spacing: 12) {
+                    Button {
+                        showImport = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.down")
+                    }
+                    .foregroundStyle(palette.accent)
+                    .accessibilityLabel("Import M3U")
+                    Button {
+                        newName = ""
+                        showCreate = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .foregroundStyle(palette.accent)
+                    }
                 }
             }
+        }
+        .fileImporter(
+            isPresented: $showImport,
+            allowedContentTypes: [.plainText, .data],
+            allowsMultipleSelection: false
+        ) { result in
+            guard let url = try? result.get().first else { return }
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+            guard let text = try? String(contentsOf: url, encoding: .utf8) else {
+                importMessage = "Couldn’t read that playlist file."
+                return
+            }
+            let defaultName = url.deletingPathExtension().lastPathComponent
+            Task {
+                let match = await app.repository.importM3u(text: text, defaultName: defaultName)
+                if match.matched.isEmpty {
+                    importMessage = "No songs in your library matched that playlist."
+                } else if match.unmatched.isEmpty {
+                    importMessage = "Imported “\(match.playlistName)” · \(match.matched.count) songs"
+                } else {
+                    importMessage = "Imported “\(match.playlistName)” · \(match.matched.count) matched, \(match.unmatched.count) skipped"
+                }
+            }
+        }
+        .alert("M3U import", isPresented: Binding(
+            get: { importMessage != nil },
+            set: { if !$0 { importMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { importMessage = nil }
+        } message: {
+            Text(importMessage ?? "")
         }
         .alert("New playlist", isPresented: $showCreate) {
             TextField("Name", text: $newName)
@@ -313,6 +358,14 @@ struct PlaylistDetailScreen: View {
                             if canReorder {
                                 EditButton()
                             }
+                            if !tracks.isEmpty {
+                                ShareLink(
+                                    item: M3uExportDocument(text: app.repository.exportM3u(name: title, tracks: tracks)),
+                                    preview: SharePreview("\(title).m3u")
+                                ) {
+                                    Label("Export M3U", systemImage: "square.and.arrow.up")
+                                }
+                            }
                         } label: {
                             Image(systemName: "ellipsis.circle")
                                 .foregroundStyle(palette.accent)
@@ -527,7 +580,9 @@ struct AddToPlaylistSheet: View {
             List(app.visiblePlaylists.filter(\.acceptsManualAdds)) { pl in
                 Button {
                     Task {
-                        await app.repository.addToPlaylist(playlistId: pl.id, trackId: track.id)
+                        let ids = app.addToPlaylistTracks.isEmpty ? [track.id] : app.addToPlaylistTracks.map(\.id)
+                        await app.repository.addToPlaylist(playlistId: pl.id, trackIds: ids)
+                        app.addToPlaylistTracks = []
                         dismiss()
                     }
                 } label: {
@@ -544,12 +599,22 @@ struct AddToPlaylistSheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(AppBackground())
-            .navigationTitle("Add to playlist")
+            .navigationTitle(app.addToPlaylistTracks.count > 1 ? "Add \(app.addToPlaylistTracks.count) songs" : "Add to playlist")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
             }
+        }
+    }
+}
+
+private struct M3uExportDocument: Transferable {
+    let text: String
+
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(exportedContentType: .plainText) { item in
+            Data(item.text.utf8)
         }
     }
 }

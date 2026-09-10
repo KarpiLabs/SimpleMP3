@@ -76,6 +76,77 @@ struct Simple_MP3Tests {
         #expect(result.index == 0)
     }
 
+    @Test func librarySearchFindsAlbumsArtistsAndPlaylists() {
+        let track = Track(title: "Highway", artist: "Juniper", album: "Folded Sky", uri: "file://a")
+        let album = AlbumGroup(name: "Folded Sky", subtitle: "Juniper", trackCount: 1, totalDuration: 0, artworkUri: nil)
+        let artist = AlbumGroup(name: "Skyline", subtitle: "", trackCount: 1, totalDuration: 0, artworkUri: nil)
+        let playlist = PlaylistMeta(
+            id: "p1",
+            name: "Sky mix",
+            description: "",
+            coverUri: nil,
+            createdAt: 0,
+            updatedAt: 0,
+            isSystem: false,
+            systemType: nil,
+            trackCount: 1,
+            firstArtworkUri: nil
+        )
+        let results = LibrarySearch.query(
+            "sky",
+            tracks: [track],
+            albums: [album],
+            artists: [artist],
+            playlists: [playlist]
+        )
+        #expect(results.tracks.count == 1)
+        #expect(results.albums.map(\.name) == ["Folded Sky"])
+        #expect(results.artists.map(\.name) == ["Skyline"])
+        #expect(results.playlists.map(\.name) == ["Sky mix"])
+    }
+
+    @Test func m3uParseAndMatch() {
+        let text = """
+        #EXTM3U
+        #PLAYLIST:Road trip
+        #EXTINF:180,Juniper - Highway
+        file://song.mp3
+        missing.mp3
+        """
+        let (name, entries) = M3uPlaylist.parse(text, defaultName: "Fallback")
+        #expect(name == "Road trip")
+        #expect(entries.count == 2)
+        let library = [Track(id: "t1", title: "Highway", artist: "Juniper", uri: "file://song.mp3")]
+        let match = M3uPlaylist.match(entries: entries, library: library, playlistName: name)
+        #expect(match.matched.map(\.id) == ["t1"])
+        #expect(match.unmatched.count == 1)
+    }
+
+    @Test func duplicateDetectorKeepsMusicFolderCopy() {
+        let music = Track(
+            id: "a",
+            title: "Highway",
+            artist: "Juniper",
+            uri: "file://a",
+            duration: 180_000,
+            folderPath: "Music/Juniper",
+            size: 4_000_000
+        )
+        let download = Track(
+            id: "b",
+            title: "Highway",
+            artist: "Juniper",
+            uri: "file://b",
+            duration: 181_000,
+            folderPath: "Download",
+            size: 3_000_000
+        )
+        let groups = DuplicateDetector.findGroups([music, download])
+        #expect(groups.count == 1)
+        #expect(groups[0].keepId == "a")
+        #expect(groups[0].extras.map(\.id) == ["b"])
+    }
+
     @Test func playbackQueueDropsStreamsWhenStartingOnASong() {
         let song = Track(title: "Highway", uri: "file://song.mp3", source: .local)
         let stream = Track(title: "Radio", uri: "https://radio.example/live", source: .stream)

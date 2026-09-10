@@ -3,12 +3,15 @@ package io.karpilabs.simplemp3.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.karpilabs.simplemp3.data.duplicates.DuplicateDetector
 import io.karpilabs.simplemp3.data.local.AlbumRow
 import io.karpilabs.simplemp3.data.local.FolderBrowser
 import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.PlaylistWithMeta
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.data.local.playbackQueue
+import io.karpilabs.simplemp3.data.playlist.M3uPlaylist
+import io.karpilabs.simplemp3.data.search.LibrarySearch
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import io.karpilabs.simplemp3.data.prefs.BufferProfile
 import io.karpilabs.simplemp3.data.prefs.ResumeSnapshot
@@ -19,15 +22,13 @@ import io.karpilabs.simplemp3.data.scrobble.ScrobbleManager
 import io.karpilabs.simplemp3.data.storage.LargeFileStorageManager
 import io.karpilabs.simplemp3.player.PlayerConnection
 import io.karpilabs.simplemp3.player.PlayerUiState
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -172,13 +173,30 @@ class MusicViewModel
         private val _searchQuery = MutableStateFlow("")
         val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-        @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
-        val searchResults: StateFlow<List<TrackEntity>> =
-            _searchQuery
-                .debounce(180)
-                .flatMapLatest { q ->
-                    if (q.isBlank()) flowOf(emptyList()) else repository.search(q)
-                }.stateIn(viewModelScope, share, emptyList())
+        @OptIn(FlowPreview::class)
+        val searchResults: StateFlow<LibrarySearch.Results> =
+            combine(
+                _searchQuery.debounce(180),
+                tracks,
+                albums,
+                artists,
+                playlists,
+            ) { q, t, a, ar, p ->
+                LibrarySearch.query(q, t, a, ar, p)
+            }.stateIn(viewModelScope, share, LibrarySearch.Results())
+
+        val safTreeUris: StateFlow<List<String>> =
+            repository.safTreeUris
+                .stateIn(viewModelScope, share, emptyList())
+
+        private val _duplicateGroups = MutableStateFlow<List<DuplicateDetector.Group>>(emptyList())
+        val duplicateGroups: StateFlow<List<DuplicateDetector.Group>> = _duplicateGroups.asStateFlow()
+
+        private val _duplicatesLoading = MutableStateFlow(false)
+        val duplicatesLoading: StateFlow<Boolean> = _duplicatesLoading.asStateFlow()
+
+        private val _m3uImportMessage = MutableStateFlow<String?>(null)
+        val m3uImportMessage: StateFlow<String?> = _m3uImportMessage.asStateFlow()
 
         private val _libraryFilter = MutableStateFlow("")
         val libraryFilter: StateFlow<String> = _libraryFilter.asStateFlow()
@@ -350,12 +368,20 @@ class MusicViewModel
             playerConnection.playNext(track)
         }
 
+        fun playNext(tracks: List<TrackEntity>) {
+            playerConnection.playNext(tracks)
+        }
+
         fun addToQueue(track: TrackEntity) {
             if (track.isStream) {
                 playerConnection.playTracks(listOf(track), 0)
                 return
             }
             playerConnection.addToQueue(track)
+        }
+
+        fun addToQueue(tracks: List<TrackEntity>) {
+            playerConnection.addToQueue(tracks)
         }
 
         fun resumeLastSession(autoPlay: Boolean = true) {
@@ -442,7 +468,7 @@ class MusicViewModel
         ) {
             if (trackIds.isEmpty()) return
             viewModelScope.launch {
-                trackIds.forEach { repository.addToPlaylist(playlistId, it) }
+                repository.addToPlaylist(playlistId, trackIds)
             }
         }
 
@@ -487,6 +513,13 @@ class MusicViewModel
         fun hideTrack(trackId: Long) {
             viewModelScope.launch {
                 repository.setHidden(trackId, true)
+            }
+        }
+
+        fun hideTracks(trackIds: List<Long>) {
+            if (trackIds.isEmpty()) return
+            viewModelScope.launch {
+                repository.setHiddenMany(trackIds, true)
             }
         }
 
@@ -604,6 +637,75 @@ class MusicViewModel
         fun clearLibraryFolderRoots() {
             viewModelScope.launch {
                 repository.setLibraryFolderRoots(emptySet())
+            }
+        }
+
+        fun addSafTree(uri: String) {
+            viewModelScope.launch {
+                repository.addSafTreeUri(uri)
+            }
+        }
+
+        fun removeSafTree(uri: String) {
+            viewModelScope.launch {
+                repository.removeSafTreeUri(uri)
+            }
+        }
+
+        fun safTreeDisplayName(uri: String): String = repository.safTreeDisplayName(uri)
+
+        fun refreshDuplicates() {
+            viewModelScope.launch {
+                _duplicatesLoading.value = true
+                try {
+                    _duplicateGroups.value = repository.findDuplicateGroups()
+                } finally {
+                    _duplicatesLoading.value = false
+                }
+            }
+        }
+
+        fun hideDuplicateExtras(group: DuplicateDetector.Group) {
+            viewModelScope.launch {
+                repository.hideDuplicateExtras(group)
+                _duplicateGroups.value = repository.findDuplicateGroups()
+            }
+        }
+
+        fun mergeDuplicateGroup(group: DuplicateDetector.Group) {
+            viewModelScope.launch {
+                repository.mergeDuplicateGroup(group)
+                _duplicateGroups.value = repository.findDuplicateGroups()
+            }
+        }
+
+        fun importM3u(
+            text: String,
+            defaultName: String,
+        ) {
+            viewModelScope.launch {
+                val result = repository.importM3u(text, defaultName)
+                _m3uImportMessage.value = formatM3uImport(result)
+            }
+        }
+
+        fun consumeM3uImportMessage() {
+            _m3uImportMessage.value = null
+        }
+
+        fun exportM3u(
+            name: String,
+            tracks: List<TrackEntity>,
+        ): String = repository.exportM3u(name, tracks)
+
+        private fun formatM3uImport(result: M3uPlaylist.MatchResult): String {
+            val matched = result.matched.size
+            val missed = result.unmatched.size
+            return when {
+                matched == 0 -> "No songs in your library matched that playlist."
+                missed == 0 -> "Imported “${result.playlistName}” · $matched song${if (matched == 1) "" else "s"}"
+                else ->
+                    "Imported “${result.playlistName}” · $matched matched, $missed skipped (not in library)"
             }
         }
     }

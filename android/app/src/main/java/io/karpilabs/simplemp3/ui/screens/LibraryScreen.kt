@@ -46,8 +46,10 @@ import io.karpilabs.simplemp3.data.local.FolderBrowser
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.player.PlayerUiState
 import io.karpilabs.simplemp3.ui.components.AlbumArt
+import io.karpilabs.simplemp3.ui.components.SelectionBar
 import io.karpilabs.simplemp3.ui.components.TrackActionsMenu
 import io.karpilabs.simplemp3.ui.components.TrackRow
+import io.karpilabs.simplemp3.ui.components.rememberTrackSelection
 import io.karpilabs.simplemp3.ui.theme.AccentTeal
 import io.karpilabs.simplemp3.ui.theme.LocalSimpleMP3Palette
 import io.karpilabs.simplemp3.ui.util.formatTrackCount
@@ -70,10 +72,15 @@ fun LibraryScreen(
     onPlayNext: (TrackEntity) -> Unit = {},
     onAddToQueue: (TrackEntity) -> Unit = {},
     onHide: (TrackEntity) -> Unit = {},
+    onQueueTracks: (List<TrackEntity>) -> Unit = {},
+    onPlayNextTracks: (List<TrackEntity>) -> Unit = {},
+    onAddTracksToPlaylist: (List<TrackEntity>) -> Unit = {},
+    onHideTracks: (List<TrackEntity>) -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var actionTrack by remember { mutableStateOf<TrackEntity?>(null) }
+    val selection = rememberTrackSelection()
     val tabs = listOf("Songs", "Albums", "Artists", "Folders")
     val q = filter.trim()
 
@@ -184,28 +191,66 @@ fun LibraryScreen(
 
         when (tab) {
             0 ->
-                LazyColumn(contentPadding = PaddingValues(bottom = 120.dp)) {
-                    items(filteredTracks, key = { it.id }, contentType = { "track" }) { track ->
-                        Box {
-                            TrackRow(
-                                track = track,
-                                isPlaying = playerState.currentMediaId == "track:${track.id}",
-                                onClick = { onPlayTrack(track, filteredTracks) },
-                                onLongClick = { actionTrack = track },
-                                onFavoriteClick = { onToggleFavorite(track.id) },
-                            )
-                            TrackActionsMenu(
-                                expanded = actionTrack?.id == track.id,
-                                track = actionTrack,
-                                onDismiss = { actionTrack = null },
-                                onPlayNext = onPlayNext,
-                                onAddToQueue = onAddToQueue,
-                                onAddToPlaylist = onAddToPlaylist,
-                                onToggleFavorite = { onToggleFavorite(it.id) },
-                                onHide = onHide,
-                                showNeverCompress = false,
-                            )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        contentPadding =
+                            PaddingValues(bottom = if (selection.isSelecting) 180.dp else 120.dp),
+                    ) {
+                        items(filteredTracks, key = { it.id }, contentType = { "track" }) { track ->
+                            Box {
+                                TrackRow(
+                                    track = track,
+                                    isPlaying = playerState.currentMediaId == "track:${track.id}",
+                                    selected = selection.selected(track.id),
+                                    selectionMode = selection.isSelecting,
+                                    onClick = {
+                                        if (selection.isSelecting) {
+                                            selection.toggle(track.id)
+                                        } else {
+                                            onPlayTrack(track, filteredTracks)
+                                        }
+                                    },
+                                    onLongClick = { selection.enter(track.id) },
+                                    onFavoriteClick = { onToggleFavorite(track.id) },
+                                    onMoreClick = { actionTrack = track },
+                                )
+                                TrackActionsMenu(
+                                    expanded = actionTrack?.id == track.id,
+                                    track = actionTrack,
+                                    onDismiss = { actionTrack = null },
+                                    onPlayNext = onPlayNext,
+                                    onAddToQueue = onAddToQueue,
+                                    onAddToPlaylist = onAddToPlaylist,
+                                    onToggleFavorite = { onToggleFavorite(it.id) },
+                                    onHide = onHide,
+                                    showNeverCompress = false,
+                                )
+                            }
                         }
+                    }
+                    if (selection.isSelecting) {
+                        SelectionBar(
+                            count = selection.count,
+                            onQueue = {
+                                onQueueTracks(selection.selectedTracks(filteredTracks))
+                                selection.clear()
+                            },
+                            onPlayNext = {
+                                onPlayNextTracks(selection.selectedTracks(filteredTracks))
+                                selection.clear()
+                            },
+                            onAddToPlaylist = {
+                                onAddTracksToPlaylist(selection.selectedTracks(filteredTracks))
+                                selection.clear()
+                            },
+                            onHide = {
+                                onHideTracks(selection.selectedTracks(filteredTracks))
+                                selection.clear()
+                            },
+                            onSelectAll = { selection.selectAll(filteredTracks) },
+                            onClear = { selection.clear() },
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                        )
                     }
                 }
             1 ->

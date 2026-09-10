@@ -23,10 +23,11 @@ final class AppModel {
     let scrobble: ScrobbleService
 
     var searchQuery: String = ""
-    var searchResults: [Track] = []
+    var searchResults: LibrarySearchResults = LibrarySearchResults()
     var showNowPlaying = false
     var showQueue = false
     var addToPlaylistTrack: Track?
+    var addToPlaylistTracks: [Track] = []
     var selectedTab: AppTab = .home
     /// Forced full-screen destination for App Store screenshot capture.
     var screenshotOverlay: ScreenshotOverlay?
@@ -98,9 +99,9 @@ final class AppModel {
     func updateSearch() async {
         let q = searchQuery
         if q.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            searchResults = []
+            searchResults = LibrarySearchResults()
         } else {
-            searchResults = await repository.search(q)
+            searchResults = await repository.searchLibrary(q)
         }
     }
 

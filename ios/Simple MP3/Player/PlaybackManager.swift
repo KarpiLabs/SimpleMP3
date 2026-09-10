@@ -192,6 +192,33 @@ final class PlaybackManager {
         play(tracks: list, startIndex: idx)
     }
 
+    func playNext(_ tracks: [Track]) {
+        let songs = tracks.filter { $0.source != .stream }
+        guard !songs.isEmpty else { return }
+        if state.queue.isEmpty {
+            play(tracks: songs, startIndex: 0)
+            return
+        }
+        let insertAt = min(state.index + 1, state.queue.count)
+        state.queue.insert(contentsOf: songs, at: insertAt)
+        order = Array(state.queue.indices)
+        persistResume()
+        NotificationCenter.default.post(name: .playbackDidChange, object: nil)
+    }
+
+    func addToQueue(_ tracks: [Track]) {
+        let songs = tracks.filter { $0.source != .stream }
+        guard !songs.isEmpty else { return }
+        if state.queue.isEmpty {
+            play(tracks: songs, startIndex: 0)
+            return
+        }
+        state.queue.append(contentsOf: songs)
+        order = Array(state.queue.indices)
+        persistResume()
+        NotificationCenter.default.post(name: .playbackDidChange, object: nil)
+    }
+
     /// Play a live network stream URL (progressive or HLS `.m3u8`) directly — AVPlayer
     /// handles HLS natively. Not saved to the library.
     func playStream(url: String, title: String) {

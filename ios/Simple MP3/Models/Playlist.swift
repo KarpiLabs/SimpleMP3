@@ -49,6 +49,8 @@ nonisolated struct Playlist: Identifiable, Codable, Hashable, Sendable {
 nonisolated enum SmartPlaylist: String, CaseIterable, Identifiable, Sendable {
     case mostPlayed = "most_played"
     case recentlyAdded = "recently_added"
+    case neverPlayed = "never_played"
+    case notRecently = "not_recently"
 
     var id: String { rawValue }
 
@@ -56,6 +58,8 @@ nonisolated enum SmartPlaylist: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .mostPlayed: return "Most Played"
         case .recentlyAdded: return "Recently Added"
+        case .neverPlayed: return "Never Played"
+        case .notRecently: return "Not in a while"
         }
     }
 
@@ -63,6 +67,8 @@ nonisolated enum SmartPlaylist: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .mostPlayed: return "Your top tracks by play count"
         case .recentlyAdded: return "The latest additions to your library"
+        case .neverPlayed: return "Tracks you haven't started yet"
+        case .notRecently: return "Played before, but not in the last 90 days"
         }
     }
 
@@ -70,8 +76,12 @@ nonisolated enum SmartPlaylist: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .mostPlayed: return "chart.line.uptrend.xyaxis"
         case .recentlyAdded: return "clock.arrow.circlepath"
+        case .neverPlayed: return "music.note.slash"
+        case .notRecently: return "hourglass"
         }
     }
+
+    static let notRecentlyWindowMs: Int64 = 90 * 24 * 60 * 60 * 1000
 }
 
 struct ResumeSnapshot: Codable, Equatable, Sendable {

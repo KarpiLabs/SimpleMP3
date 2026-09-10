@@ -17,8 +17,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Category
+import androidx.compose.material.icons.rounded.FileOpen
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.HourglassEmpty
+import androidx.compose.material.icons.rounded.MusicOff
 import androidx.compose.material.icons.automirrored.rounded.TrendingUp
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -56,6 +60,9 @@ fun PlaylistsScreen(
     onOpenSmart: (SmartPlaylist) -> Unit,
     onOpenGenre: (String) -> Unit,
     onCreatePlaylist: (String) -> Unit,
+    onImportM3u: () -> Unit = {},
+    importMessage: String? = null,
+    onConsumeImportMessage: () -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
     var showCreate by remember { mutableStateOf(false) }
@@ -70,7 +77,7 @@ fun PlaylistsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Playlists",
                         style = MaterialTheme.typography.headlineLarge,
@@ -80,6 +87,13 @@ fun PlaylistsScreen(
                         text = "Manage collections that sync to Android Auto",
                         style = MaterialTheme.typography.bodySmall,
                         color = palette.textSecondary,
+                    )
+                }
+                IconButton(onClick = onImportM3u) {
+                    Icon(
+                        Icons.Rounded.FileOpen,
+                        contentDescription = "Import M3U",
+                        tint = AccentTeal,
                     )
                 }
             }
@@ -98,6 +112,8 @@ fun PlaylistsScreen(
                             when (smart) {
                                 SmartPlaylist.MOST_PLAYED -> Icons.AutoMirrored.Rounded.TrendingUp
                                 SmartPlaylist.RECENTLY_ADDED -> Icons.Rounded.History
+                                SmartPlaylist.NEVER_PLAYED -> Icons.Rounded.MusicOff
+                                SmartPlaylist.NOT_RECENTLY -> Icons.Rounded.HourglassEmpty
                             },
                         onClick = { onOpenSmart(smart) },
                     )
@@ -140,6 +156,20 @@ fun PlaylistsScreen(
         ) {
             Icon(Icons.Rounded.Add, contentDescription = "New playlist")
         }
+    }
+
+    if (importMessage != null) {
+        AlertDialog(
+            onDismissRequest = onConsumeImportMessage,
+            containerColor = palette.card,
+            title = { Text("M3U import", color = MaterialTheme.colorScheme.onSurface) },
+            text = { Text(importMessage, color = palette.textSecondary) },
+            confirmButton = {
+                TextButton(onClick = onConsumeImportMessage) {
+                    Text("OK", color = AccentTeal)
+                }
+            },
+        )
     }
 
     if (showCreate) {

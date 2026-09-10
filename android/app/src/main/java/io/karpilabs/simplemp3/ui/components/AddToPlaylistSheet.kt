@@ -37,6 +37,7 @@ fun AddToPlaylistSheet(
     onDismiss: () -> Unit,
     onSelect: (Long) -> Unit,
     onCreateNew: () -> Unit,
+    songCount: Int = 1,
 ) {
     val palette = LocalSimpleMP3Palette.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -53,7 +54,12 @@ fun AddToPlaylistSheet(
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
             Text(
-                text = trackTitle,
+                text =
+                    if (songCount > 1) {
+                        "$songCount songs"
+                    } else {
+                        trackTitle
+                    },
                 style = MaterialTheme.typography.bodyMedium,
                 color = palette.textSecondary,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),

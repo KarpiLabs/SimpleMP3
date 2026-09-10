@@ -17,9 +17,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FolderOff
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.SdCard
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -60,6 +63,9 @@ fun LibraryFoldersScreen(
     onToggleRoot: (String) -> Unit,
     onSelectAllVisible: () -> Unit,
     onClearSelection: () -> Unit,
+    safTrees: List<Pair<String, String>> = emptyList(),
+    onAddSafFolder: () -> Unit = {},
+    onRemoveSafFolder: (String) -> Unit = {},
 ) {
     val palette = LocalSimpleMP3Palette.current
     val limitEnabled = selectedRoots.isNotEmpty()
@@ -104,6 +110,96 @@ fun LibraryFoldersScreen(
                     color = palette.textSecondary,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
+            }
+
+            item {
+                Text(
+                    text = "SD card & USB",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = AccentTeal,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                )
+            }
+            item {
+                Text(
+                    text = "Add a folder the system music library missed — SD cards, USB sticks, or any directory you pick.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = palette.textSecondary,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                )
+            }
+            item {
+                Row(
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(palette.card)
+                            .clickable(onClick = onAddSafFolder)
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.SdCard,
+                        contentDescription = null,
+                        tint = AccentTeal,
+                        modifier = Modifier.size(28.dp),
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Add SD / USB folder",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = "Uses the system folder picker · permission is remembered",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = palette.textSecondary,
+                        )
+                    }
+                    Icon(Icons.Rounded.Add, contentDescription = null, tint = AccentTeal)
+                }
+            }
+            items(safTrees, key = { it.first }) { (uri, label) ->
+                Row(
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 16.dp, vertical = 3.dp)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(palette.card)
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Rounded.Folder,
+                        contentDescription = null,
+                        tint = AccentTeal,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = uri,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = palette.textMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    IconButton(onClick = { onRemoveSafFolder(uri) }) {
+                        Icon(Icons.Rounded.Close, contentDescription = "Remove folder", tint = palette.textMuted)
+                    }
+                }
             }
 
             item {

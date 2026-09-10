@@ -1,15 +1,20 @@
 package io.karpilabs.simplemp3.data.repository
 
+import io.karpilabs.simplemp3.data.duplicates.DuplicateDetector
 import io.karpilabs.simplemp3.data.local.AlbumRow
 import io.karpilabs.simplemp3.data.local.FolderBrowser
 import io.karpilabs.simplemp3.data.local.PlaylistDao
 import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.PlaylistWithMeta
+import io.karpilabs.simplemp3.data.local.SmartPlaylist
 import io.karpilabs.simplemp3.data.local.TrackDao
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.data.local.excludingLiveStreams
+import io.karpilabs.simplemp3.data.playlist.M3uPlaylist
 import io.karpilabs.simplemp3.data.prefs.AppPreferences
 import io.karpilabs.simplemp3.data.scanner.MediaStoreScanner
+import io.karpilabs.simplemp3.data.scanner.SafFolderScanner
+import io.karpilabs.simplemp3.data.search.LibrarySearch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +36,7 @@ class MusicRepository
         private val trackDao: TrackDao,
         private val playlistDao: PlaylistDao,
         private val scanner: MediaStoreScanner,
+        private val safScanner: SafFolderScanner,
         private val appPreferences: AppPreferences,
     ) {
         private val scanMutex = Mutex()
@@ -68,16 +74,28 @@ class MusicRepository
         fun getTracksByGenre(genre: String): Flow<List<TrackEntity>> = trackDao.getTracksByGenre(genre)
 
         /** On-demand contents for a [SmartPlaylist] — used for play-all / Auto browse. */
-        suspend fun getSmartTracksOnce(smart: io.karpilabs.simplemp3.data.local.SmartPlaylist): List<TrackEntity> =
+        suspend fun getSmartTracksOnce(smart: SmartPlaylist): List<TrackEntity> =
             when (smart) {
-                io.karpilabs.simplemp3.data.local.SmartPlaylist.MOST_PLAYED -> trackDao.getMostPlayedOnce(100)
-                io.karpilabs.simplemp3.data.local.SmartPlaylist.RECENTLY_ADDED -> trackDao.getRecentlyAddedOnce(100)
+                SmartPlaylist.MOST_PLAYED -> trackDao.getMostPlayedOnce(100)
+                SmartPlaylist.RECENTLY_ADDED -> trackDao.getRecentlyAddedOnce(100)
+                SmartPlaylist.NEVER_PLAYED -> trackDao.getNeverPlayedOnce(500)
+                SmartPlaylist.NOT_RECENTLY ->
+                    trackDao.getNotRecentlyPlayedOnce(
+                        System.currentTimeMillis() - SmartPlaylist.NOT_RECENTLY_WINDOW_MS,
+                        200,
+                    )
             }
 
-        fun getSmartTracks(smart: io.karpilabs.simplemp3.data.local.SmartPlaylist): Flow<List<TrackEntity>> =
+        fun getSmartTracks(smart: SmartPlaylist): Flow<List<TrackEntity>> =
             when (smart) {
-                io.karpilabs.simplemp3.data.local.SmartPlaylist.MOST_PLAYED -> trackDao.getMostPlayed(100)
-                io.karpilabs.simplemp3.data.local.SmartPlaylist.RECENTLY_ADDED -> trackDao.getRecentlyAdded(100)
+                SmartPlaylist.MOST_PLAYED -> trackDao.getMostPlayed(100)
+                SmartPlaylist.RECENTLY_ADDED -> trackDao.getRecentlyAdded(100)
+                SmartPlaylist.NEVER_PLAYED -> trackDao.getNeverPlayed(500)
+                SmartPlaylist.NOT_RECENTLY ->
+                    trackDao.getNotRecentlyPlayed(
+                        System.currentTimeMillis() - SmartPlaylist.NOT_RECENTLY_WINDOW_MS,
+                        200,
+                    )
             }
 
         suspend fun getTracksByGenreOnce(genre: String): List<TrackEntity> = trackDao.getTracksByGenreOnce(genre)
@@ -91,7 +109,19 @@ class MusicRepository
             trackDao.setHidden(trackId, hidden)
         }
 
+        suspend fun setHiddenMany(
+            trackIds: List<Long>,
+            hidden: Boolean,
+        ) {
+            if (trackIds.isEmpty()) return
+            trackIds.chunked(400).forEach { chunk ->
+                trackDao.setHiddenMany(chunk, hidden)
+            }
+        }
+
         val libraryFolderRoots: Flow<Set<String>> = appPreferences.libraryFolderRootsFlow
+
+        val safTreeUris: Flow<List<String>> = appPreferences.safTreeUrisFlow
 
         /** Direct track counts keyed by folderPath (for browser badges). */
         val folderTrackCounts: Flow<Map<String, Int>> =
@@ -233,13 +263,7 @@ class MusicRepository
                         scanner
                             .scan(allowedRoots = roots)
                             .map { it.copy(source = TrackEntity.SOURCE_LOCAL) }
-                    // Only touch local MediaStore tracks — never wipe Jellyfin offline downloads.
-                    if (scanned.isNotEmpty()) {
-                        // Chunk inserts for large libraries so Room/SQLite stays responsive
-                        scanned.chunked(300).forEach { chunk ->
-                            trackDao.insertTracks(chunk)
-                        }
-                    }
+                    upsertPreservingUserState(scanned)
                     val keepLocal = scanned.map { it.id }.toSet()
                     val staleLocal =
                         trackDao
@@ -248,12 +272,34 @@ class MusicRepository
                     staleLocal.chunked(400).forEach { chunk ->
                         if (chunk.isNotEmpty()) trackDao.deleteTracksByIds(chunk)
                     }
+
+                    val trees = appPreferences.getSafTreeUris()
+                    val safScanned = safScanner.scanTrees(trees)
+                    upsertPreservingUserState(safScanned)
+                    val keepSaf = safScanned.map { it.id }.toSet()
+                    val staleSaf =
+                        trackDao
+                            .getTrackIdsBySource(TrackEntity.SOURCE_SAF)
+                            .filter { it !in keepSaf }
+                    staleSaf.chunked(400).forEach { chunk ->
+                        if (chunk.isNotEmpty()) trackDao.deleteTracksByIds(chunk)
+                    }
+
                     appPreferences.setLastLibraryScanMs()
                     trackDao.getTrackCount()
                 } finally {
                     _isScanning.value = false
                 }
             }
+
+        private suspend fun upsertPreservingUserState(incoming: List<TrackEntity>) {
+            if (incoming.isEmpty()) return
+            incoming.chunked(300).forEach { chunk ->
+                val existing = trackDao.getTracksByIds(chunk.map { it.id }).associateBy { it.id }
+                val merged = chunk.map { it.preservingUserState(existing[it.id]) }
+                trackDao.insertTracks(merged)
+            }
+        }
 
         suspend fun listDeviceFolderPaths(): List<String> = scanner.listAllFolderPaths()
 
@@ -268,6 +314,18 @@ class MusicRepository
         fun search(query: String): Flow<List<TrackEntity>> = trackDao.searchTracks(query)
 
         suspend fun searchOnce(query: String): List<TrackEntity> = trackDao.searchTracksOnce(query)
+
+        suspend fun searchLibrary(query: String): LibrarySearch.Results {
+            val q = query.trim()
+            if (q.isEmpty()) return LibrarySearch.Results()
+            return LibrarySearch.query(
+                raw = q,
+                tracks = trackDao.searchTracksOnce(q),
+                albums = trackDao.getAlbumsOnce(),
+                artists = trackDao.getArtistsOnce(),
+                playlists = playlistDao.getPlaylistsWithMetaOnce(),
+            )
+        }
 
         suspend fun getTrack(id: Long): TrackEntity? = trackDao.getTrackById(id)
 
@@ -369,6 +427,13 @@ class MusicRepository
             trackId: Long,
         ) {
             playlistDao.addTrackToEnd(playlistId, trackId)
+        }
+
+        suspend fun addToPlaylist(
+            playlistId: Long,
+            trackIds: List<Long>,
+        ) {
+            playlistDao.addTracksToEnd(playlistId, trackIds)
         }
 
         suspend fun removeFromPlaylist(
@@ -503,5 +568,78 @@ class MusicRepository
                 if (ordered.isNotEmpty()) return ordered
             }
             return getRecentlyPlayedTracksOnce(40)
+        }
+
+        // ── M3U ────────────────────────────────────────────────────
+
+        suspend fun importM3u(
+            text: String,
+            defaultName: String,
+        ): M3uPlaylist.MatchResult {
+            val (name, entries) = M3uPlaylist.parse(text, defaultName)
+            val library = trackDao.getAllTracksOnce()
+            val match = M3uPlaylist.match(entries, library, name)
+            if (match.matched.isNotEmpty()) {
+                val id = createPlaylist(match.playlistName.ifBlank { defaultName })
+                playlistDao.addTracksToEnd(id, match.matched.map { it.id })
+            }
+            return match
+        }
+
+        fun exportM3u(
+            name: String,
+            tracks: List<TrackEntity>,
+        ): String = M3uPlaylist.write(name, tracks)
+
+        // ── Duplicates ─────────────────────────────────────────────
+
+        suspend fun findDuplicateGroups(): List<DuplicateDetector.Group> =
+            DuplicateDetector.findGroups(trackDao.getAllTracksOnce())
+
+        /** Hide every extra in [group] except [keepId]. Files stay on disk. */
+        suspend fun hideDuplicateExtras(
+            group: DuplicateDetector.Group,
+            keepId: Long = group.keepId,
+        ) {
+            val extras = group.tracks.filter { it.id != keepId }.map { it.id }
+            setHiddenMany(extras, true)
+        }
+
+        /**
+         * Copy playlist membership from extras onto [keepId], then hide the extras.
+         * Files are never deleted.
+         */
+        suspend fun mergeDuplicateGroup(
+            group: DuplicateDetector.Group,
+            keepId: Long = group.keepId,
+        ) {
+            val extras = group.tracks.filter { it.id != keepId }
+            for (extra in extras) {
+                val playlistIds = playlistDao.getPlaylistIdsForTrack(extra.id)
+                for (playlistId in playlistIds) {
+                    playlistDao.addTrackToEnd(playlistId, keepId)
+                    playlistDao.removeTrackFromPlaylist(playlistId, extra.id)
+                }
+            }
+            setHiddenMany(extras.map { it.id }, true)
+        }
+
+        // ── SAF trees ──────────────────────────────────────────────
+
+        suspend fun getSafTreeUris(): List<String> = appPreferences.getSafTreeUris()
+
+        fun safTreeDisplayName(uri: String): String = safScanner.treeDisplayName(uri)
+
+        suspend fun addSafTreeUri(uri: String) {
+            appPreferences.addSafTreeUri(uri)
+            scanLibrary(force = true)
+        }
+
+        suspend fun removeSafTreeUri(uri: String) {
+            appPreferences.removeSafTreeUri(uri)
+            val ids = trackDao.getTrackIdsBySourceAndExternalId(TrackEntity.SOURCE_SAF, uri)
+            ids.chunked(400).forEach { chunk ->
+                if (chunk.isNotEmpty()) trackDao.deleteTracksByIds(chunk)
+            }
         }
     }

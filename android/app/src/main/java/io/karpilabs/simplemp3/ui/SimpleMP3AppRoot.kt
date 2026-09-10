@@ -1,7 +1,11 @@
 package io.karpilabs.simplemp3.ui
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -27,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,6 +53,7 @@ import io.karpilabs.simplemp3.ui.components.QueueSheet
 import io.karpilabs.simplemp3.ui.navigation.Routes
 import io.karpilabs.simplemp3.ui.screens.CollectionDetailScreen
 import io.karpilabs.simplemp3.ui.screens.CreatePlaylistDialog
+import io.karpilabs.simplemp3.ui.screens.DuplicatesScreen
 import io.karpilabs.simplemp3.ui.screens.FolderDetailScreen
 import io.karpilabs.simplemp3.ui.screens.HiddenSongsScreen
 import io.karpilabs.simplemp3.ui.screens.HomeScreen
@@ -68,6 +74,7 @@ import io.karpilabs.simplemp3.ui.viewmodel.JellyfinViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.MusicViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.QuickConnectViewModel
 import io.karpilabs.simplemp3.ui.viewmodel.StreamViewModel
+import io.karpilabs.simplemp3.ui.util.PersistableOpenDocumentTree
 import io.karpilabs.simplemp3.ui.viewmodel.YoutubeViewModel
 
 private data class TabItem(
@@ -113,8 +120,64 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
 
     var showNowPlaying by remember { mutableStateOf(false) }
     var showQueue by remember { mutableStateOf(false) }
-    var addToPlaylistTrack by remember { mutableStateOf<TrackEntity?>(null) }
+    var addToPlaylistTracks by remember { mutableStateOf<List<TrackEntity>?>(null) }
     var showCreateFromAdd by remember { mutableStateOf(false) }
+    var pendingM3uExport by remember { mutableStateOf<Pair<String, String>?>(null) }
+    val context = LocalContext.current
+
+    val importM3uLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            val text =
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                }.getOrNull()
+            if (text.isNullOrBlank()) return@rememberLauncherForActivityResult
+            val defaultName =
+                uri.lastPathSegment
+                    ?.substringAfterLast('/')
+                    ?.substringAfterLast(':')
+                    ?.substringBeforeLast('.')
+                    ?.ifBlank { null }
+                    ?: "Imported playlist"
+            viewModel.importM3u(text, defaultName)
+        }
+
+    val exportM3uLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.CreateDocument("audio/x-mpegurl"),
+        ) { uri ->
+            val payload = pendingM3uExport
+            pendingM3uExport = null
+            if (uri == null || payload == null) return@rememberLauncherForActivityResult
+            runCatching {
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    out.write(payload.second.toByteArray(Charsets.UTF_8))
+                }
+            }
+        }
+
+    val safTreeLauncher =
+        rememberLauncherForActivityResult(PersistableOpenDocumentTree()) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            }
+            viewModel.addSafTree(uri.toString())
+        }
+
+    fun exportPlaylistM3u(
+        name: String,
+        tracks: List<TrackEntity>,
+    ) {
+        val body = viewModel.exportM3u(name, tracks)
+        pendingM3uExport = name to body
+        val fileName = name.replace(Regex("[\\\\/:*?\"<>|]"), "_").ifBlank { "playlist" } + ".m3u"
+        exportM3uLauncher.launch(fileName)
+    }
 
     val audioPermission =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -226,7 +289,7 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onPlayAll = { viewModel.playAll(it) },
                         onOpenPlaylist = { navController.navigate(Routes.playlistDetail(it)) },
                         onToggleFavorite = viewModel::toggleFavorite,
-                        onAddToPlaylist = { addToPlaylistTrack = it },
+                        onAddToPlaylist = { addToPlaylistTracks = listOf(it) },
                         onPlayNext = viewModel::playNext,
                         onAddToQueue = viewModel::addToQueue,
                         onHide = { viewModel.hideTrack(it.id) },
@@ -284,6 +347,7 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onOpenScrobbling = { navController.navigate(Routes.SCROBBLING) },
                         onOpenLibraryFolders = { navController.navigate(Routes.LIBRARY_FOLDERS) },
                         onOpenHiddenSongs = { navController.navigate(Routes.HIDDEN_SONGS) },
+                        onOpenDuplicates = { navController.navigate(Routes.DUPLICATES) },
                     )
                 }
                 composable(Routes.SCROBBLING) {
@@ -298,6 +362,18 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                             viewModel.loginLastfm(apiKey, apiSecret, username, password, onResult)
                         },
                         onLogoutLastfm = viewModel::logoutLastfm,
+                    )
+                }
+                composable(Routes.DUPLICATES) {
+                    val groups by viewModel.duplicateGroups.collectAsStateWithLifecycle()
+                    val loading by viewModel.duplicatesLoading.collectAsStateWithLifecycle()
+                    LaunchedEffect(Unit) { viewModel.refreshDuplicates() }
+                    DuplicatesScreen(
+                        groups = groups,
+                        isLoading = loading,
+                        onBack = { navController.popBackStack() },
+                        onHideExtras = viewModel::hideDuplicateExtras,
+                        onMerge = viewModel::mergeDuplicateGroup,
                     )
                 }
                 composable(Routes.HIDDEN_SONGS) {
@@ -318,6 +394,11 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         remember(deviceFolders) {
                             buildLibraryFolderPickerPaths(deviceFolders)
                         }
+                    val safUris by viewModel.safTreeUris.collectAsStateWithLifecycle()
+                    val safTrees =
+                        remember(safUris) {
+                            safUris.map { it to viewModel.safTreeDisplayName(it) }
+                        }
                     LibraryFoldersScreen(
                         selectedRoots = selectedRoots,
                         deviceFolders = deviceFolders,
@@ -331,6 +412,17 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                             viewModel.selectAllVisibleLibraryFolderRoots(pickerPaths)
                         },
                         onClearSelection = viewModel::clearLibraryFolderRoots,
+                        safTrees = safTrees,
+                        onAddSafFolder = { safTreeLauncher.launch(null) },
+                        onRemoveSafFolder = { uri ->
+                            runCatching {
+                                context.contentResolver.releasePersistableUriPermission(
+                                    Uri.parse(uri),
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                                )
+                            }
+                            viewModel.removeSafTree(uri)
+                        },
                     )
                 }
                 composable(Routes.JELLYFIN) {
@@ -442,10 +534,17 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onQueryChange = viewModel::setSearchQuery,
                         onPlayTrack = { track, queue -> viewModel.playTrack(track, queue) },
                         onToggleFavorite = viewModel::toggleFavorite,
-                        onAddToPlaylist = { addToPlaylistTrack = it },
+                        onAddToPlaylist = { addToPlaylistTracks = listOf(it) },
                         onPlayNext = viewModel::playNext,
                         onAddToQueue = viewModel::addToQueue,
                         onHide = { viewModel.hideTrack(it.id) },
+                        onOpenAlbum = { navController.navigate(Routes.albumDetail(it)) },
+                        onOpenArtist = { navController.navigate(Routes.artistDetail(it)) },
+                        onOpenPlaylist = { navController.navigate(Routes.playlistDetail(it)) },
+                        onQueueTracks = viewModel::addToQueue,
+                        onPlayNextTracks = viewModel::playNext,
+                        onAddTracksToPlaylist = { addToPlaylistTracks = it },
+                        onHideTracks = { viewModel.hideTracks(it.map { t -> t.id }) },
                     )
                 }
                 composable(Routes.LIBRARY) {
@@ -467,14 +566,19 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onOpenArtist = { navController.navigate(Routes.artistDetail(it)) },
                         onOpenFolder = { navController.navigate(Routes.folderDetail(it)) },
                         onToggleFavorite = viewModel::toggleFavorite,
-                        onAddToPlaylist = { addToPlaylistTrack = it },
+                        onAddToPlaylist = { addToPlaylistTracks = listOf(it) },
                         onPlayNext = viewModel::playNext,
                         onAddToQueue = viewModel::addToQueue,
                         onHide = { viewModel.hideTrack(it.id) },
+                        onQueueTracks = viewModel::addToQueue,
+                        onPlayNextTracks = viewModel::playNext,
+                        onAddTracksToPlaylist = { addToPlaylistTracks = it },
+                        onHideTracks = { viewModel.hideTracks(it.map { t -> t.id }) },
                     )
                 }
                 composable(Routes.PLAYLISTS) {
                     val genres by viewModel.genres.collectAsStateWithLifecycle()
+                    val importMessage by viewModel.m3uImportMessage.collectAsStateWithLifecycle()
                     PlaylistsScreen(
                         playlists = visiblePlaylists,
                         genres = genres,
@@ -482,6 +586,19 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onOpenSmart = { navController.navigate(Routes.smartDetail(it.key)) },
                         onOpenGenre = { navController.navigate(Routes.genreDetail(it)) },
                         onCreatePlaylist = { viewModel.createPlaylist(it) },
+                        onImportM3u = {
+                            importM3uLauncher.launch(
+                                arrayOf(
+                                    "audio/x-mpegurl",
+                                    "audio/mpegurl",
+                                    "application/vnd.apple.mpegurl",
+                                    "text/plain",
+                                    "*/*",
+                                ),
+                            )
+                        },
+                        importMessage = importMessage,
+                        onConsumeImportMessage = viewModel::consumeM3uImportMessage,
                     )
                 }
                 composable(
@@ -504,6 +621,14 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onShuffle = { viewModel.playAll(smartTracks.shuffled()) },
                         onPlayTrack = { viewModel.playTrack(it, smartTracks) },
                         onToggleFavorite = viewModel::toggleFavorite,
+                        onAddToPlaylist = { addToPlaylistTracks = listOf(it) },
+                        onPlayNext = viewModel::playNext,
+                        onAddToQueue = viewModel::addToQueue,
+                        onHide = { viewModel.hideTrack(it.id) },
+                        onQueueTracks = viewModel::addToQueue,
+                        onPlayNextTracks = viewModel::playNext,
+                        onAddTracksToPlaylist = { addToPlaylistTracks = it },
+                        onHideTracks = { viewModel.hideTracks(it.map { t -> t.id }) },
                     )
                 }
                 composable(
@@ -524,6 +649,14 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onShuffle = { viewModel.playAll(genreTracks.shuffled()) },
                         onPlayTrack = { viewModel.playTrack(it, genreTracks) },
                         onToggleFavorite = viewModel::toggleFavorite,
+                        onAddToPlaylist = { addToPlaylistTracks = listOf(it) },
+                        onPlayNext = viewModel::playNext,
+                        onAddToQueue = viewModel::addToQueue,
+                        onHide = { viewModel.hideTrack(it.id) },
+                        onQueueTracks = viewModel::addToQueue,
+                        onPlayNextTracks = viewModel::playNext,
+                        onAddTracksToPlaylist = { addToPlaylistTracks = it },
+                        onHideTracks = { viewModel.hideTracks(it.map { t -> t.id }) },
                     )
                 }
                 composable(
@@ -554,10 +687,17 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onReorder = { from, to -> viewModel.reorderPlaylist(playlistId, from, to) },
                         onPlayNext = viewModel::playNext,
                         onAddToQueue = viewModel::addToQueue,
-                        onAddToPlaylist = { addToPlaylistTrack = it },
+                        onAddToPlaylist = { addToPlaylistTracks = listOf(it) },
                         onHide = { viewModel.hideTrack(it.id) },
                         libraryTracks = libraryTracks,
                         onAddTracks = { viewModel.addToPlaylist(playlistId, it) },
+                        onQueueTracks = viewModel::addToQueue,
+                        onPlayNextTracks = viewModel::playNext,
+                        onAddTracksToPlaylist = { addToPlaylistTracks = it },
+                        onHideTracks = { viewModel.hideTracks(it.map { t -> t.id }) },
+                        onExportM3u = {
+                            exportPlaylistM3u(playlist?.name ?: "Playlist", playlistTracks)
+                        },
                     )
                 }
                 composable(
@@ -580,6 +720,14 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onShuffle = { viewModel.playAll(albumTracks.shuffled()) },
                         onPlayTrack = { viewModel.playTrack(it, albumTracks) },
                         onToggleFavorite = viewModel::toggleFavorite,
+                        onAddToPlaylist = { addToPlaylistTracks = listOf(it) },
+                        onPlayNext = viewModel::playNext,
+                        onAddToQueue = viewModel::addToQueue,
+                        onHide = { viewModel.hideTrack(it.id) },
+                        onQueueTracks = viewModel::addToQueue,
+                        onPlayNextTracks = viewModel::playNext,
+                        onAddTracksToPlaylist = { addToPlaylistTracks = it },
+                        onHideTracks = { viewModel.hideTracks(it.map { t -> t.id }) },
                     )
                 }
                 composable(
@@ -602,6 +750,14 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onShuffle = { viewModel.playAll(artistTracks.shuffled()) },
                         onPlayTrack = { viewModel.playTrack(it, artistTracks) },
                         onToggleFavorite = viewModel::toggleFavorite,
+                        onAddToPlaylist = { addToPlaylistTracks = listOf(it) },
+                        onPlayNext = viewModel::playNext,
+                        onAddToQueue = viewModel::addToQueue,
+                        onHide = { viewModel.hideTrack(it.id) },
+                        onQueueTracks = viewModel::addToQueue,
+                        onPlayNextTracks = viewModel::playNext,
+                        onAddTracksToPlaylist = { addToPlaylistTracks = it },
+                        onHideTracks = { viewModel.hideTracks(it.map { t -> t.id }) },
                     )
                 }
                 composable(
@@ -627,10 +783,14 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
                         onShuffle = { viewModel.playAll(folderTracks.shuffled()) },
                         onPlayTrack = { viewModel.playTrack(it, folderTracks) },
                         onToggleFavorite = viewModel::toggleFavorite,
-                        onAddToPlaylist = { addToPlaylistTrack = it },
+                        onAddToPlaylist = { addToPlaylistTracks = listOf(it) },
                         onPlayNext = viewModel::playNext,
                         onAddToQueue = viewModel::addToQueue,
                         onHide = { viewModel.hideTrack(it.id) },
+                        onQueueTracks = viewModel::addToQueue,
+                        onPlayNextTracks = viewModel::playNext,
+                        onAddTracksToPlaylist = { addToPlaylistTracks = it },
+                        onHideTracks = { viewModel.hideTracks(it.map { t -> t.id }) },
                     )
                 }
             }
@@ -681,14 +841,15 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
         )
     }
 
-    addToPlaylistTrack?.let { track ->
+    addToPlaylistTracks?.let { tracks ->
         AddToPlaylistSheet(
             playlists = visiblePlaylists,
-            trackTitle = track.title,
-            onDismiss = { addToPlaylistTrack = null },
+            trackTitle = tracks.firstOrNull()?.title.orEmpty(),
+            songCount = tracks.size,
+            onDismiss = { addToPlaylistTracks = null },
             onSelect = { playlistId ->
-                viewModel.addToPlaylist(playlistId, track.id)
-                addToPlaylistTrack = null
+                viewModel.addToPlaylist(playlistId, tracks.map { it.id })
+                addToPlaylistTracks = null
             },
             onCreateNew = {
                 showCreateFromAdd = true
@@ -701,8 +862,8 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
             onDismiss = { showCreateFromAdd = false },
             onConfirm = { name ->
                 viewModel.createPlaylist(name) { id ->
-                    addToPlaylistTrack?.let { viewModel.addToPlaylist(id, it.id) }
-                    addToPlaylistTrack = null
+                    addToPlaylistTracks?.let { viewModel.addToPlaylist(id, it.map { t -> t.id }) }
+                    addToPlaylistTracks = null
                 }
                 showCreateFromAdd = false
             },

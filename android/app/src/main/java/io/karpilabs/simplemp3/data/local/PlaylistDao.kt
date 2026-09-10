@@ -93,6 +93,12 @@ interface PlaylistDao {
     @Query("SELECT COALESCE(MAX(position), -1) FROM playlist_tracks WHERE playlistId = :playlistId")
     suspend fun getMaxPosition(playlistId: Long): Int
 
+    @Query("SELECT trackId FROM playlist_tracks WHERE playlistId = :playlistId")
+    suspend fun getTrackIds(playlistId: Long): List<Long>
+
+    @Query("SELECT playlistId FROM playlist_tracks WHERE trackId = :trackId")
+    suspend fun getPlaylistIdsForTrack(trackId: Long): List<Long>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlaylistTrack(crossRef: PlaylistTrackCrossRef)
 
@@ -122,15 +128,29 @@ interface PlaylistDao {
         playlistId: Long,
         trackId: Long,
     ) {
-        if (containsTrack(playlistId, trackId)) return
-        val next = getMaxPosition(playlistId) + 1
-        insertPlaylistTrack(
-            PlaylistTrackCrossRef(
-                playlistId = playlistId,
-                trackId = trackId,
-                position = next,
-            ),
-        )
+        addTracksToEnd(playlistId, listOf(trackId))
+    }
+
+    @Transaction
+    suspend fun addTracksToEnd(
+        playlistId: Long,
+        trackIds: List<Long>,
+    ) {
+        if (trackIds.isEmpty()) return
+        val existing = getTrackIds(playlistId).toHashSet()
+        var next = getMaxPosition(playlistId) + 1
+        val toInsert = ArrayList<PlaylistTrackCrossRef>(trackIds.size)
+        for (trackId in trackIds) {
+            if (!existing.add(trackId)) continue
+            toInsert +=
+                PlaylistTrackCrossRef(
+                    playlistId = playlistId,
+                    trackId = trackId,
+                    position = next++,
+                )
+        }
+        if (toInsert.isEmpty()) return
+        insertPlaylistTracks(toInsert)
         touchPlaylist(playlistId)
     }
 

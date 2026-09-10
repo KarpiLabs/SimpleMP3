@@ -267,16 +267,54 @@ class PlayerConnection
         }
 
         fun addToQueue(track: TrackEntity) {
+            addToQueue(listOf(track))
+        }
+
+        fun addToQueue(tracks: List<TrackEntity>) {
+            val songs = tracks.filter { !it.isStream }
+            if (songs.isEmpty()) return
             val c = controller
             if (c == null || c.mediaItemCount == 0) {
-                playTracks(listOf(track), 0)
+                playTracks(songs, 0)
                 return
             }
             scope.launch {
-                val ready = withContext(Dispatchers.IO) { storageManager.ensurePlayable(track) }
-                c.addMediaItem(MediaItemFactory.fromTrack(ready))
+                val ready =
+                    withContext(Dispatchers.IO) {
+                        songs.map { storageManager.ensurePlayable(it) }
+                    }
+                c.addMediaItems(ready.map { MediaItemFactory.fromTrack(it) })
                 if (lastQueueIds.isNotEmpty()) {
-                    lastQueueIds = lastQueueIds + ready.id
+                    lastQueueIds = lastQueueIds + ready.map { it.id }
+                }
+                schedulePersist()
+            }
+        }
+
+        fun playNext(tracks: List<TrackEntity>) {
+            val songs = tracks.filter { !it.isStream }
+            if (songs.isEmpty()) return
+            if (songs.size == 1) {
+                playNext(songs.first())
+                return
+            }
+            val c = controller
+            if (c == null || c.mediaItemCount == 0) {
+                playTracks(songs, 0)
+                return
+            }
+            scope.launch {
+                val ready =
+                    withContext(Dispatchers.IO) {
+                        songs.map { storageManager.ensurePlayable(it) }
+                    }
+                val insertAt = (c.currentMediaItemIndex + 1).coerceAtMost(c.mediaItemCount)
+                c.addMediaItems(insertAt, ready.map { MediaItemFactory.fromTrack(it) })
+                if (lastQueueIds.isNotEmpty()) {
+                    val mutable = lastQueueIds.toMutableList()
+                    val at = insertAt.coerceIn(0, mutable.size)
+                    mutable.addAll(at, ready.map { it.id })
+                    lastQueueIds = mutable
                 }
                 schedulePersist()
             }
