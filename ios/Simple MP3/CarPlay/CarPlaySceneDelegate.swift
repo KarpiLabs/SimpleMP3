@@ -140,7 +140,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         }
     }
 
-    // MARK: - Root (tab bar: Home · Recently Played · Streams · Browse · Your Library)
+    // MARK: - Root (tab bar: Home · Recently Played · Streams · Your Library)
 
     @MainActor
     private func buildRootTemplate() async -> CPTabBarTemplate {
@@ -156,15 +156,11 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         streams.tabTitle = "Streams"
         streams.tabImage = UIImage(systemName: "dot.radiowaves.left.and.right")
 
-        let browse = buildBrowseTemplate()
-        browse.tabTitle = "Browse"
-        browse.tabImage = UIImage(systemName: "square.grid.2x2.fill")
-
         let library = buildLibraryTemplate()
         library.tabTitle = "Your Library"
         library.tabImage = UIImage(systemName: "books.vertical.fill")
 
-        return CPTabBarTemplate(templates: [home, recent, streams, browse, library])
+        return CPTabBarTemplate(templates: [home, recent, streams, library])
     }
 
     /// Greeting header + horizontal "continue listening" shelf + playlist shelf.
@@ -255,7 +251,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     }
 
     @MainActor
-    private func buildBrowseTemplate() -> CPListTemplate {
+    private func buildLibraryTemplate() -> CPListTemplate {
         var items: [CPListItem] = []
         if app.preferences.jellyfinEnabled {
             items.append(folderItem(title: "Jellyfin Offline", detail: "\(app.repository.jellyfinCount)", id: "jellyfin"))
@@ -263,19 +259,10 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         items.append(folderItem(title: "Albums", detail: "\(app.repository.albums.count)", id: "albums"))
         items.append(folderItem(title: "Artists", detail: "\(app.repository.artists.count)", id: "artists"))
         items.append(folderItem(title: "Songs", detail: Formatters.trackCount(app.repository.tracks.count), id: "songs"))
-        attachSectionHandlers(items)
-        return CPListTemplate(title: "Browse", sections: [CPListSection(items: items)])
-    }
-
-    @MainActor
-    private func buildLibraryTemplate() -> CPListTemplate {
-        var items: [CPListItem] = []
-        items.append(folderItem(title: "Streams", detail: "Live radio", id: "streams"))
-        items.append(folderItem(title: "Favorite Streams", detail: "Hearted stations", id: "favorite_streams"))
         items.append(folderItem(title: "Liked Songs", detail: "Favorites", id: "liked"))
         items.append(folderItem(title: "Playlists", detail: "\(carPlaylists.count)", id: "playlists"))
-        let nowDetail = app.player.state.current?.title ?? "Nothing playing"
-        items.append(folderItem(title: "Now Playing", detail: nowDetail, id: "now"))
+        items.append(folderItem(title: "Streams", detail: "Live radio", id: "streams"))
+        items.append(folderItem(title: "Favorite Streams", detail: "Hearted stations", id: "favorite_streams"))
         attachSectionHandlers(items)
         return CPListTemplate(title: "Your Library", sections: [CPListSection(items: items)])
     }
@@ -325,8 +312,6 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             pushArtists()
         case "songs":
             pushTrackList(title: "Songs", tracks: app.repository.tracks.excludingLiveStreams())
-        case "now":
-            pushNowPlaying()
         default:
             break
         }
@@ -493,62 +478,6 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
             }
             return item
         }
-    }
-
-    @MainActor
-    private func pushNowPlaying() {
-        let state = app.player.state
-        var items: [CPListItem] = []
-
-        items.append(CPListItem(
-            text: state.current?.title ?? "Nothing playing",
-            detailText: state.current?.artist
-        ))
-
-        if state.current != nil {
-            let open = CPListItem(text: "Open Now Playing", detailText: "Full screen controls")
-            open.handler = { [weak self] _, completion in
-                self?.presentSystemNowPlaying()
-                completion()
-            }
-            items.append(open)
-        }
-
-        let playPause = CPListItem(
-            text: state.isPlaying ? "Pause" : "Play",
-            detailText: "Toggle playback"
-        )
-        playPause.handler = { [weak self] _, completion in
-            Task { @MainActor in
-                self?.app.player.togglePlayPause()
-                completion()
-            }
-        }
-        items.append(playPause)
-
-        let next = CPListItem(text: "Next", detailText: nil)
-        next.handler = { [weak self] _, completion in
-            Task { @MainActor in self?.app.player.skipNext(); completion() }
-        }
-        items.append(next)
-
-        let prev = CPListItem(text: "Previous", detailText: nil)
-        prev.handler = { [weak self] _, completion in
-            Task { @MainActor in self?.app.player.skipPrevious(); completion() }
-        }
-        items.append(prev)
-
-        let shuffle = CPListItem(
-            text: state.shuffle ? "Shuffle On" : "Shuffle Off",
-            detailText: "Tap to toggle"
-        )
-        shuffle.handler = { [weak self] _, completion in
-            Task { @MainActor in self?.app.player.toggleShuffle(); completion() }
-        }
-        items.append(shuffle)
-
-        let template = CPListTemplate(title: "Now Playing", sections: [CPListSection(items: items)])
-        interfaceController?.pushTemplate(template, animated: true) { _, _ in }
     }
 
     /// Pushes the system Now Playing template (CarPlay media chrome).
