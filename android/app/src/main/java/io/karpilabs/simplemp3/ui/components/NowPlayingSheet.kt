@@ -21,7 +21,7 @@ import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Shuffle
@@ -141,7 +141,7 @@ fun NowPlayingSheet(
                     Row {
                         IconButton(onClick = onOpenQueue) {
                             Icon(
-                                Icons.Rounded.QueueMusic,
+                                Icons.AutoMirrored.Rounded.QueueMusic,
                                 contentDescription = "Queue",
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )

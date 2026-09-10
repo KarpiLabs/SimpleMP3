@@ -96,7 +96,7 @@ class LastFmClient(
             val form = FormBody.Builder().apply { signed.forEach { (k, v) -> add(k, v) } }.build()
             val request = Request.Builder().url(endpoint).post(form).build()
             http.newCall(request).execute().use { resp ->
-                val text = resp.body?.string().orEmpty()
+                val text = resp.body.string()
                 if (!resp.isSuccessful) return@use null
                 JSONObject(text).optJSONObject("session")?.optString("key").takeIf { !it.isNullOrBlank() }
             }

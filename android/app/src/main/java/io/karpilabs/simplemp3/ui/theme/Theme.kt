@@ -111,6 +111,10 @@ private val DayPalette =
 val LocalSimpleMP3Palette = androidx.compose.runtime.staticCompositionLocalOf { NightPalette }
 
 @Composable
+// Window.statusBarColor/navigationBarColor are deprecated as of API 35 (no-ops once edge-to-edge
+// is enforced) with no drop-in replacement that preserves the per-theme nav bar tint here; keep
+// setting them for API 29–34 and silence the deprecation.
+@Suppress("DEPRECATION")
 fun SimpleMP3Theme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     content: @Composable () -> Unit,

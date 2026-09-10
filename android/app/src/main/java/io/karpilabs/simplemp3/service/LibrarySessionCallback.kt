@@ -116,7 +116,7 @@ class LibrarySessionCallback(
                 .build()
 
         return MediaSession.ConnectionResult
-            .AcceptedResultBuilder(session)
+            .AcceptedResultBuilder(session, controller)
             .setAvailableSessionCommands(sessionCommands)
             .setAvailablePlayerCommands(playerCommands)
             .build()
@@ -468,6 +468,7 @@ class LibrarySessionCallback(
     override fun onPlaybackResumption(
         mediaSession: MediaSession,
         controller: MediaSession.ControllerInfo,
+        isForPlayback: Boolean,
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
         val future = SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
         ioScope.launch {
@@ -536,7 +537,7 @@ class LibrarySessionCallback(
         // Google Assistant / "Hey Google, play X in Simple MP3" voice commands arrive as an
         // empty mediaId with the spoken phrase (and sometimes structured artist/album/title
         // extras) in requestMetadata — not as one of our browse tree ids.
-        val voiceQuery = only.requestMetadata?.searchQuery?.trim()
+        val voiceQuery = only.requestMetadata.searchQuery?.trim()
         if (mediaId.isBlank() && !voiceQuery.isNullOrBlank()) {
             val list = resolveVoiceQueue(only)
             return ResolvedQueue(list, 0)
@@ -580,13 +581,13 @@ class LibrarySessionCallback(
      * tried first; the freeform [MediaItem.RequestMetadata.searchQuery] is the fallback.
      */
     private suspend fun resolveVoiceQueue(item: MediaItem): List<MediaItem> {
-        val extras = item.requestMetadata?.extras
+        val extras = item.requestMetadata.extras
         val artistHint = extras?.getString(MediaStore.EXTRA_MEDIA_ARTIST)?.trim()?.takeIf { it.isNotBlank() }
         val albumHint = extras?.getString(MediaStore.EXTRA_MEDIA_ALBUM)?.trim()?.takeIf { it.isNotBlank() }
         val titleHint = extras?.getString(MediaStore.EXTRA_MEDIA_TITLE)?.trim()?.takeIf { it.isNotBlank() }
         val query =
             item.requestMetadata
-                ?.searchQuery
+                .searchQuery
                 ?.trim()
                 .orEmpty()
 

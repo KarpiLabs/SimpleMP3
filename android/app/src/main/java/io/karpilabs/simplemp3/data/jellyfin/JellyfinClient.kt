@@ -72,7 +72,7 @@ class JellyfinClient
                             .build()
 
                     okHttp.newCall(request).execute().use { response ->
-                        val body = response.body?.string().orEmpty()
+                        val body = response.body.string()
                         if (!response.isSuccessful) {
                             throw IOException("Login failed (${response.code})")
                         }
@@ -269,7 +269,7 @@ class JellyfinClient
                         if (!response.isSuccessful) {
                             throw IOException("Download failed (${response.code})")
                         }
-                        val body = response.body ?: throw IOException("Empty body")
+                        val body = response.body
                         val total = body.contentLength().takeIf { it > 0 }
                         body.byteStream().use { input ->
                             tmp.outputStream().use { output ->
@@ -312,7 +312,7 @@ class JellyfinClient
                             .build()
                     okHttp.newCall(request).execute().use { response ->
                         if (!response.isSuccessful) return@runCatching null
-                        val body = response.body ?: return@runCatching null
+                        val body = response.body
                         dest.outputStream().use { out -> body.byteStream().copyTo(out) }
                     }
                     dest
@@ -334,7 +334,7 @@ class JellyfinClient
                     .get()
                     .build()
             okHttp.newCall(request).execute().use { response ->
-                val body = response.body?.string().orEmpty()
+                val body = response.body.string()
                 if (!response.isSuccessful) {
                     throw IOException("Request failed (${response.code})")
                 }

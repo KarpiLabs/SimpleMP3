@@ -163,7 +163,7 @@ object MediaItemFactory {
                 },
             artworkUri = playlist.displayCover,
             isPlayable = playlist.trackCount > 0,
-            folderType = MediaMetadata.FOLDER_TYPE_PLAYLISTS,
+            mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_PLAYLISTS,
             // Contains tracks — render as a list, not a grid.
             browsableHint = CONTENT_STYLE_LIST,
             playableHint = CONTENT_STYLE_LIST,
@@ -176,7 +176,7 @@ object MediaItemFactory {
             subtitle = "${album.subtitle} · ${album.trackCount} songs",
             artworkUri = album.artworkUri,
             isPlayable = true,
-            folderType = MediaMetadata.FOLDER_TYPE_ALBUMS,
+            mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_ALBUMS,
             browsableHint = CONTENT_STYLE_LIST,
             playableHint = CONTENT_STYLE_LIST,
         )
@@ -188,7 +188,7 @@ object MediaItemFactory {
             subtitle = "${artist.trackCount} songs",
             artworkUri = artist.artworkUri,
             isPlayable = true,
-            folderType = MediaMetadata.FOLDER_TYPE_ARTISTS,
+            mediaType = MediaMetadata.MEDIA_TYPE_FOLDER_ARTISTS,
             browsableHint = CONTENT_STYLE_LIST,
             playableHint = CONTENT_STYLE_LIST,
         )
@@ -269,7 +269,7 @@ object MediaItemFactory {
         subtitle: String? = null,
         artworkUri: String? = null,
         isPlayable: Boolean = false,
-        folderType: @MediaMetadata.FolderType Int = MediaMetadata.FOLDER_TYPE_MIXED,
+        mediaType: @MediaMetadata.MediaType Int = MediaMetadata.MEDIA_TYPE_FOLDER_MIXED,
         browsableHint: Int = CONTENT_STYLE_GRID,
         playableHint: Int = CONTENT_STYLE_LIST,
     ): MediaItem {
@@ -286,8 +286,7 @@ object MediaItemFactory {
                 .setSubtitle(subtitle)
                 .setIsBrowsable(true)
                 .setIsPlayable(isPlayable)
-                .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
-                .setFolderType(folderType)
+                .setMediaType(mediaType)
                 .setExtras(extras)
                 .apply {
                     artworkUri?.let { setArtworkUri(it.toUri()) }

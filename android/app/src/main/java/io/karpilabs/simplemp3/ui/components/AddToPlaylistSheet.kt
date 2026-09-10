@@ -12,7 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.PlaylistAdd
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -85,7 +85,7 @@ fun AddToPlaylistSheet(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            Icons.Rounded.PlaylistAdd,
+                            Icons.AutoMirrored.Rounded.PlaylistAdd,
                             contentDescription = null,
                             tint = AccentTeal,
                         )

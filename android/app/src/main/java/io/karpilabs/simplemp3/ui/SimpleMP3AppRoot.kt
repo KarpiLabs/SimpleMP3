@@ -9,7 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LibraryMusic
-import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -28,7 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -142,7 +142,7 @@ fun SimpleMP3AppRoot(viewModel: MusicViewModel = hiltViewModel()) {
             TabItem(Routes.HOME, "Home", Icons.Rounded.Home),
             TabItem(Routes.SEARCH, "Search", Icons.Rounded.Search),
             TabItem(Routes.LIBRARY, "Library", Icons.Rounded.LibraryMusic),
-            TabItem(Routes.PLAYLISTS, "Playlists", Icons.Rounded.QueueMusic),
+            TabItem(Routes.PLAYLISTS, "Playlists", Icons.AutoMirrored.Rounded.QueueMusic),
             TabItem(Routes.TOOLS, "Tools", Icons.Rounded.Build),
         )
 

@@ -45,6 +45,13 @@ data class QuickConnectSession(
 )
 
 /**
+ * Single-value query/body parameter accessor. NanoHTTPD's [NanoHTTPD.IHTTPSession.getParms] is
+ * deprecated in favour of the multi-value [NanoHTTPD.IHTTPSession.getParameters]; this collapses
+ * back to the first value to preserve the previous behaviour.
+ */
+private fun NanoHTTPD.IHTTPSession.param(key: String): String? = parameters[key]?.firstOrNull()
+
+/**
  * Ephemeral LAN HTTP portal for desktop upload / playlist management.
  * Started only while the Quick Connect screen is visible.
  */
@@ -340,7 +347,7 @@ class QuickConnectServer
                 }
 
                 val body =
-                    session.parms["code"]
+                    session.param("code")
                         ?.takeIf { it.isNotBlank() }
                         ?: readJsonBody(files)?.optString("code")
                         ?: ""
@@ -442,7 +449,7 @@ class QuickConnectServer
                             ?.optString("name")
                             ?.trim()
                             .orEmpty()
-                            .ifBlank { session.parms["name"]?.trim().orEmpty() }
+                            .ifBlank { session.param("name")?.trim().orEmpty() }
                     if (name.isBlank()) {
                         return@runBlocking jsonError(Response.Status.BAD_REQUEST, "Name required")
                     }
@@ -463,7 +470,7 @@ class QuickConnectServer
                             ?.optString("name")
                             ?.trim()
                             .orEmpty()
-                            .ifBlank { session.parms["name"]?.trim().orEmpty() }
+                            .ifBlank { session.param("name")?.trim().orEmpty() }
                     if (name.isBlank()) {
                         return@runBlocking jsonError(Response.Status.BAD_REQUEST, "Name required")
                     }
@@ -517,7 +524,7 @@ class QuickConnectServer
                     val trackId =
                         when {
                             json != null && json.has("trackId") -> json.optLong("trackId")
-                            else -> session.parms["trackId"]?.toLongOrNull()
+                            else -> session.param("trackId")?.toLongOrNull()
                         }
                     if (trackId == null || trackId == 0L) {
                         return@runBlocking jsonError(Response.Status.BAD_REQUEST, "trackId required")
@@ -542,7 +549,7 @@ class QuickConnectServer
                 files: Map<String, String>,
             ): Response =
                 runBlocking {
-                    val playlistId = session.parms["playlistId"]?.toLongOrNull()
+                    val playlistId = session.param("playlistId")?.toLongOrNull()
                     val imported = mutableListOf<TrackEntity>()
                     val errors = mutableListOf<String>()
 
@@ -559,13 +566,13 @@ class QuickConnectServer
                         files.forEach { (key, path) ->
                             val f = File(path)
                             if (f.isFile && f.length() > 0 && path.contains(File.separator)) {
-                                tryImport(f, session.parms[key] ?: f.name, playlistId, imported, errors)
+                                tryImport(f, session.param(key) ?: f.name, playlistId, imported, errors)
                             }
                         }
                     } else {
                         fileFields.forEach { (key, path) ->
                             val f = File(path)
-                            val original = session.parms[key] ?: f.name
+                            val original = session.param(key) ?: f.name
                             tryImport(f, original, playlistId, imported, errors)
                         }
                     }

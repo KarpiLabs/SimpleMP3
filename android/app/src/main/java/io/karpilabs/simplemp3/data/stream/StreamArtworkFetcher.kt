@@ -132,7 +132,7 @@ class StreamArtworkFetcher
                     ) {
                         return@use null
                     }
-                    response.body?.string()?.take(MAX_HTML_CHARS)
+                    response.body.string().take(MAX_HTML_CHARS)
                 }
             }.getOrNull()
         }
@@ -148,7 +148,7 @@ class StreamArtworkFetcher
             return runCatching {
                 probe.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@use null
-                    val bytes = response.body?.bytes() ?: return@use null
+                    val bytes = response.body.bytes()
                     if (bytes.size > MAX_IMAGE_BYTES) return@use null
                     bytes.takeIf { StreamArtworkParser.looksLikeImage(it) }
                 }
