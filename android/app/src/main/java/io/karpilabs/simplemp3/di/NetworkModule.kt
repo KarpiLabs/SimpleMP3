@@ -28,6 +28,9 @@ object NetworkModule {
         val logging =
             HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BASIC
+                // Redact sensitive credentials so they are not exposed in logcat / system logs
+                redactHeader("Authorization")
+                redactHeader("X-Emby-Authorization")
             }
         return OkHttpClient
             .Builder()
