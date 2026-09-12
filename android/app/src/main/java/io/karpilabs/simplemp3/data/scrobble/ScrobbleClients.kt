@@ -84,12 +84,16 @@ class LastFmClient(
         username: String,
         password: String,
     ): String? {
+        // Last.fm API supports either raw password or MD5 hash of the password.
+        // Hash password with MD5 before creating request parameters to avoid holding or
+        // transmitting cleartext password in request forms and OkHttp logs.
+        val pwdHash = md5(password)
         val params =
             sortedMapOf(
                 "method" to "auth.getMobileSession",
                 "api_key" to apiKey,
                 "username" to username,
-                "password" to password,
+                "password" to pwdHash,
             )
         val signed = signed(params, apiSecret)
         return runCatching {
