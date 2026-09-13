@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.karpilabs.simplemp3.data.prefs.SecretCipher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -32,7 +33,8 @@ class JellyfinPreferences
         val sessionFlow: Flow<JellyfinSession?> =
             context.jellyfinDataStore.data.map { prefs ->
                 val url = prefs[Keys.SERVER_URL]
-                val token = prefs[Keys.ACCESS_TOKEN]
+                val rawToken = prefs[Keys.ACCESS_TOKEN]
+                val token = rawToken?.let { SecretCipher.decrypt(it) }
                 val userId = prefs[Keys.USER_ID]
                 val userName = prefs[Keys.USER_NAME]
                 val deviceId = prefs[Keys.DEVICE_ID]
@@ -63,7 +65,7 @@ class JellyfinPreferences
         suspend fun saveSession(session: JellyfinSession) {
             context.jellyfinDataStore.edit { prefs ->
                 prefs[Keys.SERVER_URL] = session.serverUrl
-                prefs[Keys.ACCESS_TOKEN] = session.accessToken
+                prefs[Keys.ACCESS_TOKEN] = SecretCipher.encrypt(session.accessToken)
                 prefs[Keys.USER_ID] = session.userId
                 prefs[Keys.USER_NAME] = session.userName
                 session.serverId?.let { prefs[Keys.SERVER_ID] = it }

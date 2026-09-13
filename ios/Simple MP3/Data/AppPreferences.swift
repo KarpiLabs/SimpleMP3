@@ -145,7 +145,7 @@ final class AppPreferences {
         didSet { defaults.set(jellyfinUser, forKey: Key.jellyfinUser) }
     }
     var jellyfinToken: String {
-        didSet { defaults.set(jellyfinToken, forKey: Key.jellyfinToken) }
+        didSet { Keychain.set(jellyfinToken, for: Key.jellyfinToken) }
     }
     var jellyfinUserId: String {
         didSet { defaults.set(jellyfinUserId, forKey: Key.jellyfinUserId) }
@@ -194,7 +194,7 @@ final class AppPreferences {
         lastfmApiSecret = Self.loadSecret(Key.lastfmApiSecret, defaults: d)
         jellyfinServerUrl = d.string(forKey: Key.jellyfinServerUrl) ?? ""
         jellyfinUser = d.string(forKey: Key.jellyfinUser) ?? ""
-        jellyfinToken = d.string(forKey: Key.jellyfinToken) ?? ""
+        jellyfinToken = Self.loadSecret(Key.jellyfinToken, defaults: d)
         jellyfinUserId = d.string(forKey: Key.jellyfinUserId) ?? ""
         if let did = d.string(forKey: Key.jellyfinDeviceId), !did.isEmpty {
             jellyfinDeviceId = did
