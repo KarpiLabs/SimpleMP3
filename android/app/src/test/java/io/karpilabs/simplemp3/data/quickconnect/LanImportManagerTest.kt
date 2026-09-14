@@ -44,4 +44,11 @@ class LanImportManagerTest {
         assertEquals("song_name__.mp3", LanImportManager.sanitizeFileName("song<name>?.mp3"))
         assertEquals("test__file.mp3", LanImportManager.sanitizeFileName("test$#file.mp3"))
     }
+
+    @Test
+    fun testSanitizeFileName_trailingDotsAndSpaces() {
+        assertEquals("song.mp3", LanImportManager.sanitizeFileName("song.mp3."))
+        assertEquals("song.mp3", LanImportManager.sanitizeFileName("song.mp3  "))
+        assertEquals("song.mp3", LanImportManager.sanitizeFileName("song.mp3. . "))
+    }
 }
