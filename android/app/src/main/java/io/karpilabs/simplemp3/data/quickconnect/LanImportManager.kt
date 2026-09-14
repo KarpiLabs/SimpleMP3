@@ -262,7 +262,7 @@ class LanImportManager
                 while (base.contains("..")) {
                     base = base.replace("..", ".")
                 }
-                return base.take(180).trimStart('.', ' ').ifBlank { "upload.mp3" }
+                return base.take(180).trim('.', ' ').ifBlank { "upload.mp3" }
             }
         }
     }
