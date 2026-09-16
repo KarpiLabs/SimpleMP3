@@ -292,8 +292,8 @@ final class MusicRepository {
     }
 
     func deleteTrack(id: String) async {
-        if let t = await store.track(id: id) {
-            if t.isAppOwned, let url = t.fileURL, url.isFileURL {
+        if let t = await store.track(id: id), t.isAppOwned {
+            if let url = t.fileURL, url.isFileURL {
                 Self.deleteFileSafely(at: url)
             }
             if let art = t.artworkUri, let url = URL(string: art), url.isFileURL {
