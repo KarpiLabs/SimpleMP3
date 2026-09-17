@@ -167,6 +167,25 @@ actor JellyfinClient {
         return URL(string: "\(jf.serverUrl)/Items/\(enc)/Images/Primary?tag=\(tag)&maxWidth=\(maxWidth)&api_key=\(jf.accessToken)")
     }
 
+    /// Sanitizes external names to prevent path traversal, hidden files, or unsafe file system characters.
+    static func sanitizeFileName(_ name: String) -> String {
+        var base = name.components(separatedBy: "/").last ?? name
+        base = base.components(separatedBy: "\\").last ?? base
+        base = base.trimmingCharacters(in: .whitespacesAndNewlines)
+        while base.hasPrefix(".") || base.hasPrefix(" ") {
+            base = String(base.dropFirst())
+        }
+        base = base.replacingOccurrences(of: #"[^A-Za-z0-9._\- ]"#, with: "_", options: .regularExpression)
+        while base.contains("..") {
+            base = base.replacingOccurrences(of: "..", with: ".")
+        }
+        base = base.trimmingCharacters(in: CharacterSet(charactersIn: ". "))
+        if base.count > 180 {
+            base = String(base.prefix(180))
+        }
+        return base
+    }
+
     func download(
         session jf: JellyfinSession,
         item: JellyfinItem,
@@ -181,11 +200,16 @@ actor JellyfinClient {
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw JellyfinError.downloadFailed
         }
-        let ext = item.Container?.lowercased() ?? "mp3"
-        let safe = item.title
-            .replacingOccurrences(of: "/", with: "-")
-            .replacingOccurrences(of: ":", with: "-")
-        let dest = directory.appendingPathComponent("\(item.Id)_\(safe).\(ext)")
+        let rawExt = item.Container?.lowercased().components(separatedBy: ",").first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "mp3"
+        let safeExt = Self.sanitizeFileName(rawExt).isEmpty ? "mp3" : Self.sanitizeFileName(rawExt)
+        let safeTitle = Self.sanitizeFileName(item.title)
+        let safeId = Self.sanitizeFileName(item.Id)
+        let fileName = "\(safeId)_\(safeTitle).\(safeExt)"
+        let dest = directory.appendingPathComponent(fileName).standardizedFileURL
+        let dirPath = directory.standardizedFileURL.path
+        guard dest.path.hasPrefix(dirPath.hasSuffix("/") ? dirPath : dirPath + "/") else {
+            throw JellyfinError.downloadFailed
+        }
         if FileManager.default.fileExists(atPath: dest.path) {
             try FileManager.default.removeItem(at: dest)
         }
