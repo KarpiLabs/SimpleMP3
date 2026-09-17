@@ -181,4 +181,18 @@ struct Simple_MP3Tests {
             try StreamSaver.persistArtwork(testData, to: invalidDestination)
         }
     }
+
+    @Test func jellyfinSanitizeFileNamePreventsPathTraversal() {
+        let dirtyTitle = "../../Library/Preferences/malicious.plist"
+        let cleanTitle = JellyfinClient.sanitizeFileName(dirtyTitle)
+        #expect(!cleanTitle.contains("/"))
+        #expect(!cleanTitle.contains(".."))
+        #expect(cleanTitle == "malicious.plist")
+
+        let dirtyWindows = "..\\..\\etc\\passwd"
+        let cleanWindows = JellyfinClient.sanitizeFileName(dirtyWindows)
+        #expect(!cleanWindows.contains("\\"))
+        #expect(!cleanWindows.contains(".."))
+        #expect(cleanWindows == "passwd")
+    }
 }
