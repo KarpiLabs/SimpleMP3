@@ -6,6 +6,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import io.karpilabs.simplemp3.data.quickconnect.LanImportManager
 import java.io.File
 import java.net.URI
 
@@ -65,5 +66,24 @@ class JellyfinPathTraversalTest {
 
         // Verify valid track file WAS deleted
         assertFalse("Valid track file should be deleted", validTrackFile.exists())
+    }
+
+    @Test
+    fun testDownloadDestinationPath_preventsPathTraversalForMaliciousItemId() {
+        val maliciousItemId = "../../databases/malicious"
+        val ext = "mp3"
+
+        val safeId = LanImportManager.sanitizeFileName(maliciousItemId)
+        val audioFile = File(allowedOfflineDir, "$safeId.$ext")
+        val allowedAudioDir = allowedOfflineDir.canonicalFile
+
+        assertTrue(
+            "Sanitized audio file destination path must reside within the allowed audio directory",
+            audioFile.canonicalFile.canonicalPath.startsWith(allowedAudioDir.canonicalPath + File.separator)
+        )
+        assertFalse(
+            "Sanitized audio file path must not contain path traversal sequences",
+            audioFile.canonicalPath.contains("..")
+        )
     }
 }
