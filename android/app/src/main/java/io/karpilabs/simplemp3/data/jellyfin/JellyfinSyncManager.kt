@@ -8,6 +8,7 @@ import io.karpilabs.simplemp3.data.local.PlaylistEntity
 import io.karpilabs.simplemp3.data.local.TrackDao
 import io.karpilabs.simplemp3.data.local.TrackEntity
 import io.karpilabs.simplemp3.data.local.jellyfinItemIdToTrackId
+import io.karpilabs.simplemp3.data.quickconnect.LanImportManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -353,7 +354,13 @@ class JellyfinSyncManager
                     container.contains("wav") -> "wav"
                     else -> "mp3"
                 }
-            val audioFile = File(audioDir(), "${item.id}.$ext")
+            val safeId = LanImportManager.sanitizeFileName(item.id)
+            val audioFile = File(audioDir(), "$safeId.$ext")
+            val allowedAudioDir = audioDir().canonicalFile
+            if (!audioFile.canonicalFile.canonicalPath.startsWith(allowedAudioDir.canonicalPath + File.separator)) {
+                return null
+            }
+
             val download =
                 client.downloadToFile(session, item.id, audioFile) { read, total ->
                     // keep UI responsive with soft progress on current item
@@ -367,8 +374,13 @@ class JellyfinSyncManager
                 }
             if (download.isFailure) return null
 
-            val artFile = File(artDir(), "${item.id}.jpg")
-            val art = client.downloadImage(session, item, artFile).getOrNull()
+            val artFile = File(artDir(), "$safeId.jpg")
+            val allowedArtDir = artDir().canonicalFile
+            val art = if (artFile.canonicalFile.canonicalPath.startsWith(allowedArtDir.canonicalPath + File.separator)) {
+                client.downloadImage(session, item, artFile).getOrNull()
+            } else {
+                null
+            }
             val artworkUri =
                 art?.let { Uri.fromFile(it).toString() }
                     ?: client.imageUrl(session, item)
