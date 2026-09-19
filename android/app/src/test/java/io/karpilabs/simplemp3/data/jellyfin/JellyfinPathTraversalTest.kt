@@ -42,28 +42,36 @@ class JellyfinPathTraversalTest {
         val allowedDir = File(filesDir, "offline/jellyfin").canonicalFile
 
         // Function simulating deleteFileUriSafely logic without android.net.Uri in JVM unit test
-        fun deleteSafely(uriString: String) {
-            runCatching {
-                val path = URI.create(uriString).path ?: return
-                val targetFile = File(path).canonicalFile
-                if (targetFile.canonicalPath.startsWith(allowedDir.canonicalPath + File.separator)) {
-                    targetFile.delete()
-                }
-            }
-        }
-
         // Attempt deletion using path traversal URI pointing to sensitive file
-        val maliciousUri = sensitiveFile.toURI().toString()
-        deleteSafely(maliciousUri)
+        val maliciousPath = sensitiveFile.canonicalPath
+        JellyfinSyncManager.deleteFileSafely(File(maliciousPath), allowedDir)
 
         // Verify sensitive file was NOT deleted
         assertTrue("Sensitive file should still exist after path traversal deletion attempt", sensitiveFile.exists())
 
         // Attempt deletion of valid track file
-        val validUri = validTrackFile.toURI().toString()
-        deleteSafely(validUri)
+        JellyfinSyncManager.deleteFileSafely(validTrackFile, allowedDir)
 
         // Verify valid track file WAS deleted
         assertFalse("Valid track file should be deleted", validTrackFile.exists())
+    }
+
+    @Test
+    fun testDeleteFileSafely_duringDirectoryCleanup_preventsSymlinkTraversal() {
+        val sensitiveFile = File(sensitiveDir, "secret.db").also {
+            it.writeText("confidential")
+        }
+        val validTrackFile = File(allowedOfflineDir, "track1.mp3").also {
+            it.writeText("audio")
+        }
+        val allowedDir = File(filesDir, "offline/jellyfin").canonicalFile
+
+        // Test normal deletion within allowed dir using production method directly
+        JellyfinSyncManager.deleteFileSafely(validTrackFile, allowedDir)
+        assertFalse("Valid track in audio dir should be deleted", validTrackFile.exists())
+
+        // Test attempting to delete file outside allowed dir
+        JellyfinSyncManager.deleteFileSafely(sensitiveFile, allowedDir)
+        assertTrue("Sensitive file outside allowed dir must not be deleted", sensitiveFile.exists())
     }
 }
