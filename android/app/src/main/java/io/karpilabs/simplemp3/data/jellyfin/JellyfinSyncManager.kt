@@ -298,11 +298,20 @@ class JellyfinSyncManager
         }
 
         private fun deleteFileSafely(file: File) {
-            runCatching {
-                val targetFile = file.canonicalFile
-                val allowedDir = File(context.filesDir, "offline/jellyfin").canonicalFile
-                if (targetFile.canonicalPath.startsWith(allowedDir.canonicalPath + File.separator)) {
-                    targetFile.delete()
+            deleteFileSafely(file, File(context.filesDir, "offline/jellyfin"))
+        }
+
+        companion object {
+            internal fun deleteFileSafely(
+                file: File,
+                allowedDir: File,
+            ) {
+                runCatching {
+                    val targetFile = file.canonicalFile
+                    val baseDir = allowedDir.canonicalFile
+                    if (targetFile.canonicalPath.startsWith(baseDir.canonicalPath + File.separator)) {
+                        targetFile.delete()
+                    }
                 }
             }
         }
@@ -310,8 +319,8 @@ class JellyfinSyncManager
         suspend fun clearAllOffline(): Int {
             val tracks = trackDao.getTracksBySourceOnce(TrackEntity.SOURCE_JELLYFIN)
             tracks.forEach { removeOfflineTrack(it.id) }
-            audioDir().listFiles()?.forEach { it.delete() }
-            artDir().listFiles()?.forEach { it.delete() }
+            audioDir().listFiles()?.forEach { deleteFileSafely(it) }
+            artDir().listFiles()?.forEach { deleteFileSafely(it) }
             return tracks.size
         }
 
