@@ -17,7 +17,16 @@ object AudioConverter {
         val title: String,
         val artist: String,
         val album: String = "YouTube",
-    )
+    ) {
+        val sanitizedTitle: String get() = sanitize(title, "Untitled Track")
+        val sanitizedArtist: String get() = sanitize(artist, "Unknown Artist")
+        val sanitizedAlbum: String get() = sanitize(album, "YouTube")
+
+        private fun sanitize(value: String, fallback: String): String {
+            val cleaned = value.replace(Regex("[\\r\\n\\t\\u0000-\\u001F]+"), " ").trim()
+            return cleaned.ifBlank { fallback }
+        }
+    }
 
     /**
      * Convert any ffmpeg-readable audio file to MP3 (libmp3lame, VBR quality 0),
@@ -106,9 +115,9 @@ object AudioConverter {
             "-bsf:a", "aac_adtstoasc",
             "-movflags", "+faststart",
             "-id3v2_version", "3",
-            "-metadata", "title=${metadata.title}",
-            "-metadata", "artist=${metadata.artist}",
-            "-metadata", "album=${metadata.album}",
+            "-metadata", "title=${metadata.sanitizedTitle}",
+            "-metadata", "artist=${metadata.sanitizedArtist}",
+            "-metadata", "album=${metadata.sanitizedAlbum}",
             outputM4a.absolutePath,
         )
 
@@ -140,10 +149,10 @@ object AudioConverter {
         args.addAll(
             listOf(
                 "-id3v2_version", "3",
-                "-metadata", "title=${metadata.title}",
-                "-metadata", "artist=${metadata.artist}",
-                "-metadata", "album=${metadata.album}",
-                "-metadata", "album_artist=${metadata.artist}",
+                "-metadata", "title=${metadata.sanitizedTitle}",
+                "-metadata", "artist=${metadata.sanitizedArtist}",
+                "-metadata", "album=${metadata.sanitizedAlbum}",
+                "-metadata", "album_artist=${metadata.sanitizedArtist}",
                 outputMp3.absolutePath,
             ),
         )
