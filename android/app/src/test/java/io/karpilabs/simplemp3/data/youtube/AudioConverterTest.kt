@@ -18,15 +18,27 @@ class AudioConverterTest {
 
         val args = AudioConverter.buildRemuxArgs("https://example.com/stream.m3u8", outputFile, metadata)
 
-        // Verify that metadata values are distinct array elements (not string concatenated into commands)
+        // Verify that metadata values are distinct array elements and sanitized
         val titleIndex = args.indexOf("-metadata")
         assertTrue("Expected -metadata flag in args", titleIndex >= 0)
-        assertTrue("Expected -metadata title= argument in args", args.contains("title=${metadata.title}"))
-        assertTrue("Expected -metadata artist= argument in args", args.contains("artist=${metadata.artist}"))
-        assertTrue("Expected -metadata album= argument in args", args.contains("album=${metadata.album}"))
+        assertTrue("Expected -metadata title= argument in args", args.contains("title=${metadata.sanitizedTitle}"))
+        assertTrue("Expected -metadata artist= argument in args", args.contains("artist=${metadata.sanitizedArtist}"))
+        assertTrue("Expected -metadata album= argument in args", args.contains("album=${metadata.sanitizedAlbum}"))
         assertEquals("-y", args[0])
         assertEquals("-i", args[1])
         assertEquals("https://example.com/stream.m3u8", args[2])
+    }
+
+    @Test
+    fun testMetadataSanitizesControlCharactersAndNewlines() {
+        val metadata = AudioConverter.Metadata(
+            title = "Line1\r\nLine2\t\u0000Injected",
+            artist = "\r\n  New Artist \t",
+            album = "\u0007"
+        )
+        assertEquals("Line1 Line2 Injected", metadata.sanitizedTitle)
+        assertEquals("New Artist", metadata.sanitizedArtist)
+        assertEquals("YouTube", metadata.sanitizedAlbum)
     }
 
     @Test
@@ -48,9 +60,9 @@ class AudioConverterTest {
             withCover = false
         )
 
-        assertTrue("Expected -metadata title= argument in args", args.contains("title=${metadata.title}"))
-        assertTrue("Expected -metadata artist= argument in args", args.contains("artist=${metadata.artist}"))
-        assertTrue("Expected -metadata album= argument in args", args.contains("album=${metadata.album}"))
+        assertTrue("Expected -metadata title= argument in args", args.contains("title=${metadata.sanitizedTitle}"))
+        assertTrue("Expected -metadata artist= argument in args", args.contains("artist=${metadata.sanitizedArtist}"))
+        assertTrue("Expected -metadata album= argument in args", args.contains("album=${metadata.sanitizedAlbum}"))
         assertEquals(outputFile.absolutePath, args.last())
     }
 }
