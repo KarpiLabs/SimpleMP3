@@ -107,13 +107,14 @@ class YoutubeDownloadManager
                             StreamInfo.getInfo(ServiceList.YouTube, cleaned)
                         }
 
-                    val videoId =
+                    val rawVideoId =
                         info.id?.takeIf { it.isNotBlank() }
                             ?: extractVideoId(cleaned)
                             ?: info.originalUrl
                                 .hashCode()
                                 .toUInt()
                                 .toString(16)
+                    val videoId = sanitizeVideoId(rawVideoId)
 
                     // Already downloaded as MP3?
                     trackDao.getByJellyfinId(videoId)?.let { existing ->
@@ -474,6 +475,16 @@ class YoutubeDownloadManager
                     return "https://www.youtube.com/watch?v=$s"
                 }
                 return s
+            }
+
+            fun sanitizeVideoId(rawId: String): String {
+                var base = rawId.substringAfterLast('/').substringAfterLast('\\').trim()
+                base = base.trimStart('.', ' ')
+                base = base.replace(Regex("[^A-Za-z0-9_\\-]"), "_")
+                while (base.contains("..")) {
+                    base = base.replace("..", ".")
+                }
+                return base.take(64).trimStart('.', ' ').ifBlank { "unknown_id" }
             }
 
             fun extractVideoId(url: String): String? {
