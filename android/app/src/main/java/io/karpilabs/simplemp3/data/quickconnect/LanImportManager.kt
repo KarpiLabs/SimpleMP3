@@ -121,7 +121,7 @@ class LanImportManager
             withContext(Dispatchers.IO) {
                 val track = trackDao.getTrackById(trackId) ?: return@withContext false
                 if (track.source != TrackEntity.SOURCE_LAN) return@withContext false
-                deleteFileUri(track.uri)
+                deleteFileUriSafely(track.uri, audioDir())
                 trackDao.deleteTrackById(trackId)
                 true
             }
@@ -225,17 +225,6 @@ class LanImportManager
                 false
             }
 
-        private fun deleteFileUri(uri: String) {
-            runCatching {
-                val path = Uri.parse(uri).path ?: return
-                val targetFile = File(path).canonicalFile
-                val allowedDir = audioDir().canonicalFile
-                // Ensure target file is within the dedicated LAN audio directory to prevent path traversal
-                if (targetFile.canonicalPath.startsWith(allowedDir.canonicalPath + File.separator)) {
-                    targetFile.delete()
-                }
-            }
-        }
 
         private fun extensionOf(name: String): String =
             name
@@ -246,6 +235,32 @@ class LanImportManager
         companion object {
             private const val MAX_BYTES = 200L * 1024L * 1024L // 200 MB
             val ALLOWED_EXTENSIONS = setOf("mp3", "m4a", "aac", "flac", "ogg", "opus", "wav")
+
+            /**
+             * Safely deletes a local file URI only if its canonical target path resides
+             * strictly within the specified allowed base directory, preventing path traversal attacks.
+             */
+            internal fun deleteFileUriSafely(
+                uri: String,
+                allowedDir: File,
+            ) {
+                runCatching {
+                    val path = parsePathFromUri(uri) ?: return
+                    val targetFile = File(path).canonicalFile
+                    val baseDir = allowedDir.canonicalFile
+                    if (targetFile.canonicalPath.startsWith(baseDir.canonicalPath + File.separator)) {
+                        targetFile.delete()
+                    }
+                }
+            }
+
+            private fun parsePathFromUri(uriString: String): String? {
+                if (uriString.startsWith("file:/")) {
+                    return runCatching { java.net.URI(uriString).path }.getOrNull()
+                        ?: uriString.removePrefix("file://").removePrefix("file:")
+                }
+                return runCatching { Uri.parse(uriString).path }.getOrNull() ?: uriString
+            }
 
             /**
              * Sanitizes user-provided filenames to prevent path traversal, hidden file creation,
