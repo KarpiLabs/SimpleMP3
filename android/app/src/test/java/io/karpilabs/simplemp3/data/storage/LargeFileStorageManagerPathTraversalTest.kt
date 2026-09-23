@@ -43,4 +43,20 @@ class LargeFileStorageManagerPathTraversalTest {
         assertTrue("File inside app_data is permitted", isWithinBaseDir(validHotFile, baseAppDir))
         assertFalse("File outside app_data is blocked", isWithinBaseDir(maliciousFile, baseAppDir))
     }
+
+    @Test
+    fun testIsPathWithinFilesDir_preventsRelativePathTraversalAndPrefixCollisions() {
+        fun isWithinFilesDir(file: File, allowedBase: File): Boolean {
+            val target = file.canonicalFile
+            val allowed = allowedBase.canonicalFile
+            return target.path.startsWith(allowed.path + File.separator)
+        }
+
+        val relativeTraversalFile = File(filesDir, "storage/warm/../../../../etc/passwd")
+        val siblingDir = File(baseAppDir, "files_sibling").also { it.mkdirs() }
+        val siblingFile = File(siblingDir, "secret.mp3").also { it.writeText("secret") }
+
+        assertFalse("Relative traversal with .. is blocked", isWithinFilesDir(relativeTraversalFile, filesDir))
+        assertFalse("Sibling directory matching prefix without separator is blocked", isWithinFilesDir(siblingFile, filesDir))
+    }
 }
