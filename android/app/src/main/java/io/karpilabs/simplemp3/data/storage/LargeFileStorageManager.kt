@@ -266,7 +266,8 @@ class LargeFileStorageManager
             val hotFile = File(hotPath)
             if (!hotFile.exists() || hotFile.length() < COLD_MIN_BYTES) return track
             // Only pack files we own under app storage
-            if (!hotFile.absolutePath.startsWith(context.filesDir.absolutePath)) return track
+            val baseDir = context.filesDir.canonicalFile
+            if (!hotFile.canonicalFile.path.startsWith(baseDir.path + File.separator)) return track
 
             val coldFile = File(coldDir(), "${track.id}.mp3.gz")
             val tmp = File(coldFile.absolutePath + ".part")
@@ -311,7 +312,8 @@ class LargeFileStorageManager
             val path = uriPath(track.uri) ?: return track
             val input = File(path)
             if (!input.exists() || input.length() == 0L) return track
-            if (!input.absolutePath.startsWith(context.filesDir.absolutePath)) return track
+            val baseDir = context.filesDir.canonicalFile
+            if (!input.canonicalFile.path.startsWith(baseDir.path + File.separator)) return track
 
             // Movies / long form → leaner; album-length large files stay a bit richer
             val targetKbps =
