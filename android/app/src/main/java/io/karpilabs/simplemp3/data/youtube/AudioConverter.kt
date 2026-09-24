@@ -75,15 +75,33 @@ object AudioConverter {
      * @param input a remote URL or a local file path FFmpeg can read
      * @return the [outputM4a] on success
      */
+    internal fun isValidInputSource(input: String): Boolean {
+        val trimmed = input.trim()
+        if (trimmed.isEmpty()) return false
+        val firstColon = trimmed.indexOf(':')
+        if (firstColon > 0) {
+            val potentialScheme = trimmed.substring(0, firstColon)
+            if (potentialScheme.matches(Regex("^[a-zA-Z][a-zA-Z0-9+.-]*$"))) {
+                val scheme = potentialScheme.lowercase()
+                return scheme == "http" || scheme == "https" || scheme == "file"
+            }
+        }
+        return true
+    }
+
     fun remuxToM4a(
         input: String,
         outputM4a: File,
         metadata: Metadata,
     ): Result<File> {
+        val trimmed = input.trim()
+        if (!isValidInputSource(trimmed)) {
+            return Result.failure(IllegalArgumentException("Invalid or unsupported input source scheme"))
+        }
         outputM4a.parentFile?.mkdirs()
         outputM4a.delete()
 
-        val args = buildRemuxArgs(input, outputM4a, metadata)
+        val args = buildRemuxArgs(trimmed, outputM4a, metadata)
         val session = FFmpegKit.executeWithArguments(args)
         val code = session.returnCode
         return when {
