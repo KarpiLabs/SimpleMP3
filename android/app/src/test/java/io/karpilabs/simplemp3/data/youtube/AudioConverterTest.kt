@@ -1,6 +1,7 @@
 package io.karpilabs.simplemp3.data.youtube
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -64,5 +65,36 @@ class AudioConverterTest {
         assertTrue("Expected -metadata artist= argument in args", args.contains("artist=${metadata.sanitizedArtist}"))
         assertTrue("Expected -metadata album= argument in args", args.contains("album=${metadata.sanitizedAlbum}"))
         assertEquals(outputFile.absolutePath, args.last())
+    }
+
+    @Test
+    fun testIsValidInputSource_acceptsSafeSchemesAndLocalPaths() {
+        assertTrue(AudioConverter.isValidInputSource("http://example.com/stream.m3u8"))
+        assertTrue(AudioConverter.isValidInputSource("https://example.com/stream.m3u8"))
+        assertTrue(AudioConverter.isValidInputSource("file:///sdcard/Download/test.m4a"))
+        assertTrue(AudioConverter.isValidInputSource("/storage/emulated/0/Music/song.mp3"))
+        assertTrue(AudioConverter.isValidInputSource("relative/path/to/song.flac"))
+    }
+
+    @Test
+    fun testIsValidInputSource_rejectsDangerousSchemes() {
+        assertFalse(AudioConverter.isValidInputSource("concat:file1|file2"))
+        assertFalse(AudioConverter.isValidInputSource("pipe:0"))
+        assertFalse(AudioConverter.isValidInputSource("unix:/tmp/socket"))
+        assertFalse(AudioConverter.isValidInputSource("subfile:0"))
+        assertFalse(AudioConverter.isValidInputSource("fd:0"))
+        assertFalse(AudioConverter.isValidInputSource(""))
+    }
+
+    @Test
+    fun testRemuxToM4a_failsOnDisallowedScheme() {
+        val metadata = AudioConverter.Metadata(title = "Test", artist = "Test")
+        val outputFile = File("/tmp/output.m4a")
+
+        val result = AudioConverter.remuxToM4a("concat:file1|file2", outputFile, metadata)
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        assertEquals("Invalid or unsupported input source scheme", result.exceptionOrNull()?.message)
     }
 }
