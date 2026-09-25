@@ -283,8 +283,8 @@ class JellyfinSyncManager
             val track = trackDao.getTrackById(trackId) ?: return
             if (track.source != TrackEntity.SOURCE_JELLYFIN) return
             track.jellyfinId?.let { jfId ->
-                deleteFileSafely(File(audioDir(), fileNameFor(jfId, track.uri)))
-                deleteFileSafely(File(artDir(), "$jfId.jpg"))
+                deleteFileSafely(File(audioDir(), fileNameFor(jfId, track.uri)), audioDir())
+                deleteFileSafely(File(artDir(), "$jfId.jpg"), artDir())
             }
             deleteFileUriSafely(track.uri)
             trackDao.deleteTrackById(trackId)
@@ -293,7 +293,7 @@ class JellyfinSyncManager
         private fun deleteFileUriSafely(uri: String) {
             runCatching {
                 val path = Uri.parse(uri).path ?: return
-                deleteFileSafely(File(path))
+                deleteFileSafely(File(path), audioDir())
             }
         }
 
