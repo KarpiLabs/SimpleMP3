@@ -16,12 +16,14 @@ class JellyfinPathTraversalTest {
 
     private lateinit var filesDir: File
     private lateinit var allowedOfflineDir: File
+    private lateinit var artOfflineDir: File
     private lateinit var sensitiveDir: File
 
     @Before
     fun setUp() {
         filesDir = tempFolder.newFolder("files")
         allowedOfflineDir = File(filesDir, "offline/jellyfin/audio").also { it.mkdirs() }
+        artOfflineDir = File(filesDir, "offline/jellyfin/art").also { it.mkdirs() }
         sensitiveDir = File(filesDir, "databases").also { it.mkdirs() }
     }
 
@@ -73,5 +75,21 @@ class JellyfinPathTraversalTest {
         // Test attempting to delete file outside allowed dir
         JellyfinSyncManager.deleteFileSafely(sensitiveFile, allowedDir)
         assertTrue("Sensitive file outside allowed dir must not be deleted", sensitiveFile.exists())
+    }
+
+    @Test
+    fun testDeleteFileSafely_strictlyScopedToSpecificSubdirectory() {
+        val artFile = File(artOfflineDir, "artwork.jpg").also {
+            it.writeText("image bytes")
+        }
+        assertTrue("Art file should exist initially", artFile.exists())
+
+        // Attempt deleting art file when audioDir is passed as allowed base dir
+        JellyfinSyncManager.deleteFileSafely(artFile, allowedOfflineDir)
+        assertTrue("Art file outside audioDir must not be deleted", artFile.exists())
+
+        // Deleting art file with artOfflineDir as allowed base dir should succeed
+        JellyfinSyncManager.deleteFileSafely(artFile, artOfflineDir)
+        assertFalse("Art file within artOfflineDir should be deleted", artFile.exists())
     }
 }
