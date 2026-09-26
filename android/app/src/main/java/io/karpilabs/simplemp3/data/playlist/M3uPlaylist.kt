@@ -180,10 +180,14 @@ object M3uPlaylist {
     ): TrackEntity? {
         normalizeLocation(entry.location)?.let { loc ->
             byUri[loc]?.let { return it }
-            // Absolute path may be a suffix of a stored file:// URI or vice versa.
+            // Absolute or relative path must match on path component boundaries.
+            val cleanLoc = loc.trimStart('/')
             val suffixHit =
                 byUri.entries.firstOrNull { (key, _) ->
-                    key.endsWith(loc) || loc.endsWith(key)
+                    val cleanKey = key.trimStart('/')
+                    cleanKey == cleanLoc ||
+                        cleanKey.endsWith("/$cleanLoc") ||
+                        cleanLoc.endsWith("/$cleanKey")
                 }
             if (suffixHit != null) return suffixHit.value
         }

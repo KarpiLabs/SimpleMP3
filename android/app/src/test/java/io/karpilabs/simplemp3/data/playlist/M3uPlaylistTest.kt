@@ -69,6 +69,19 @@ class M3uPlaylistTest {
     }
 
     @Test
+    fun matchEnforcesPathComponentBoundaries() {
+        val library =
+            listOf(
+                track(1, "Night", "Other", "file:///storage/emulated/0/Music/night.mp3"),
+            )
+        // Partial suffix "ight.mp3" should not match "night.mp3" via location suffix matching
+        val entries = listOf(M3uPlaylist.Entry("/Music/ight.mp3"))
+        val result = M3uPlaylist.match(entries, library, "Imported")
+        assertTrue(result.matched.isEmpty())
+        assertEquals(1, result.unmatched.size)
+    }
+
+    @Test
     fun skipsLiveStreams() {
         val stream =
             TrackEntity(
