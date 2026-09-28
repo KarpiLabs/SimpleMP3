@@ -321,10 +321,7 @@ class YoutubeDownloadManager
         }
 
         private fun deleteFileUriSafely(uri: String) {
-            runCatching {
-                val path = Uri.parse(uri).path ?: return
-                deleteFileSafely(File(path))
-            }
+            deleteFileUriSafely(uri, File(context.filesDir, "offline/youtube"))
         }
 
         private fun deleteFileSafely(file: File) {
@@ -455,6 +452,29 @@ class YoutubeDownloadManager
                 .ifBlank { "YouTube Audio" }
 
         companion object {
+            /**
+             * Safely deletes a local file URI only if it uses a file scheme and its canonical path
+             * strictly resides within the specified allowed base directory.
+             */
+            internal fun deleteFileUriSafely(
+                uri: String,
+                allowedDir: File,
+            ) {
+                runCatching {
+                    if (!uri.startsWith("file:")) return
+                    val path = parsePathFromUri(uri) ?: return
+                    deleteFileSafely(File(path), allowedDir)
+                }
+            }
+
+            private fun parsePathFromUri(uriString: String): String? {
+                if (uriString.startsWith("file:/")) {
+                    return runCatching { java.net.URI(uriString).path }.getOrNull()
+                        ?: uriString.removePrefix("file://").removePrefix("file:")
+                }
+                return runCatching { Uri.parse(uriString).path }.getOrNull() ?: uriString
+            }
+
             internal fun deleteFileSafely(
                 file: File,
                 allowedDir: File,
