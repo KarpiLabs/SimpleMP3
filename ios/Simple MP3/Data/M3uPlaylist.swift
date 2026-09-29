@@ -14,7 +14,8 @@ enum M3uPlaylist {
 
         var fileName: String {
             let trimmed = location.split(separator: "?").first.map(String.init) ?? location
-            return (trimmed as NSString).lastPathComponent
+            let last = (trimmed as NSString).lastPathComponent
+            return last.removingPercentEncoding ?? last
         }
     }
 
