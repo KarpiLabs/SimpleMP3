@@ -54,7 +54,7 @@ object SecretCipher {
         } catch (_: Exception) {
             // If the Keystore is somehow unavailable, fail closed rather than silently
             // persisting plaintext under the encrypted contract.
-            plain
+            ""
         }
     }
 
