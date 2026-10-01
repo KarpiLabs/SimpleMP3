@@ -267,22 +267,13 @@ class StreamSaveManager
         ): String? {
             val dest = File(artDir(), "${safeFileName(key)}.img")
             return runCatching {
+                // Safely open input stream via ContentResolver for all schemes (content:// and file://)
+                // to avoid direct raw File(path) access and path traversal risks.
                 val copied =
-                    when {
-                        source.scheme == "file" -> {
-                            val path = source.path ?: return@runCatching null
-                            val from = File(path)
-                            if (!from.isFile) return@runCatching null
-                            from.copyTo(dest, overwrite = true)
-                            true
-                        }
-                        else -> {
-                            context.contentResolver.openInputStream(source)?.use { input ->
-                                dest.outputStream().use { output -> input.copyTo(output) }
-                                true
-                            } ?: false
-                        }
-                    }
+                    context.contentResolver.openInputStream(source)?.use { input ->
+                        dest.outputStream().use { output -> input.copyTo(output) }
+                        true
+                    } ?: false
                 if (!copied || !dest.exists() || dest.length() < 16L) {
                     dest.delete()
                     return@runCatching null
