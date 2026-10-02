@@ -60,18 +60,30 @@ object StreamArtworkParser {
         return null
     }
 
+    /**
+     * Resolves a relative or absolute URL against [baseUrl], ensuring the output
+     * uses http/https scheme and handles malformed URIs safely without throwing exceptions.
+     */
     fun resolveUrl(
         maybeRelative: String,
         baseUrl: String,
-    ): String {
+    ): String? {
         val trimmed = maybeRelative.trim()
         if (trimmed.startsWith("http://", ignoreCase = true) ||
             trimmed.startsWith("https://", ignoreCase = true)
         ) {
             return trimmed
         }
-        val base = java.net.URI(baseUrl)
-        return base.resolve(trimmed).toString()
+        return runCatching {
+            val resolved = java.net.URI(baseUrl).resolve(trimmed).toString()
+            if (resolved.startsWith("http://", ignoreCase = true) ||
+                resolved.startsWith("https://", ignoreCase = true)
+            ) {
+                resolved
+            } else {
+                null
+            }
+        }.getOrNull()
     }
 
     fun isHlsUrl(url: String): Boolean {
