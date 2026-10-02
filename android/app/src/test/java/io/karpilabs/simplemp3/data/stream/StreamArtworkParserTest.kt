@@ -76,4 +76,11 @@ http://radio.example/stream
         assertEquals("jpg", StreamArtworkParser.imageExtension(jpeg))
         assertFalse(StreamArtworkParser.looksLikeImage(byteArrayOf(1, 2, 3, 4)))
     }
+
+    @Test
+    fun `resolveUrl prevents non-http schemes and malformed URIs`() {
+        assertNull(StreamArtworkParser.resolveUrl("file:///etc/passwd", "https://radio.example/"))
+        assertNull(StreamArtworkParser.resolveUrl("javascript:alert(1)", "https://radio.example/"))
+        assertNull(StreamArtworkParser.resolveUrl("invalid path {bad}", "https://radio.example/"))
+    }
 }
