@@ -17,6 +17,12 @@ struct Simple_MP3Tests {
         #expect(url?.absoluteString == "https://station.example/cover.jpg")
     }
 
+    @Test func streamArtworkRejectsNonHttpSchemes() {
+        let html = "<html><head><meta property=\"og:image\" content=\"file:///etc/passwd\"></head></html>"
+        let url = StreamSaver.imageURLFromHTML(html, base: URL(string: "https://station.example/")!)
+        #expect(url == nil)
+    }
+
     @Test func streamArtworkParsesRelativeAppleTouchIcon() {
         let html = "<link rel=\"apple-touch-icon\" href=\"/icon.png\">"
         let url = StreamSaver.imageURLFromHTML(html, base: URL(string: "https://radio.example/listen")!)

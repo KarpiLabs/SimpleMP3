@@ -147,10 +147,14 @@ enum StreamSaver {
             guard let value, !value.isEmpty, value != "0" else { return nil }
             return value
         }
+        func parseHTTPURL(_ raw: String?) -> URL? {
+            guard let raw, let u = URL(string: raw), u.scheme == "http" || u.scheme == "https" else { return nil }
+            return u
+        }
         return IcyHeaders(
             name: header("icy-name") ?? header("ice-name"),
-            stationURL: (header("icy-url") ?? header("ice-url")).flatMap(URL.init(string:)),
-            imageURL: (header("icy-logo") ?? header("ice-logo") ?? header("icy-image")).flatMap(URL.init(string:))
+            stationURL: parseHTTPURL(header("icy-url") ?? header("ice-url")),
+            imageURL: parseHTTPURL(header("icy-logo") ?? header("ice-logo") ?? header("icy-image"))
         )
     }
 
@@ -169,6 +173,7 @@ enum StreamSaver {
     }
 
     private static func downloadText(_ url: URL) async -> String? {
+        guard url.scheme == "http" || url.scheme == "https" else { return nil }
         var request = URLRequest(url: url, timeoutInterval: 6)
         request.setValue("SimpleMP3/1.1", forHTTPHeaderField: "User-Agent")
         guard let (bytes, response) = try? await URLSession.shared.bytes(for: request),
@@ -194,6 +199,7 @@ enum StreamSaver {
     }
 
     private static func downloadImage(_ url: URL) async -> Data? {
+        guard url.scheme == "http" || url.scheme == "https" else { return nil }
         var request = URLRequest(url: url, timeoutInterval: 6)
         request.setValue("SimpleMP3/1.1", forHTTPHeaderField: "User-Agent")
         guard let (data, response) = try? await URLSession.shared.data(for: request),
@@ -234,7 +240,12 @@ enum StreamSaver {
         if trimmed.lowercased().hasPrefix("http://") || trimmed.lowercased().hasPrefix("https://") {
             return URL(string: trimmed)
         }
-        return URL(string: trimmed, relativeTo: base)?.absoluteURL
+        guard let resolved = URL(string: trimmed, relativeTo: base)?.absoluteURL,
+              resolved.scheme == "http" || resolved.scheme == "https"
+        else {
+            return nil
+        }
+        return resolved
     }
 
     private static func firstGroup(_ pattern: String, in text: String) -> String? {
