@@ -61,7 +61,7 @@ class ListenBrainzClient(
                     .build()
             http.newCall(request).execute().use { it.isSuccessful }
         }.getOrElse {
-            Log.w(TAG, "ListenBrainz submit failed", it)
+            Log.w(TAG, "ListenBrainz submit failed: ${it.message}")
             false
         }
     }
@@ -101,7 +101,7 @@ class LastFmClient(
                 JSONObject(text).optJSONObject("session")?.optString("key").takeIf { !it.isNullOrBlank() }
             }
         }.getOrElse {
-            Log.w(TAG, "Last.fm getMobileSession failed", it)
+            Log.w(TAG, "Last.fm getMobileSession failed: ${it.message}")
             null
         }
     }
@@ -160,7 +160,7 @@ class LastFmClient(
             val request = Request.Builder().url(endpoint).post(form).build()
             http.newCall(request).execute().use { it.isSuccessful }
         }.getOrElse {
-            Log.w(TAG, "Last.fm POST failed", it)
+            Log.w(TAG, "Last.fm POST failed: ${it.message}")
             false
         }
     }
