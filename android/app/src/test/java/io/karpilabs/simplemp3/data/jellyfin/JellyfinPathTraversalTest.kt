@@ -74,4 +74,26 @@ class JellyfinPathTraversalTest {
         JellyfinSyncManager.deleteFileSafely(sensitiveFile, allowedDir)
         assertTrue("Sensitive file outside allowed dir must not be deleted", sensitiveFile.exists())
     }
+
+    @Test
+    fun testSanitizeId_stripsPathTraversalAndUnsafeChars() {
+        org.junit.Assert.assertEquals("etc_passwd", JellyfinSyncManager.sanitizeId("../../etc/passwd"))
+        org.junit.Assert.assertEquals("secret", JellyfinSyncManager.sanitizeId("..\\..\\secret"))
+        org.junit.Assert.assertEquals("item_123", JellyfinSyncManager.sanitizeId("item/123"))
+        org.junit.Assert.assertEquals("abc-xyz", JellyfinSyncManager.sanitizeId("abc-xyz"))
+        org.junit.Assert.assertEquals("item", JellyfinSyncManager.sanitizeId("../.."))
+    }
+
+    @Test
+    fun testDownloadDestination_residesWithinAllowedDirectory() {
+        val maliciousId = "../../databases/hacked"
+        val safeId = JellyfinSyncManager.sanitizeId(maliciousId)
+        val audioBaseDir = allowedOfflineDir.canonicalFile
+        val targetFile = File(audioBaseDir, "$safeId.mp3").canonicalFile
+
+        assertTrue(
+            "Target file canonical path must stay inside offline audio directory",
+            targetFile.canonicalPath.startsWith(audioBaseDir.canonicalPath + File.separator)
+        )
+    }
 }
