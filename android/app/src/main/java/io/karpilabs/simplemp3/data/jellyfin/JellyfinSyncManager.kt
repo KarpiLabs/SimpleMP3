@@ -302,6 +302,11 @@ class JellyfinSyncManager
         }
 
         companion object {
+            internal fun sanitizeId(id: String): String {
+                val cleaned = id.replace(Regex("[^A-Za-z0-9_-]"), "_").trim('_')
+                return cleaned.ifBlank { "item" }
+            }
+
             internal fun deleteFileSafely(
                 file: File,
                 allowedDir: File,
@@ -325,18 +330,14 @@ class JellyfinSyncManager
         }
 
         fun isDownloaded(itemId: String): Boolean {
-            val id = jellyfinItemIdToTrackId(itemId)
-            // cheap filesystem check
-            return audioDir().listFiles()?.any {
-                it.nameWithoutExtension ==
-                    itemId.replace(
-                        "-",
-                        "",
-                    ) ||
-                    it.name.startsWith(itemId)
+            val safeId = sanitizeId(itemId)
+            val audioBaseDir = runCatching { audioDir().canonicalFile }.getOrDefault(audioDir())
+            return audioBaseDir.listFiles()?.any {
+                it.nameWithoutExtension == safeId.replace("-", "") ||
+                    it.name.startsWith(safeId)
             } == true ||
-                File(audioDir(), "$itemId.mp3").exists() ||
-                File(audioDir(), "${itemId.replace("-", "")}.mp3").exists()
+                File(audioBaseDir, "$safeId.mp3").exists() ||
+                File(audioBaseDir, "${safeId.replace("-", "")}.mp3").exists()
         }
 
         private suspend fun downloadOne(
@@ -362,7 +363,19 @@ class JellyfinSyncManager
                     container.contains("wav") -> "wav"
                     else -> "mp3"
                 }
-            val audioFile = File(audioDir(), "${item.id}.$ext")
+
+            val safeId = sanitizeId(item.id)
+            val audioBaseDir = audioDir().canonicalFile
+            val audioFile = File(audioBaseDir, "$safeId.$ext").canonicalFile
+            if (!audioFile.canonicalPath.startsWith(audioBaseDir.canonicalPath + File.separator)) {
+                return null
+            }
+
+            val artBaseDir = artDir().canonicalFile
+            val artFile = File(artBaseDir, "$safeId.jpg").canonicalFile
+            if (!artFile.canonicalPath.startsWith(artBaseDir.canonicalPath + File.separator)) {
+                return null
+            }
             val download =
                 client.downloadToFile(session, item.id, audioFile) { read, total ->
                     // keep UI responsive with soft progress on current item
@@ -376,7 +389,6 @@ class JellyfinSyncManager
                 }
             if (download.isFailure) return null
 
-            val artFile = File(artDir(), "${item.id}.jpg")
             val art = client.downloadImage(session, item, artFile).getOrNull()
             val artworkUri =
                 art?.let { Uri.fromFile(it).toString() }
