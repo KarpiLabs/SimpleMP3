@@ -15,16 +15,7 @@ object M3uPlaylist {
         val durationSec: Int? = null,
     ) {
         val fileName: String
-            get() =
-                location
-                    .substringBefore('?')
-                    .substringBefore('#')
-                    .trimEnd('/')
-                    .substringAfterLast('/')
-                    .substringAfterLast('\\')
-                    .let { decoded ->
-                        runCatching { URLDecoder.decode(decoded, Charsets.UTF_8.name()) }.getOrDefault(decoded)
-                    }
+            get() = fileNameOf(location)
 
         val displayTitle: String
             get() = title?.takeIf { it.isNotBlank() } ?: fileName.substringBeforeLast('.')
@@ -156,7 +147,10 @@ object M3uPlaylist {
             s = runCatching { URLDecoder.decode(s, Charsets.UTF_8.name()) }.getOrDefault(s)
         }
         s = s.replace('\\', '/')
-        return s.lowercase()
+        while (s.contains("..")) {
+            s = s.replace("..", "")
+        }
+        return s.trim('/').lowercase().ifBlank { null }
     }
 
     internal fun fileNameOf(location: String): String =
@@ -169,6 +163,8 @@ object M3uPlaylist {
             .let { decoded ->
                 runCatching { URLDecoder.decode(decoded, Charsets.UTF_8.name()) }.getOrDefault(decoded)
             }
+            .replace("..", "")
+            .trimStart('.', ' ')
 
     private fun exportLocation(track: TrackEntity): String = track.uri
 
