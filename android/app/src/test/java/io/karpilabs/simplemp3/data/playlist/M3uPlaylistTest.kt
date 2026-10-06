@@ -62,6 +62,14 @@ class M3uPlaylistTest {
     }
 
     @Test
+    fun normalizeLocationStripsPathTraversal() {
+        assertEquals("etc/passwd", M3uPlaylist.normalizeLocation("../../etc/passwd"))
+        assertEquals("secret.mp3", M3uPlaylist.normalizeLocation("file:///../../secret.mp3"))
+        assertEquals("passwd", M3uPlaylist.fileNameOf("../../etc/passwd"))
+        assertEquals("secret.mp3", M3uPlaylist.fileNameOf("file:///../../secret.mp3"))
+    }
+
+    @Test
     fun splitArtistTitle() {
         assertEquals("Juniper" to "Highway", M3uPlaylist.splitArtistTitle("Juniper - Highway"))
         assertEquals(null to "Highway", M3uPlaylist.splitArtistTitle("Highway"))
