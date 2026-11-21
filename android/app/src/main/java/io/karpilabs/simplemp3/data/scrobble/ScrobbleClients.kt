@@ -100,8 +100,9 @@ class LastFmClient(
                 if (!resp.isSuccessful) return@use null
                 JSONObject(text).optJSONObject("session")?.optString("key").takeIf { !it.isNullOrBlank() }
             }
-        }.getOrElse {
-            Log.w(TAG, "Last.fm getMobileSession failed", it)
+        }.getOrElse { e ->
+            // Security: avoid passing the full exception stack trace to Log.w to prevent leaking sensitive auth parameters or credentials
+            Log.w(TAG, "Last.fm getMobileSession failed: ${e.message}")
             null
         }
     }
